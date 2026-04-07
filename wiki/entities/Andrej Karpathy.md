@@ -15,6 +15,7 @@ related:
   - "[[LLM Wiki Pattern]]"
   - "[[Compounding Knowledge]]"
   - "[[Nate Herk LLM Wiki Transcript]]"
+  - "[[entities/_index]]"
 sources:
   - "[[wiki/sources/Nate Herk LLM Wiki Transcript]]"
 ---

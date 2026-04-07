@@ -21,6 +21,7 @@ related:
   - "[[Andrej Karpathy]]"
   - "[[Nate Herk LLM Wiki Transcript]]"
   - "[[index]]"
+  - "[[concepts/_index]]"
 sources:
   - "[[wiki/sources/Nate Herk LLM Wiki Transcript]]"
 ---

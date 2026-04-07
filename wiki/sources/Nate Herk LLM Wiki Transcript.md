@@ -27,6 +27,7 @@ related:
   - "[[Compounding Knowledge]]"
   - "[[Andrej Karpathy]]"
   - "[[index]]"
+  - "[[sources/_index]]"
 sources:
   - "[[.raw/nate-herk-llm-wiki-transcript.md]]"
 ---

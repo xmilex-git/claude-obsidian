@@ -17,6 +17,7 @@ related:
   - "[[Hot Cache]]"
   - "[[Andrej Karpathy]]"
   - "[[Nate Herk LLM Wiki Transcript]]"
+  - "[[concepts/_index]]"
 sources:
   - "[[wiki/sources/Nate Herk LLM Wiki Transcript]]"
 ---

@@ -19,6 +19,7 @@ related:
   - "[[Compounding Knowledge]]"
   - "[[index]]"
   - "[[hot]]"
+  - "[[concepts/_index]]"
 sources:
   - "[[wiki/sources/Nate Herk LLM Wiki Transcript]]"
 ---
