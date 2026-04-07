@@ -36,9 +36,12 @@ node_modules/
 # Personal files dropped into vault root by Obsidian (don't commit these)
 WIKI*.md
 PROMPT.md
+Welcome.md
 *.tmp.*
 Obsidian vault*
 Untitled.canvas
+Cosmic Brain*.gif
+Cosmic Brain*.png
 Untitled *.canvas
 Untitled.base
 *.base
