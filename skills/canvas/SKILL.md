@@ -1,7 +1,6 @@
 ---
 name: canvas
 description: "Visual layer of the wiki. Add images, text cards, PDFs, and wiki pages to Obsidian canvas files with auto-positioning inside zones. Integrates with /banana for image capture. Triggers on: /canvas, canvas new, canvas add image, canvas add text, canvas add pdf, canvas add note, canvas zone, canvas list, canvas from banana, add to canvas, put this on the canvas, open canvas, create canvas."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob"]
 ---
 
 # canvas — Visual Reference Layer
@@ -11,7 +10,7 @@ The three knowledge capture layers:
 - `/autoresearch` → structured knowledge (wiki/sources/, wiki/concepts/)
 - `/canvas` → visual references (wiki/canvases/)
 
-A canvas is a JSON file Obsidian renders as an infinite visual board. This skill reads and writes canvas JSON directly. Read `references/canvas-spec.md` for the full format reference before making any edits.
+A canvas is a JSON file Obsidian renders as an infinite visual board. This skill reads and writes canvas JSON directly. Read `references/canvas-spec.md` for the full format reference before making any edits. This spec aligns with the [JSON Canvas open standard](https://jsoncanvas.org/) — if `kepano/obsidian-skills` is installed, its `json-canvas` skill is the authoritative cross-platform reference.
 
 ---
 

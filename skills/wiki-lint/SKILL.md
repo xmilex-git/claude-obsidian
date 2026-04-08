@@ -5,7 +5,6 @@ description: >
   missing cross-references, frontmatter gaps, and empty sections. Creates or updates
   Dataview dashboards. Generates canvas maps. Triggers on: "lint", "health check",
   "clean up wiki", "check the wiki", "wiki maintenance", "find orphans", "wiki audit".
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 ---
 
 # wiki-lint — Wiki Health Check

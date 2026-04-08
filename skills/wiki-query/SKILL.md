@@ -1,11 +1,6 @@
 ---
 name: wiki-query
-description: >
-  Answer questions using the Obsidian wiki vault. Reads hot cache first, then index,
-  then relevant pages. Synthesizes answers with citations. Files good answers back
-  as wiki pages. Triggers on: "what do you know about", "query:", "what is", "explain",
-  "summarize", "find in wiki", "search the wiki", "based on the wiki".
-allowed-tools: ["Read", "Write", "Bash", "Glob", "Grep"]
+description: "Answer questions using the Obsidian wiki vault. Reads hot cache first, then index, then relevant pages. Synthesizes answers with citations. Files good answers back as wiki pages. Supports quick, standard, and deep modes. Triggers on: what do you know about, query:, what is, explain, summarize, find in wiki, search the wiki, based on the wiki, wiki query quick, wiki query deep."
 ---
 
 # wiki-query — Query the Wiki
@@ -14,7 +9,32 @@ The wiki has already done the synthesis work. Read strategically, answer precise
 
 ---
 
-## Query Workflow
+## Query Modes
+
+Three depths. Choose based on the question complexity.
+
+| Mode | Trigger | Reads | Token cost | Best for |
+|------|---------|-------|------------|---------|
+| **Quick** | `query quick: ...` or simple factual Q | hot.md + index.md only | ~1,500 | "What is X?", date lookups, quick facts |
+| **Standard** | default (no flag) | hot.md + index + 3-5 pages | ~3,000 | Most questions |
+| **Deep** | `query deep: ...` or "thorough", "comprehensive" | Full wiki + optional web | ~8,000+ | "Compare A vs B across everything", synthesis, gap analysis |
+
+---
+
+## Quick Mode
+
+Use when the answer is likely in the hot cache or index summary.
+
+1. Read `wiki/hot.md`. If it answers the question — respond immediately.
+2. If not: read `wiki/index.md`. Scan descriptions for the answer.
+3. If found in index summary — respond. Do not open any pages.
+4. If not found — say "Not in quick cache. Run as standard query?"
+
+Do not open individual wiki pages in quick mode.
+
+---
+
+## Standard Query Workflow
 
 1. **Read** `wiki/hot.md` first. It may already have the answer or directly relevant context.
 2. **Read** `wiki/index.md` to find the most relevant pages (scan for titles and descriptions).
@@ -22,6 +42,19 @@ The wiki has already done the synthesis work. Read strategically, answer precise
 4. **Synthesize** the answer in chat. Cite sources with wikilinks: `(Source: [[Page Name]])`.
 5. **Offer to file** the answer: "This analysis seems worth keeping. Should I save it as `wiki/questions/answer-name.md`?"
 6. If the question reveals a **gap**: say "I don't have enough on X. Want to find a source?"
+
+---
+
+## Deep Mode
+
+Use for synthesis questions, comparisons, or "tell me everything about X."
+
+1. Read `wiki/hot.md` and `wiki/index.md`.
+2. Identify all relevant sections (concepts, entities, sources, comparisons).
+3. Read every relevant page — no skipping.
+4. If wiki coverage is thin, offer to supplement with web search.
+5. Synthesize a comprehensive answer with full citations.
+6. Always file the result back as a wiki page — deep answers are too valuable to lose.
 
 ---
 

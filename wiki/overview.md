@@ -42,14 +42,22 @@ Run `/wiki` to scaffold this vault for your own domain and replace this overview
 - [[Andrej Karpathy]] — originated the pattern
 
 **Sources seeded:**
+- [[claude-obsidian-ecosystem-research]] — 16+ projects, 13 cherry-picks identified (2026-04-08)
 
 ---
 
 ## Current State
 
-- Sources ingested: 1
-- Wiki pages: 11
-- Last activity: 2026-04-07 (claude-obsidian v1.1.0 initialized)
+- Sources ingested: 2
+- Wiki pages: 25
+- Last activity: 2026-04-08 (ecosystem research ingest — 16+ projects mapped)
+
+---
+
+## Canvases
+
+- [[claude-obsidian-presentation]] — Full presentation: hero, overview, skills, architecture, Wiki vs RAG, visual demos (2026-04-07)
+- [[AI Marketing Hub Cover Images Canvas]] — Cover image library for AI Marketing Hub brand assets
 
 ---
 

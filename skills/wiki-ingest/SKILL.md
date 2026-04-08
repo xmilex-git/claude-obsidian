@@ -1,16 +1,96 @@
 ---
 name: wiki-ingest
-description: >
-  Ingest sources into the Obsidian wiki vault. Reads a source, extracts entities
-  and concepts, creates or updates wiki pages, cross-references, and logs the operation.
-  Supports single sources and batch mode. Triggers on: "ingest", "process this source",
-  "add this to the wiki", "read and file this", "batch ingest", "ingest all of these".
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
+description: "Ingest sources into the Obsidian wiki vault. Reads a source, extracts entities and concepts, creates or updates wiki pages, cross-references, and logs the operation. Supports files, URLs, and batch mode. Triggers on: ingest, process this source, add this to the wiki, read and file this, batch ingest, ingest all of these, ingest this url."
 ---
 
 # wiki-ingest — Source Ingestion
 
 Read the source. Write the wiki. Cross-reference everything. A single source typically touches 8-15 wiki pages.
+
+**Syntax standard**: Write all Obsidian Markdown using proper Obsidian Flavored Markdown — wikilinks as `[[Note Name]]`, callouts as `> [!type] Title`, embeds as `![[file]]`, properties as YAML frontmatter. If kepano/obsidian-skills is installed, its `obsidian-markdown` skill is the authoritative syntax reference.
+
+---
+
+## Delta Tracking
+
+Before ingesting any file, check `.raw/.manifest.json` to avoid re-processing unchanged sources.
+
+```bash
+# Check if manifest exists
+[ -f .raw/.manifest.json ] && echo "exists" || echo "no manifest yet"
+```
+
+**Manifest format** (create if missing):
+```json
+{
+  "sources": {
+    ".raw/articles/article-slug-2026-04-08.md": {
+      "hash": "abc123",
+      "ingested_at": "2026-04-08",
+      "pages_created": ["wiki/sources/article-slug.md", "wiki/entities/Person.md"],
+      "pages_updated": ["wiki/index.md"]
+    }
+  }
+}
+```
+
+**Before ingesting a file:**
+1. Compute a hash: `md5sum [file] | cut -d' ' -f1` (or `sha256sum` on Linux).
+2. Check if the path exists in `.manifest.json` with the same hash.
+3. If hash matches — skip. Report: "Already ingested (unchanged). Use `force` to re-ingest."
+4. If missing or hash differs — proceed with ingest.
+
+**After ingesting a file:**
+1. Record `{hash, ingested_at, pages_created, pages_updated}` in `.manifest.json`.
+2. Write the updated manifest back.
+
+Skip delta checking if the user says "force ingest" or "re-ingest".
+
+---
+
+## URL Ingestion
+
+Trigger: user passes a URL starting with `https://`.
+
+Steps:
+
+1. **Fetch** the page using WebFetch.
+2. **Clean** (optional): if `defuddle` is available (`which defuddle 2>/dev/null`), run `defuddle [url]` to strip ads, nav, and clutter — typically saves 40-60% tokens. Fall back to raw WebFetch output if not installed.
+3. **Derive slug** from the URL path (last segment, lowercased, spaces→hyphens, strip query strings).
+4. **Save** to `.raw/articles/[slug]-[YYYY-MM-DD].md` with a frontmatter header:
+   ```markdown
+   ---
+   source_url: [url]
+   fetched: [YYYY-MM-DD]
+   ---
+   ```
+5. Proceed with **Single Source Ingest** starting at step 2 (file is now in `.raw/`).
+
+---
+
+## Image / Vision Ingestion
+
+Trigger: user passes an image file path (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`, `.avif`).
+
+Steps:
+
+1. **Read** the image file using the Read tool — Claude can process images natively.
+2. **Describe** the image contents: extract all text (OCR), identify key concepts, entities, diagrams, and data visible in the image.
+3. **Save** the description to `.raw/images/[slug]-[YYYY-MM-DD].md`:
+   ```markdown
+   ---
+   source_type: image
+   original_file: [original path]
+   fetched: YYYY-MM-DD
+   ---
+   # Image: [slug]
+
+   [Full description of image contents, transcribed text, entities visible, etc.]
+   ```
+4. Copy the image to `_attachments/images/[slug].[ext]` if it's not already in the vault.
+5. Proceed with **Single Source Ingest** on the saved description file.
+
+Use cases: whiteboard photos, screenshots, diagrams, infographics, document scans.
 
 ---
 

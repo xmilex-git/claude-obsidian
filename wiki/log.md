@@ -25,6 +25,14 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-08] ingest | Claude + Obsidian Ecosystem Research
+- Type: research ingest
+- Source: `.raw/claude-obsidian-ecosystem-research.md`
+- Queries: 6 parallel web searches + 12 repo deep-reads
+- Pages created: [[claude-obsidian-ecosystem]], [[cherry-picks]], [[claude-obsidian-ecosystem-research]], [[Ar9av-obsidian-wiki]], [[Nexus-claudesidian-mcp]], [[ballred-obsidian-claude-pkm]], [[rvk7895-llm-knowledge-bases]], [[kepano-obsidian-skills]], [[Claudian-YishenTu]]
+- Key finding: 16+ active Claude+Obsidian projects; 13 cherry-pick features identified for v1.3.0+
+- Top gap confirmed: no delta tracking, no URL ingestion, no auto-commit
+
 ## [2026-04-07] session | Full Audit, System Setup & Plugin Installation
 - Type: session
 - Location: wiki/meta/full-audit-and-system-setup-session.md
