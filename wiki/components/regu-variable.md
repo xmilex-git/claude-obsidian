@@ -33,29 +33,29 @@ updated: 2026-04-23
 > [!key-insight] Single universal expression type
 > CUBRID uses one class (`regu_variable_node`) for all expression nodes. The `type` field (`REGU_DATATYPE` enum) discriminates which member of the `value` union is valid. This makes generic walkers (`map_regu`) possible but also makes the type heavily overloaded — the AGENTS.md calls it "the most complex type — deeply nested unions".
 
-## `REGU_DATATYPE` — discriminant
+## `REGU_DATATYPE` — 17-way discriminant
 
-```c
-typedef enum {
-  TYPE_DBVAL,           // value.dbval       — literal DB_VALUE (constant)
-  TYPE_CONSTANT,        // value.dbvalptr    — pointer to host-var or cached constant
-  TYPE_ORDERBY_NUM,     // value.dbvalptr    — ORDERBY_NUM() result slot
-  TYPE_INARITH,         // value.arithptr    — input arithmetic expression (evaluated once)
-  TYPE_OUTARITH,        // value.arithptr    — output arithmetic (re-evaluated per tuple)
-  TYPE_ATTR_ID,         // value.attr_descr  — heap attribute fetch
-  TYPE_CLASS_ATTR_ID,   // value.attr_descr  — class attribute
-  TYPE_SHARED_ATTR_ID,  // value.attr_descr  — shared attribute
-  TYPE_POSITION,        // value.pos_descr   — position in list file tuple
-  TYPE_LIST_ID,         // value.srlist_id   — sorted list file (subquery result)
-  TYPE_POS_VALUE,       // value.val_pos     — positional host variable
-  TYPE_OID,             // (no value field)  — current object OID
-  TYPE_CLASSOID,        // (no value field)  — current class OID
-  TYPE_FUNC,            // value.funcp       — built-in function call
-  TYPE_REGUVAL_LIST,    // value.reguval_list — VALUES list (multi-row insert)
-  TYPE_REGU_VAR_LIST,   // value.regu_var_list — CUME_DIST / PERCENT_RANK list
-  TYPE_SP               // value.sp_ptr      — stored procedure invocation
-} REGU_DATATYPE;
-```
+Full enum with value semantics. The `value` union member listed is valid when `type == …`:
+
+| Constant | `value` member | Evaluation time | Description |
+|----------|---------------|-----------------|-------------|
+| `TYPE_DBVAL` | `dbval` (DB_VALUE inline) | Compile time | Literal constant — embedded in the XASL stream |
+| `TYPE_CONSTANT` | `dbvalptr` (DB_VALUE *) | Prepare time | Points to host-var slot or cached bound value |
+| `TYPE_ORDERBY_NUM` | `dbvalptr` (DB_VALUE *) | Per tuple | `ORDERBY_NUM()` result slot |
+| `TYPE_INARITH` | `arithptr` (ARITH_TYPE *) | Per tuple (once) | Input arithmetic — evaluated once, result cached in `arithptr->value` |
+| `TYPE_OUTARITH` | `arithptr` (ARITH_TYPE *) | Per tuple (always) | Output arithmetic — always re-evaluated |
+| `TYPE_ATTR_ID` | `attr_descr` (ATTR_DESCR) | Per tuple | Fetch heap attribute from current tuple |
+| `TYPE_CLASS_ATTR_ID` | `attr_descr` (ATTR_DESCR) | Per access | Class-level (static) attribute |
+| `TYPE_SHARED_ATTR_ID` | `attr_descr` (ATTR_DESCR) | Per access | Shared attribute |
+| `TYPE_POSITION` | `pos_descr` (QFILE_TUPLE_VALUE_POSITION) | Per tuple | Positional reference into list-file tuple columns |
+| `TYPE_LIST_ID` | `srlist_id` (QFILE_SORTED_LIST_ID *) | Per subquery execution | Sorted list file (subquery result, used for IN / EXISTS) |
+| `TYPE_POS_VALUE` | `val_pos` (int) | Per binding | Positional host variable (CAS binding slot index) |
+| `TYPE_OID` | — (no union field) | Per tuple | Current scan object OID |
+| `TYPE_CLASSOID` | — (no union field) | Per tuple | Current scan class OID |
+| `TYPE_FUNC` | `funcp` (FUNCTION_TYPE *) | Per tuple | Built-in scalar function call (regex, JSON, string, etc.) |
+| `TYPE_REGUVAL_LIST` | `reguval_list` (REGU_VALUE_LIST *) | Per row | VALUES list for multi-row INSERT |
+| `TYPE_REGU_VAR_LIST` | `regu_var_list` (REGU_VARIABLE_LIST) | Per partition | `CUME_DIST` / `PERCENT_RANK` argument list |
+| `TYPE_SP` | `sp_ptr` (sp_node *) | Per tuple | Stored procedure invocation |
 
 ## Class layout
 
