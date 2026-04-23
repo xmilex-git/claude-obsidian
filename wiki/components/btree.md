@@ -1,0 +1,220 @@
+---
+type: component
+parent_module: "[[modules/src|src]]"
+path: "src/storage/btree.c"
+status: active
+purpose: "B+tree index manager: point lookup, range scan, insert, MVCC delete, bulk load, unique constraint tracking, and online index build"
+key_files:
+  - "btree.c (~37K lines) — full implementation; use function index to navigate"
+  - "btree.h — public API, BTREE_SCAN, BTID_INT, BTREE_OP_PURPOSE enums"
+  - "btree_load.c / btree_load.h — bulk index loading (sorted insert), page constants"
+  - "btree_unique.hpp — btree_unique_stats / multi_index_unique_stats (C++ classes)"
+public_api:
+  - "btree_insert(thread_p, btid, key, cls_oid, oid, op_type, unique_stat_info, unique, mvcc_header)"
+  - "btree_mvcc_delete(thread_p, btid, key, class_oid, oid, op_type, ...)"
+  - "btree_update(thread_p, btid, old_key, new_key, cls_oid, oid, op_type, ...)"
+  - "btree_keyval_search(thread_p, btid, scan_op_type, bts, key_val_range, ...)"
+  - "btree_range_scan(thread_p, bts, key_func)"
+  - "btree_range_scan_select_visible_oids(thread_p, bts)"
+  - "btree_prepare_bts(thread_p, bts, btid, index_scan_id_p, key_val_range, ...)"
+  - "btree_find_key(thread_p, btid, oid, key, clear_key)"
+  - "btree_find_min_or_max_key(thread_p, btid, key, flag_minkey)"
+  - "btree_locate_key(thread_p, btid_int, key, pg_vpid, slot_id, leaf_page_out, found_p)"
+  - "btree_online_index_dispatcher / btree_online_index_list_dispatcher"
+  - "btree_vacuum_object / btree_vacuum_insert_mvccid"
+tags:
+  - component
+  - cubrid
+  - storage
+  - btree
+  - index
+related:
+  - "[[components/storage|storage]]"
+  - "[[components/page-buffer|page-buffer]]"
+  - "[[components/heap-file|heap-file]]"
+  - "[[components/transaction|transaction]]"
+created: 2026-04-23
+updated: 2026-04-23
+---
+
+# `btree.c` — B+Tree Index Manager
+
+CUBRID's index engine implements a B+tree (leaves linked left-to-right) with full MVCC support, online index builds, and key prefix compression. The main file is ~37 K lines; navigating it requires a function index approach.
+
+> [!warning] btree.c size
+> At ~37 K lines, `btree.c` is one of the largest files in the engine. Do not attempt to read it top-to-bottom. Use the function table below to jump to relevant sections.
+
+## Node Structure
+
+| Node type | Enum | Description |
+|-----------|------|-------------|
+| `BTREE_LEAF_NODE` | 0 | Leaf: stores `(key, OID+MVCC_INFO)` tuples, linked horizontally |
+| `BTREE_NON_LEAF_NODE` | 1 | Internal: stores `(key, child_VPID)` pairs |
+| `BTREE_OVERFLOW_NODE` | 2 | Overflow OID pages for keys with many duplicates |
+
+### Key Internal Structs
+
+```c
+/* Per-record header in a leaf or non-leaf slot */
+struct leaf_rec {
+  VPID ovfl;        /* first overflow OID page, or NULL */
+  short key_len;
+};
+struct non_leaf_rec {
+  VPID pnt;         /* child page pointer */
+  short key_len;
+};
+
+/* Full B-tree descriptor (passed through all internal calls) */
+struct btid_int {
+  BTID        *sys_btid;
+  int          unique_pk;          /* is unique / is primary key flags */
+  int          part_key_desc;      /* last partial-key domain is DESC */
+  TP_DOMAIN   *key_type;
+  TP_DOMAIN   *nonleaf_key_type;   /* may differ from key_type for prefix keys */
+  VFID         ovfid;              /* overflow key file */
+  int          rev_level;
+  OID          topclass_oid;
+};
+```
+
+### MVCC Info in Leaf Records
+
+```c
+struct btree_mvcc_info {
+  short    flags;           /* HAS_INSID | HAS_DELID flags */
+  MVCCID   insert_mvccid;
+  MVCCID   delete_mvccid;
+};
+```
+
+Every live row in a leaf record carries its insert MVCCID; deleted rows additionally carry a delete MVCCID. Vacuum (`btree_vacuum_insert_mvccid`, `btree_vacuum_object`) removes these once the MVCCID becomes globally visible.
+
+## Scan Architecture (`BTREE_SCAN`)
+
+`BTREE_SCAN` (BTS) is the per-scan cursor. Key fields:
+
+| Field | Purpose |
+|-------|---------|
+| `btid_int` | B-tree descriptor |
+| `C_vpid`, `C_page` | Current leaf page |
+| `P_vpid`, `P_page` | Previous leaf page (for backward scan) |
+| `slot_id` | Current slot within leaf |
+| `cur_key` | Current key value (`DB_VALUE`) |
+| `key_range` | Lower/upper bounds (`BTREE_KEYRANGE`) |
+| `key_filter` | Post-key predicate filter |
+| `use_desc_index` | Descending scan flag |
+| `common_prefix_size` / `common_prefix_key` | Key compression state |
+| `lock_mode` | S_LOCK or X_LOCK (for next-key locking) |
+| `end_scan` | Scan exhausted |
+
+Initialize with `BTREE_INIT_SCAN(bts)` macro; reset between iterations with `BTREE_RESET_SCAN`.
+
+## Range Scan Flow
+
+```
+btree_prepare_bts()           ← set up BTS with key range + filter
+        │
+        ▼
+btree_range_scan()            ← iterate leaf pages
+        │
+        │  for each qualifying key:
+        ▼
+BTREE_RANGE_SCAN_PROCESS_KEY_FUNC  (e.g. btree_range_scan_select_visible_oids)
+        │
+        ▼
+MVCC snapshot check           ← btree_range_scan_select_visible_oids
+        │
+        ▼
+OID list returned to scan_manager
+```
+
+`btree_range_scan_select_visible_oids` applies the MVCC snapshot to each `(OID, insert_mvccid, delete_mvccid)` tuple, accepting only rows visible to the current transaction.
+
+## Key Compression
+
+> [!key-insight] Common-prefix key compression
+> Leaf pages store a `common_prefix_key` per page. Individual keys store only the suffix that differs. `is_cur_key_compressed` in `BTREE_SCAN` signals that `cur_key` must be concatenated with `common_prefix_key` before use. The compression state is validated in debug builds via `CHECK_VERIFY_COMMON_PREFIX_PAGE_INFO`.
+
+## MVCC Operation Purposes (`btree_op_purpose`)
+
+B-tree insert/delete paths are parameterized by `BTREE_OP_PURPOSE` to handle all MVCC and recovery combinations:
+
+| Purpose | Meaning |
+|---------|---------|
+| `BTREE_OP_INSERT_NEW_OBJECT` | Normal insert with insert MVCCID |
+| `BTREE_OP_INSERT_MVCC_DELID` | Mark existing row as deleted (MVCC delete) |
+| `BTREE_OP_INSERT_MARK_DELETED` | Non-MVCC class mark-delete (e.g. `_db_serial`) |
+| `BTREE_OP_DELETE_OBJECT_PHYSICAL` | Physically remove entry (after vacuum or commit) |
+| `BTREE_OP_DELETE_UNDO_INSERT` | Undo of an insert |
+| `BTREE_OP_DELETE_VACUUM_OBJECT` | Vacuum removes fully invisible entry |
+| `BTREE_OP_DELETE_VACUUM_INSID` | Vacuum removes insert MVCCID only |
+| `BTREE_OP_ONLINE_INDEX_IB_INSERT` | Online index builder insert |
+| `BTREE_OP_ONLINE_INDEX_TRAN_INSERT` | Concurrent transaction insert during index build |
+
+## Unique Constraint Tracking (`btree_unique.hpp`)
+
+```cpp
+class btree_unique_stats {
+  stat_type m_rows;    // rows = keys + nulls
+  stat_type m_keys;    // distinct non-null keys
+  stat_type m_nulls;   // null key rows
+  bool is_unique() const { return m_rows == m_keys + m_nulls; }
+};
+
+class multi_index_unique_stats {
+  std::map<BTID, btree_unique_stats, btid_comparator> m_stats_map;
+};
+```
+
+`multi_index_unique_stats` is embedded in `HEAP_SCANCACHE` to accumulate per-index stats during a DML operation. On commit, `btree_reflect_global_unique_statistics` merges local counts into the global stats on the index root page.
+
+> [!key-insight] Unique check timing
+> Unique violations are checked at the end of the statement (or transaction for deferred constraints), not inline during each insert. `BTREE_NEED_UNIQUE_CHECK` returns `true` for single/multi-row insert and single-row update, but only when the transaction is active.
+
+## Bulk Loading (`btree_load.c`)
+
+Bulk index creation (e.g. `CREATE INDEX`) uses a sorted-insert path optimized for sequential page writes:
+- Fill factor controlled by `PRM_ID_BT_UNFILL_FACTOR` (applied to both leaf and non-leaf via `LOAD_FIXED_EMPTY_FOR_LEAF` / `LOAD_FIXED_EMPTY_FOR_NONLEAF`).
+- `btree_insert_list` struct (in `btree.h`) batches key-OID pairs and can use `m_use_sorted_bulk_insert` for page-boundary-aware insertion.
+- `page_key_boundary` tracks the min/max key of each page to decide when to release the current page latch.
+
+## Latch Ordering
+
+> [!warning] Parent-before-child latch order
+> When traversing the tree (insert, delete, split, merge), latches must be acquired parent-before-child. Violating this order causes deadlocks. The tree uses a crabbing protocol: the parent page is released only after the child page is fixed and determined to be safe (no split/merge needed).
+
+## Recovery Functions
+
+Every structural change has a corresponding `btree_rv_*` function pair (`undo` / `redo`):
+
+- `btree_rv_keyval_undo_insert` / `btree_rv_keyval_undo_delete`
+- `btree_rv_redo_record_modify` / `btree_rv_undo_record_modify`
+- `btree_rv_nodehdr_undoredo_update`, `btree_rv_newpage_redo_init`
+- `btree_rv_redo_global_unique_stats_commit` / `btree_rv_undo_global_unique_stats_commit`
+
+## Fence Keys
+
+Leaf pages use fence keys (OID-marker sentinels) to bound the key range of each page. `btree_capacity.fence_key_cnt` counts them; they are invisible to query results but critical for correct range scans and merges.
+
+## Key Functions Summary
+
+| Function | Role |
+|----------|------|
+| `btree_locate_key` | Binary search on a leaf page for a key |
+| `btree_range_scan` | Full range scan iteration loop |
+| `btree_keyval_search` | Point lookup (wraps range scan with equality range) |
+| `btree_insert` | Insert new `(key, OID)` pair |
+| `btree_mvcc_delete` | Add delete MVCCID to an existing entry |
+| `btree_physical_delete` | Remove an entry from the tree |
+| `btree_vacuum_object` | Vacuum: remove fully invisible entry |
+| `btree_online_index_dispatcher` | Dispatch online index op for a single key |
+| `btree_online_index_list_dispatcher` | Dispatch online index op for a list of keys |
+| `btree_check_foreign_key` | FK constraint check (point lookup) |
+
+## Related
+
+- Parent: [[components/storage|storage]]
+- [[components/page-buffer]] — all page access via pgbuf_fix/unfix
+- [[components/heap-file]] — provides OIDs; heap attributes drive key generation
+- [[components/transaction]] — lock manager for next-key locking; MVCC for visibility
