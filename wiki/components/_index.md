@@ -120,6 +120,12 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Message Catalog (`msg/`)
+
+- [[components/message-catalog|message-catalog]] — POSIX `catgets`-style catalog format, `gencat` build pipeline, `msgcat_*` C loader; three catalogs (`cubrid`, `csql`, `utils`); four locales (`en_US.utf8`, `en_US`, `ko_KR.utf8`, `ko_KR.euckr`)
+
+---
+
 ## Bundled 3rd-party (`src/heaplayers/`)
 
 - [[components/heaplayers|heaplayers]] — Heap Layers (Emery Berger); `lea_heap.c` ~181 KB Doug Lea malloc; do-not-modify; excluded from cppcheck; SERVER_MODE LEA heap backend for `db_private_alloc`
