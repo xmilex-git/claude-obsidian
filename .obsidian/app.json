@@ -8,7 +8,9 @@
     "README.md",
     "CLAUDE.md",
     "WIKI.md",
-    "Welcome.md"
+    "Welcome.md",
+    "website/",
+    ".github/"
   ],
   "promptDelete": false
 }
