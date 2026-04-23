@@ -48,6 +48,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 - [[sources/cubrid-src-debugging|cubrid-src-debugging]] — `src/debugging/` compile-time type name helpers; header-only; zero release-build footprint (2026-04-23)
 - [[sources/cubrid-src-heaplayers|cubrid-src-heaplayers]] — `src/heaplayers/` bundled Heap Layers (Emery Berger); `lea_heap.c` ~181 KB dlmalloc; 3rd-party, do-not-modify (2026-04-23)
 - [[sources/cubrid-src-api|cubrid-src-api]] — `src/api/` CDC Change Data Capture client API: cubrid_log.h/c, four-phase model, LSA-based log extraction (2026-04-23)
+- [[sources/cubrid-src-win-tools|cubrid-src-win-tools]] — `src/win_tools/` Windows NT service host, CLI control client, MFC tray app (2026-04-23)
 
 ---
 
