@@ -1,7 +1,7 @@
 ---
 type: meta
 title: "Sources Index"
-updated: 2026-04-07
+updated: 2026-04-23
 tags:
   - meta
   - index
@@ -11,7 +11,7 @@ related:
   - "[[index]]"
   - "[[log]]"
   - "[[entities/_index]]"
-  - "[[Andrej Karpathy]]"
+  - "[[CUBRID]]"
 ---
 
 # Sources Index
