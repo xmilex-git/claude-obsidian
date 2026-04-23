@@ -5,7 +5,7 @@ path: "src/xasl/ (type headers) + src/query/xasl.h (main node)"
 status: active
 purpose: "eXecutable Algebraic Statement Language — the serializable query-plan tree that crosses the client→server wire; produced by xasl_generation, deserialized by stream_to_xasl, executed by query_executor"
 key_files:
-  - "src/query/xasl.h (XASL_NODE — main plan node, PROC_TYPE enum, access-spec types)"
+  - "src/query/xasl.h (XASL_NODE — main plan node, PROC_TYPE enum, ACCESS_SPEC_TYPE, XASL flags, XASL_STREAM struct, macros)"
   - "src/query/regu_var.hpp (regu_variable_node / REGU_VARIABLE — the expression atom)"
   - "src/xasl/xasl_predicate.hpp (PRED_EXPR, EVAL_TERM, REL_OP, BOOL_OP)"
   - "src/xasl/xasl_aggregate.hpp (AGGREGATE_TYPE / aggregate_list_node)"
@@ -15,6 +15,8 @@ key_files:
   - "src/xasl/xasl_sp.hpp (SP_TYPE — stored-procedure invocation)"
   - "src/query/xasl_to_stream.c (client side: xts_map_xasl_to_stream)"
   - "src/query/stream_to_xasl.c (server side: stx_map_stream_to_xasl)"
+  - "src/query/xasl_cache.h (XASL_CACHE_ENTRY, xcache_* API)"
+  - "src/query/subquery_cache.h (SQ_CACHE, XASL_USES_SQ_CACHE)"
 public_api:
   - "xts_map_xasl_to_stream(xasl, stream) → int   [client only, !SERVER_MODE]"
   - "stx_map_stream_to_xasl(thread_p, &xasl_tree, use_clone, buf, size, &unpack_info) → int   [server/SA]"
