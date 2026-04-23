@@ -55,6 +55,15 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/parallel-query-execute|parallel-query-execute]] — subquery parallelism
 - [[components/parallel-sort|parallel-sort]] — external sort parallelism
 
+## XASL (`src/xasl/` + `src/query/xasl.h`)
+
+- [[components/xasl|xasl]] — XASL hub: eXecutable Algebraic Statement Language; XASL_NODE plan tree; client→server serialisation; PROC_TYPE enum
+- [[components/xasl-stream|xasl-stream]] — serialisation protocol: offset-based pointer encoding, stx_build/stx_restore, XASL_UNPACK_INFO visited-pointer table
+- [[components/regu-variable|regu-variable]] — REGU_VARIABLE expression atom: 17-way discriminated union (attr, arith, func, subquery, host-var, …)
+- [[components/xasl-predicate|xasl-predicate]] — PRED_EXPR boolean tree: AND/OR/NOT combinators; COMP/ALSM/LIKE/RLIKE eval-term leaves
+- [[components/xasl-aggregate|xasl-aggregate]] — AGGREGATE_TYPE: aggregate function nodes with serialised fields + server-only accumulator
+- [[components/xasl-analytic|xasl-analytic]] — ANALYTIC_TYPE / ANALYTIC_EVAL_TYPE: window function nodes grouped by compatible sort specs
+
 ## Parser (`src/parser/`)
 
 - [[components/parser|parser]] — SQL frontend hub: lexer → bison → PT_NODE → name resolution → semantic check → XASL generation
