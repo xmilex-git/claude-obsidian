@@ -184,11 +184,49 @@ void regu_variable_node::map_regu_and_xasl(
 
 The `flags`, `domain`, and `original_domain` are serialised; `vfetch_to` and the server-only parts of sub-structures are initialised at execution time.
 
+## `REGU_VARIABLE_LIST` chaining
+
+`REGU_VARIABLE_LIST` is a typedef for `regu_variable_list_node *`:
+
+```c
+struct regu_variable_list_node {
+  regu_variable_list_node *next;
+  regu_variable_node       value;   // embedded, not a pointer
+};
+```
+
+Lists are singly linked, terminated by `next == NULL`. Used for function argument lists (`FUNCTION_TYPE.operand`), GROUP BY key lists, analytic window partition lists, etc. The embedded `value` (not a pointer) means the serializer packs each node inline in the stream.
+
+---
+
+## Interaction with query-evaluator
+
+The primary evaluation call is `fetch_val_list(thread_p, regu_list)` which iterates a `REGU_VARIABLE_LIST` and calls `qexec_eval_regu(thread_p, regu, vd)` for each node. The `vd` (value descriptor, `VAL_DESCR`) carries:
+- `dbval_ptr` — array of `DB_VALUE *` for host variables (bound by CAS)
+- `xasl_state` — parent XASL's status (needed for `EXECUTE_REGU_VARIABLE_XASL`)
+
+`TYPE_ATTR_ID` evaluation calls `heap_attrinfo_read_dbvalues` to fetch the column from the current tuple's `HEAP_CACHE_ATTRINFO`. The `cache_attrinfo` pointer in `ATTR_DESCR` is populated at scan open time, not at plan construction time.
+
+---
+
+## Serialisation details
+
+`regu_variable_node` has a `stx_build` overload in `xasl_stream.hpp`. The full union is packed field-by-field based on `type`:
+- `TYPE_DBVAL` → inline `DB_VALUE` packed with `or_pack_db_value`
+- `TYPE_CONSTANT`, `TYPE_ORDERBY_NUM` → the `DB_VALUE *` is packed as an offset into the stream's host-variable array
+- `TYPE_INARITH`, `TYPE_OUTARITH` → `ARITH_TYPE *` packed recursively; `rand_seed` is server-only, not packed
+- `TYPE_FUNC` → `FUNCTION_TYPE *` packed recursively; `tmp_obj` (compiled regex) is server-only, set to NULL on unpack
+- `TYPE_SP` → `sp_node *` packed; `sig` (PL signature) is cleared (`clear_xasl_local`) at clone decache
+- `vfetch_to` (the fetch target pointer) is NOT serialised — it is set at scan open time
+
+---
+
 ## Related
 
 - [[components/xasl|xasl]] — hub: XASL_NODE and how regu variables are used
 - [[components/xasl-predicate|xasl-predicate]] — `PRED_EXPR` whose eval_terms contain `REGU_VARIABLE *`
 - [[components/xasl-generation|xasl-generation]] — `pt_to_regu_variable` creates REGU_VARIABLEs from PT_EXPRs
-- [[components/query-executor|query-executor]] — evaluates regu variables at runtime
+- [[components/query-executor|query-executor]] — evaluates regu variables at runtime via `fetch_val_list` / `qexec_eval_regu`
 - [[components/xasl-stream|xasl-stream]] — serialisation protocol
+- [[components/subquery-cache|subquery-cache]] — per-execution result memoization for `TYPE_LIST_ID` / subquery links
 - Source: [[sources/cubrid-src-xasl|cubrid-src-xasl]]
