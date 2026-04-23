@@ -35,7 +35,25 @@ status: active
 - `qexec_execute_mainblock` ~27 K lines = single dispatch for SELECT, all DML, set ops, CONNECT BY, MERGE.
 - `SCAN_ID` = polymorphic union over **15** scan types.
 - Hash GROUP BY 2-phase spill (2000 tuple calibration, 50% selectivity).
+- Hash join partition count computed upfront — **no mid-build spill**.
 - Parallel: single global named pool `"parallel-query"`, lock-free CAS reservation, log auto-degree.
+- `arithmetic.c` owns 22 JSON scalar functions + `SLEEP()` (server-thread `usleep`)
+- `DB_NUMERIC` is **16-byte two's-complement big-integer** (NOT BCD)
+- DBLink password crypto = time-seeded XOR **obfuscation** (not a cipher)
+- AND predicate short-circuits on V_FALSE, **NOT V_UNKNOWN** (correct 3VL)
+- `qdata_evaluate_generic_function` is dead stub
+- `scan-json-table` re-evaluates RapidJSON Pointer per row (no path cache)
+- New SQL function registration = `qdata_evaluate_function` switch in `query_opfunc.c`
+
+### Parallel query internals (post-round-5 deep dive)
+- CAS reservation: `compare_exchange_weak` in-place update on failure; `push_task` fetch_add(release) pairs with `wait_workers` acquire
+- MPMC slot ABA: sequence cycles `i → i+cap → i+2·cap`; dual CAS (enqueue expects `pos`, dequeue expects `pos+capacity`) + separate `ready` bool
+- `atomic_instnum` uses `fetch_add` (over-emit tolerated)
+- `err_messages::move_top_error_message_to_this()` SWAPS thread-local error into shared list
+- `REGISTER_WORKERPOOL` at static-init; `call_once` failure is permanent
+- Worker reservation via `try_reserve_workers(N)` returns 0 on contention (non-blocking)
+- Parallel query-executor supports nested parallelism via parent-executor ctor (borrows pool)
+- heap-scan trace uses Jansson JSON aggregator; query-executor trace uses XASL_STATS struct
 
 ### Storage / transactions
 - Buffer pool: **3-zone LRU** (hot/buffer/victim); only zone 3 evictable.
