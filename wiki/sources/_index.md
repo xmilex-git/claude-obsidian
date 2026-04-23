@@ -60,6 +60,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 - [[sources/cubrid-timezones|cubrid-timezones]] — `timezones/` IANA tzdata + build toolchain → libcubrid_timezones (2026-04-23)
 - [[sources/cubrid-src-query-operators|cubrid-src-query-operators]] — `src/query/` operator & evaluator family: arithmetic, numeric, string, regex, crypto, opfunc, evaluator (2026-04-23)
 - [[sources/cubrid-contrib|cubrid-contrib]] — `contrib/` contributor drivers (Python/PHP/Perl/Ruby/.NET/Hibernate), observability, deployment (2026-04-23)
+- [[sources/cubrid-query-scan-family|cubrid-query-scan-family]] — `src/query/` scan-family deep dive: hash, set, show, JSON_TABLE, partition pruning (2026-04-23)
 
 ---
 
