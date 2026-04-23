@@ -196,3 +196,13 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/monitor|monitor]] — hub: runtime perf statistics; `statistic_value` wire type; global named registry; per-transaction sheet tracking; VACUUM ovfp threshold (server-only)
 - [[components/perfmon|perfmon]] — core API: primitive/atomic templates (accumulator, gauge, max, min), composite stats (`counter_timer_statistic`), autotimer RAII, name builders
 - [[components/stats-collection|stats-collection]] — aggregation model: always-on global counters + optional per-transaction sheet isolation; snapshot-delta pattern; overhead characteristics
+
+---
+
+## Executables (`src/executables/`)
+
+- [[components/executables|executables]] — hub: all CUBRID binary entry points, binary inventory, build-mode link split
+- [[components/cub-server-main|cub-server-main]] — `server.c` entry point: signal handlers, `net_server_start()` handoff
+- [[components/csql-shell|csql-shell]] — CSQL REPL: DSO-based SA/CS mode switch, session commands, readline, result display
+- [[components/cub-master-main|cub-master-main]] — `master.c` main loop: `select()` event loop, connection dispatch, auto-restart
+- [[components/utility-binaries|utility-binaries]] — admin utilities: createdb, unloaddb, compactdb, backupdb, killtran, cubrid service front-end
