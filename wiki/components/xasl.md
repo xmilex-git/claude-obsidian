@@ -253,21 +253,34 @@ struct access_spec_node {
 
 ---
 
-## XASL flags
+## XASL flags (complete bitmask)
 
-Common `XASL_NODE.flag` bits (checked via `XASL_IS_FLAGED`):
+`XASL_NODE.flag` bits, checked/set/cleared via `XASL_IS_FLAGED` / `XASL_SET_FLAG` / `XASL_CLEAR_FLAG`:
 
-| Flag | Meaning |
-|------|---------|
-| `XASL_TOP_MOST_XASL` | Root of the plan tree |
-| `XASL_TO_BE_CACHED` | Result will be cached |
-| `XASL_ZERO_CORR_LEVEL` | Uncorrelated subquery |
-| `XASL_LINK_TO_REGU_VARIABLE` | Subquery linked from a regu variable |
-| `XASL_USES_MRO` | Multi-range optimisation active |
-| `XASL_HAS_CONNECT_BY` | Hierarchical query |
-| `XASL_DECACHE_CLONE` | Force clone decache at end |
-| `XASL_USES_SQ_CACHE` | Subquery uses result cache |
-| `XASL_NO_PARALLEL_SUBQUERY` | Parallel subquery disabled for this node |
+| Bit | Constant | Meaning |
+|-----|----------|---------|
+| 0x0001 | `XASL_LINK_TO_REGU_VARIABLE` | Subquery is linked from a `REGU_VARIABLE.xasl` pointer |
+| 0x0002 | `XASL_SKIP_ORDERBY_LIST` | Skip ORDER BY list (result already sorted) |
+| 0x0004 | `XASL_ZERO_CORR_LEVEL` | Uncorrelated subquery (zero-correlation level) |
+| 0x0008 | `XASL_TOP_MOST_XASL` | Root node of the plan tree |
+| 0x0010 | `XASL_TO_BE_CACHED` | Result list file will be cached (used by XASL_USES_SQ_CACHE path) |
+| 0x0020 | `XASL_HAS_NOCYCLE` | `CONNECT BY NOCYCLE` specified |
+| 0x0040 | `XASL_HAS_CONNECT_BY` | Has `CONNECT BY` clause |
+| 0x0080 | `XASL_MULTI_UPDATE_AGG` | Multi-table UPDATE with aggregate |
+| 0x0100 | `XASL_IGNORE_CYCLES` | Ignore cycles in LEVEL-based `CONNECT BY` |
+| 0x0200 | `XASL_OBJFETCH_IGNORE_CLASSOID` | Object fetch ignores class OID check |
+| 0x0400 | `XASL_IS_MERGE_QUERY` | Part of a MERGE statement |
+| 0x0800 | `XASL_USES_MRO` | Multi-range optimization active |
+| 0x1000 | `XASL_DECACHE_CLONE` | Decache clone at end (clear accumulators etc.) |
+| 0x2000 | `XASL_RETURN_GENERATED_KEYS` | Return auto-generated keys (INSERT) |
+| 0x4000 | `XASL_NO_FIXED_SCAN` | Disable fixed scan optimization |
+| 0x8000 | `XASL_NEED_SINGLE_TUPLE_SCAN` | EXISTS subquery — stop after one result |
+| 0x10000 | `XASL_INCLUDES_TDE_CLASS` | References a TDE-encrypted class |
+| 0x20000 | `XASL_SAMPLING_SCAN` | Sampling scan (TABLESAMPLE) |
+| 0x40000 | `XASL_USES_SQ_CACHE` | Correlated scalar subquery result cache enabled (see [[components/subquery-cache]]) |
+| 0x80000 | `XASL_NO_PARALLEL_SUBQUERY` | Parallel subquery disabled for this node |
+| 0x100000 | `XASL_ANALYTIC_USES_LIMIT_OPT` | Analytic window uses LIMIT optimization |
+| 0x200000 | `XASL_ANALYTIC_SKIP_SORT` | Analytic window skips sort (already sorted) |
 
 ---
 
