@@ -25,6 +25,14 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-23] save | DragonScale Memory v0.2 — post-adversarial-review
+- Type: concept revision
+- Location: wiki/concepts/DragonScale Memory.md
+- Review: codex exec adversarial review rejected all 7 load-bearing claims in v0.1
+- Changes: weakened LSM analogy, removed strong prompt-cache claim, replaced 0.85 threshold with calibration procedure, justified 2^k as MVP convenience, acknowledged scope-boundary leak for boundary-first autoresearch, added Operational Policies section (retention/tombstones/versioning/conflict/concurrency/provenance/ACL), tagged claims as [sourced]/[derived]/[conjecture], narrowed tagging scope per re-review
+- Re-review result: 7/7 accepted (after one surgical fix on tagging-scope language)
+- Phase 0 complete. Phase 1 (wiki-fold skill) gated on human approval.
+
 ## [2026-04-23] save | DragonScale Memory — Phase 0 design doc (proposed)
 - Type: concept
 - Location: wiki/concepts/DragonScale Memory.md
