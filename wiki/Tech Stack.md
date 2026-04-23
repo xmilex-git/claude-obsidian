@@ -50,7 +50,20 @@ related:
 
 ## Bundled (`3rdparty/`)
 
-Populated by future ingest. See [[dependencies/_index]].
+See [[modules/3rdparty|3rdparty module]] and [[dependencies/_index|Dependencies]] for full detail.
+
+| Library | Version | Purpose |
+|---------|---------|---------|
+| [[dependencies/libexpat\|libexpat]] | 2.6.4 | XML parsing |
+| [[dependencies/jansson\|Jansson]] | 2.10 | JSON DOM manipulation |
+| [[dependencies/libedit\|libedit]] | csql_v1.2 | csql CLI line editing |
+| [[dependencies/openssl\|OpenSSL]] | 1.1.1w (EOL) | TLS/SSL, crypto |
+| [[dependencies/unixodbc\|unixODBC]] | 2.3.9 | ODBC driver manager |
+| [[dependencies/lz4\|LZ4]] | 1.9.4 | Block compression |
+| [[dependencies/rapidjson\|RapidJSON]] | 1.1.0 | Header-only JSON parsing |
+| [[dependencies/re2\|RE2]] | 2022-06-01 | Linear-time regex |
+| [[dependencies/libtbb\|Intel oneTBB]] | 2021.11.0 | Parallel query (server-only) |
+| [[dependencies/flex-bison\|Flex / Bison]] | 2.6.4 / 3.4.1 | Build-time parser codegen |
 
 ## Submodules (`.gitmodules`)
 - [[cubrid-cci]]
