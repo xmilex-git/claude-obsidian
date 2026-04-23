@@ -158,6 +158,7 @@ css_tcp_master_open()
 
 - [[modules/broker|broker]] processes (CAS) use `css_connect_to_cubrid_server()` as their primary server entry point.
 - [[components/thread|thread]] worker pools (`cubthread`) execute `css_server_task` objects dispatched by the connection pool.
+- [[components/communication|communication]] (`src/communication/`) sits directly above this layer: it defines the `NET_SERVER_REQUEST_LIST` dispatch table, `net_req_act` flags, and packer-based argument serialization. `server_support.c` (this layer) calls `net_server_request()` (communication layer) after extracting the function code from `NET_HEADER`.
 - [[Build Modes (SERVER SA CS)]] governs which files are compiled and whether actual network I/O occurs.
 - [[Architecture Overview]] describes the overall client → broker → CAS → DB server topology.
 
