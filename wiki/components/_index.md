@@ -50,8 +50,12 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/query|query]] — hub page: full XASL execution layer overview
 - [[components/query-executor|query-executor]] — `qexec_execute_mainblock`, XASL dispatch, hash GROUP BY
 - [[components/scan-manager|scan-manager]] — unified scan abstraction (15 scan types)
+- [[components/scan-hash|scan-hash]] — serial in-memory and file-backed hash scan; build/probe; spill-to-partition decision
+- [[components/scan-set|scan-set]] — S_SET_SCAN: iterate DB_SET / DB_MULTISET / DB_SEQUENCE as a virtual table
+- [[components/scan-show|scan-show]] — S_SHOWSTMT_SCAN: virtual scan for SHOW VOLUME HEADER, SHOW THREADS, etc.
+- [[components/scan-json-table|scan-json-table]] — S_JSON_TABLE_SCAN: SQL:2016 JSON_TABLE() depth-first cursor scanner
 - [[components/cursor|cursor]] — client-side result cursor over QFILE_LIST_ID
-- [[components/partition-pruning|partition-pruning]] — runtime partition elimination and DML routing
+- [[components/partition-pruning|partition-pruning]] — runtime partition elimination and DML routing (upgraded)
 - [[components/dblink|dblink]] — remote CUBRID query (CCI) + 2-phase commit
 - [[components/list-file|list-file]] — temp result spool, sort, set ops, result cache
 - [[components/aggregate-analytic|aggregate-analytic]] — GROUP BY / window functions
