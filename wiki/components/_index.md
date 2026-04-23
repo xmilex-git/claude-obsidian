@@ -183,6 +183,14 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Session Layer (`src/session/`)
+
+- [[components/session|session]] — hub: per-connection state container; session variables, prepared statements, holdable cursors, session params, PL session, private LRU partition
+- [[components/session-state|session-state]] — `SESSION_STATE` struct & lifecycle: create/check/destroy, ref_count protocol, 60-second timeout reaper, lock-free hashmap
+- [[components/session-variables|session-variables]] — `@var` user variable bindings (linked list, max 20) and session-level system parameter overrides (`SESSION_PARAM` array, O(1) `prm_Def_session_idx` lookup)
+
+---
+
 ## Performance Monitor (`src/monitor/`)
 
 - [[components/monitor|monitor]] — hub: runtime perf statistics; `statistic_value` wire type; global named registry; per-transaction sheet tracking; VACUUM ovfp threshold (server-only)
