@@ -1,7 +1,7 @@
 ---
 type: meta
 title: "Wiki Index"
-updated: 2026-04-07
+updated: 2026-04-23
 tags:
   - meta
   - index
@@ -12,20 +12,41 @@ related:
   - "[[hot]]"
   - "[[dashboard]]"
   - "[[Wiki Map]]"
-  - "[[concepts/_index]]"
-  - "[[entities/_index]]"
-  - "[[sources/_index]]"
-  - "[[LLM Wiki Pattern]]"
-  - "[[Hot Cache]]"
-  - "[[Compounding Knowledge]]"
-  - "[[Andrej Karpathy]]"
+  - "[[Architecture Overview]]"
+  - "[[Tech Stack]]"
+  - "[[Data Flow]]"
+  - "[[Dependency Graph]]"
+  - "[[Key Decisions]]"
+  - "[[modules/_index]]"
+  - "[[components/_index]]"
+  - "[[decisions/_index]]"
+  - "[[dependencies/_index]]"
+  - "[[flows/_index]]"
 ---
 
 # Wiki Index
 
-Last updated: 2026-04-08 | Total pages: 26 | Sources ingested: 2
+Last updated: 2026-04-23 | Mode: B (CUBRID codebase) + legacy seed
 
 Navigation: [[overview]] | [[log]] | [[hot]] | [[dashboard]] | [[Wiki Map]] | [[getting-started]]
+
+---
+
+## CUBRID (Mode B)
+
+Hub pages:
+- [[Architecture Overview]] — topology, subsystems, entry point
+- [[Tech Stack]] — languages, build, bundled libs
+- [[Data Flow]] — query path and lifecycles
+- [[Dependency Graph]] — internal + external deps
+- [[Key Decisions]] — ADR roll-up
+
+Sub-indexes:
+- [[modules/_index|Modules]] — per top-level source directory
+- [[components/_index|Components]] — subsystems (optimizer, lock mgr, …)
+- [[decisions/_index|Decisions]] — ADRs
+- [[dependencies/_index|Dependencies]] — external / bundled libs
+- [[flows/_index|Flows]] — request paths
 
 ---
 
