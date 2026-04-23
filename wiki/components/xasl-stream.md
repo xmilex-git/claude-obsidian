@@ -157,11 +157,94 @@ Used in debug builds to validate that pack→unpack is a round-trip identity.
 
 ## CS_MODE note
 
-In `CS_MODE`, `stx_restore<T>` is a no-op (reads the offset int and sets `target = NULL`). This allows `xasl_stream.hpp` to be included in client builds for debug-comparison purposes without pulling in server allocation.
+In `CS_MODE`, `stx_restore<T>` is a **no-op** — it reads the offset integer and sets `target = NULL` without allocating anything. This allows `xasl_stream.hpp` to compile in client builds for debug round-trip validation (`xasl_stream_compare`) without pulling in server allocators.
+
+> [!key-insight] CS_MODE stx_restore is intentionally a no-op
+> The deserialiser header is shared across all three build modes because the comparison helpers (`xasl_stream_compare` for JSON table types) are used in debug builds on the client side. The no-op definition ensures the code compiles clean without SERVER/SA allocator symbols.
+
+---
+
+## Pack function families
+
+The client packer in `xasl_to_stream.c` uses a consistent naming convention:
+
+| Family | Example | Purpose |
+|--------|---------|---------|
+| `xts_save_*` | `xts_save_xasl_node`, `xts_save_regu_variable` | Pack a structure instance to the stream |
+| `xts_get_offset_visited_ptr` | — | Deduplication: check if pointer already packed; return its offset |
+| `xts_mark_ptr_visited` | — | Register freshly packed pointer → offset |
+| `or_pack_*` | `or_pack_int`, `or_pack_db_value` | Low-level field serialisation (from `object_representation.h`) |
+
+The server unpacker in `stream_to_xasl.c` mirrors this:
+
+| Family | Example | Purpose |
+|--------|---------|---------|
+| `stx_build` | `stx_build(thread_p, buf, node)` | Overloaded template: populate `node` from `buf` |
+| `stx_restore<T>` | `stx_restore<xasl_node>(thread_p, ptr, target)` | Read offset, check visited-table, alloc+build if new |
+| `stx_alloc_struct` | `stx_alloc_struct(thread_p, sizeof(T))` | Allocate from `XASL_UNPACK_INFO.alloc_buf` arena |
+| `stx_mark_struct_visited` | — | Register `bufptr → target` in visited hash |
+| `stx_get_struct_visited_ptr` | — | Return cached pointer on second encounter |
+| `or_unpack_*` | `or_unpack_int`, `or_unpack_db_value` | Low-level field deserialisation |
+
+---
+
+## Execution path diagram
+
+```
+CLIENT (CS_MODE / SA_MODE, !SERVER_MODE):
+
+  XASL_NODE tree (in-memory)
+       │
+       ▼  xts_map_xasl_to_stream()
+       │   1. Dry-run size computation
+       │   2. Allocate flat char buffer
+       │   3. Walk tree depth-first: xts_save_xasl_node()
+       │      ├─ for each pointer field: xts_get_offset_visited_ptr() → skip if seen
+       │      │                          or pack at new offset + mark visited
+       │      └─ or_pack_* each scalar field
+       │
+  XASL_STREAM { buffer, buffer_size, xasl_id, xasl_header }
+       │
+       │  [TCP / shared memory]
+       ▼
+
+SERVER (SERVER_MODE / SA_MODE):
+
+  XASL_STREAM (flat byte buffer received)
+       │
+       ▼  stx_map_stream_to_xasl()
+       │   1. Pre-allocate arena: UNPACK_SCALE × stream_size bytes
+       │   2. stx_restore<xasl_node>(thread_p, body_ptr, &root)
+       │      ├─ or_unpack_int → offset
+       │      ├─ look up offset in ptr_blocks[256] visited table
+       │      │   hit  → return cached pointer (shared sub-tree dedup)
+       │      │   miss → stx_alloc_struct() from arena
+       │      │          stx_mark_struct_visited(bufptr, target)
+       │      │          stx_build(thread_p, bufptr, *target) → recurse
+       │      └─ repeat for every pointer field
+       │
+  XASL_NODE * (root) + XASL_UNPACK_INFO * (owns arena)
+       │
+       ▼  qexec_execute_mainblock()
+```
+
+---
+
+## Visited-pointer hashtable internals
+
+`XASL_UNPACK_INFO.ptr_blocks[256]` is a fixed-size open-addressed hash table of `STX_VISITED_PTR` entries. Hash index: `((UINTPTR)bufptr / sizeof(UINTPTR)) % 256`. Each block is a flat array with a `ptr_lwm` (low-water-mark = occupied count) and `ptr_max` (capacity). Linear probing within each block.
+
+Key properties:
+- **256 blocks** — `MAX_PTR_BLOCKS` — covering all possible `bufptr % 256` values
+- **4096 entries per block** — `OFFSETS_PER_BLOCK` — before realloc
+- The table maps source buffer pointers to freshly allocated server pointers; any shared sub-structure (e.g. a single `REGU_VARIABLE` referenced from multiple `PRED_EXPR` leaves) is allocated exactly once and reused
+
+---
 
 ## Related
 
-- [[components/xasl|xasl]] — hub: XASL_NODE structure and overall protocol
+- [[components/xasl|xasl]] — hub: XASL_NODE structure, PROC_TYPE enum, four-file rule
+- [[components/xasl-cache|xasl-cache]] — stores the packed stream; calls `stx_map_stream_to_xasl` on cache miss to create clones
 - [[components/xasl-generation|xasl-generation]] — builds the XASL_NODE tree that gets packed
 - [[components/query-executor|query-executor]] — executes the unpacked tree
 - [[Build Modes (SERVER SA CS)]]
