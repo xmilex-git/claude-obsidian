@@ -70,8 +70,8 @@ The transaction layer is the concurrency-control and durability backbone of the 
      (mvcc.c/h)          (lock_manager.c)    (log_manager.c,
                                │              log_append.cpp)
                                │                  │
-                         Wait-for graph      Log Page Buffer
-                         (wait_for_graph.c)  (log_page_buffer.c)
+                         Deadlock detect     Log Page Buffer
+                         (in lock_manager.c) (log_page_buffer.c)
                                                    │
                                               Disk (archive,
                                               active log vol)
