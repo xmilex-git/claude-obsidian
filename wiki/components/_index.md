@@ -68,6 +68,17 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Base Utilities (`src/base/`)
+
+- [[components/base|base]] — hub: error handling, memory, lock-free, porting, i18n, perf monitoring, serialization, system config
+- [[components/error-manager|error-manager]] — `er_set`, severity levels, error stack, ASSERT_ERROR macros; `error_code.h` (~1700 codes)
+- [[components/memory-alloc|memory-alloc]] — `db_private_alloc`, `free_and_init`, `memory_wrapper.hpp` placement rule, area/slab allocator
+- [[components/lockfree|lockfree]] — `lockfree::hashmap<Key,T>` (modern) + `LF_HASH_TABLE` (legacy); epoch-based reclamation
+- [[components/system-parameter|system-parameter]] — ~400 `PRM_ID_*` params; `prm_get_*_value()` API; reads `cubrid.conf`
+- [[components/porting|porting]] — POSIX↔Win32 shims; `EXPORT_IMPORT`; dynamic library loading; `ONE_K`/`ONE_M` constants
+
+---
+
 ## Object / Schema / Auth Layer (`src/object/`)
 
 - [[components/object|object]] — hub: schema, auth, catalog, class representation, LOB locator, workspace, triggers
