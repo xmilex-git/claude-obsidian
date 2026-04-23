@@ -196,14 +196,31 @@ Both functions are compiled from source files in `src/query/` (not `src/xasl/`),
 
 ### Adding a field to XASL — the four-file rule
 
-> [!warning] Serialisation/deserialisation must be kept in sync
-> Adding any field to an XASL structure requires touching **all four**:
-> 1. The header in `src/xasl/` or `src/query/xasl.h` — add the field
-> 2. `xasl_to_stream.c` — pack the field (`or_pack_*` / `stx_build`)
-> 3. `stream_to_xasl.c` — unpack the field (`or_unpack_*` / `stx_restore`)
-> 4. `xasl_generation.c` — populate the field when building the plan
+> [!warning] Serialisation/deserialisation must be kept in sync across four files
+> Adding any field to an XASL structure requires touching **all four**, in order:
+> 1. **`src/xasl/*.hpp` or `src/query/xasl.h`** — declare the field in the struct
+> 2. **`src/query/xasl_to_stream.c`** — add `or_pack_*` / `xts_save_*` call in the client packer
+> 3. **`src/query/stream_to_xasl.c`** — add `or_unpack_*` / `stx_build` call in the server unpacker
+> 4. **`src/parser/xasl_generation.c`** — set the field value when constructing the plan
 >
-> A mismatch between pack and unpack causes a mis-aligned read and typically a crash or silent data corruption at deserialization time.
+> Optionally (if the field needs server-side cache invalidation): also update `xcache_entry_get_entrysize()` in `xasl_cache.c`.
+>
+> A mismatch between pack and unpack causes a mis-aligned read and typically a crash or silent data corruption at deserialization time. The XASL stream is **not versioned** — client and server must be built from the same source.
+
+### `XASL_ID` structure
+
+```c
+struct xasl_id {
+  SHA1Hash   sha1;          // 20 bytes — SHA-1 of rewritten query hash text
+  CACHE_TIME time_stored;   // sec + usec — plan creation timestamp
+  INT32      cache_flag;    // 24-bit ref count + 8-bit status flags (server-only, NOT serialised)
+};
+```
+
+`XASL_ID_EQ` compares `sha1` and `time_stored` only; `cache_flag` is excluded.
+`XASL_ID_COPY` copies `sha1` and `time_stored` only.
+
+The `time_stored` discriminates two plans with identical SQL but compiled at different times (e.g. after a schema change forced recompile). A session holds its stale `time_stored`; the mismatch in `xcache_find_xasl_id_for_execute` triggers transparent re-prepare.
 
 ---
 
