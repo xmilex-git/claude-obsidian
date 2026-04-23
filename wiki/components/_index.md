@@ -120,6 +120,12 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Bundled 3rd-party (`src/heaplayers/`)
+
+- [[components/heaplayers|heaplayers]] — Heap Layers (Emery Berger); `lea_heap.c` ~181 KB Doug Lea malloc; do-not-modify; excluded from cppcheck; SERVER_MODE LEA heap backend for `db_private_alloc`
+
+---
+
 ## Broker Layer (`src/broker/`)
 
 - [[components/broker-impl|broker-impl]] — hub: connection broker (multi-process router), CAS lifecycle, 3-tier topology, connection pooling
