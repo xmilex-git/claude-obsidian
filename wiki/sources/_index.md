@@ -27,6 +27,12 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 
 ---
 
+## CUBRID Codebase Sources
+
+- [[sources/cubrid-src-query|cubrid-src-query]] — `src/query/` XASL execution layer (2026-04-23)
+
+---
+
 ## Articles
 
 <!-- Add article source pages here -->
