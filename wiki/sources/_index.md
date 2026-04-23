@@ -50,6 +50,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 - [[sources/cubrid-src-api|cubrid-src-api]] — `src/api/` CDC Change Data Capture client API: cubrid_log.h/c, four-phase model, LSA-based log extraction (2026-04-23)
 - [[sources/cubrid-src-win-tools|cubrid-src-win-tools]] — `src/win_tools/` Windows NT service host, CLI control client, MFC tray app (2026-04-23)
 - [[sources/cubrid-msg|cubrid-msg]] — `msg/` localized message catalogs: POSIX catgets format, three catalogs, four locales, gencat + iconv build pipeline (2026-04-23)
+- [[sources/cubrid-3rdparty|cubrid-3rdparty]] — `3rdparty/` bundled/downloaded dependencies: 10 libraries, CMake ExternalProject orchestration (2026-04-23)
 
 ---
 
