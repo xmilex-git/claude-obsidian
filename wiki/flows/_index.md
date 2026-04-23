@@ -19,6 +19,12 @@ Request paths, data flows, auth flows, and lifecycle sequences. Examples:
 - Parser → optimizer → executor pipeline
 - Lock acquisition and deadlock detection
 
-Populated by `ingest`. Empty until first ingest.
+## Pages
+
+| Page | Entry point | Exit point |
+|------|-------------|------------|
+| [[flows/dml-execution-path\|dml-execution-path]] | INSERT/UPDATE/DELETE/MERGE SQL | Modified rows + commit ack |
+
+Populated by `ingest`.
 
 Navigation: [[index]] | [[modules/_index|Modules]] | [[Data Flow]]
