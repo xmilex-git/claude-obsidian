@@ -65,3 +65,13 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/view-transform|view-transform]] — mq_translate view inlining; sargable term pushdown; updatability analysis
 - [[components/parser-allocator|parser-allocator]] — parser_block_allocator; arena lifetime model; dealloc no-op
 - [[components/show-meta|show-meta]] — SHOWSTMT_METADATA registry; DBA-only guard; per-type semantic check hooks
+
+---
+
+## Object / Schema / Auth Layer (`src/object/`)
+
+- [[components/object|object]] — hub: schema, auth, catalog, class representation, LOB locator, workspace, triggers
+- [[components/schema-manager|schema-manager]] — class/table DDL lifecycle; SM_TEMPLATE edit-commit pattern; constraint management
+- [[components/system-catalog|system-catalog]] — `_db_class` and friends; info-schema virtual views; CI-enforced 9-rule SQL formatting
+- [[components/authenticate|authenticate]] — users, groups, privilege caching; `authenticate_context`; execution-rights stack for SPs
+- [[components/lob-locator|lob-locator]] — LOB locator state machine (TRANSIENT/PERMANENT); CS/SA mode dispatch
