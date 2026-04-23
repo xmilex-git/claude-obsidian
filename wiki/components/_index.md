@@ -225,3 +225,9 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/csql-shell|csql-shell]] — CSQL REPL: DSO-based SA/CS mode switch, session commands, readline, result display
 - [[components/cub-master-main|cub-master-main]] — `master.c` main loop: `select()` event loop, connection dispatch, auto-restart
 - [[components/utility-binaries|utility-binaries]] — admin utilities: createdb, unloaddb, compactdb, backupdb, killtran, cubrid service front-end
+
+---
+
+## Windows Tools (`src/win_tools/`) — Windows only
+
+- [[components/win-tools|win-tools]] — hub: NT service host (`CUBRIDService`), CLI control client (`ctrlservice`), MFC system-tray app (`CUBRID_Service_Tray`)
