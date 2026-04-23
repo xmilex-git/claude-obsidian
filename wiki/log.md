@@ -25,6 +25,29 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-23] ingest | CUBRID round 5 — src/query + src/query/parallel DEEP DIVE (6 parallel agents)
+- Scope: per-file / per-function granularity for all of `src/query/` top-level (80+ files) + `src/query/parallel/` (top-level + 3 subdirs)
+- Agents dispatched: operators (7 pages), execution helpers (8 pages), scan families (4 + 1 upgrade), XASL+vacuum (6 upgrades/creates), parallel top-level (2 new + 4 upgrades), parallel subdirs (9 pages by agent + 5 manual after rate limit)
+- Pages created/upgraded (total ~45): see [[components/_index]] "Query Operator Family", "Query Execution Layer", "Query Scan Types", "XASL / Cache", "Parallel Query" sections
+- Key insights:
+  - `arithmetic.c` owns 22 JSON scalar functions AND `SLEEP()` (server-thread usleep)
+  - `DB_NUMERIC` is 16-byte two's-complement big-integer (NOT BCD as earlier pages suggested — corrected)
+  - `string_opfunc.c` (~28K lines) has datetime sub-family (~8-10K) that arguably warrants its own file
+  - Regex: RE2 default, std::regex `[[. .]]` collatename intentionally disabled (cross-compiler inconsistency)
+  - DBLink password = time-seeded XOR obfuscation, not a cipher
+  - `qdata_evaluate_generic_function` is a dead stub
+  - AND short-circuits on V_FALSE but NOT on V_UNKNOWN (correct 3VL)
+  - Hash join partition count computed upfront (no mid-build spill); Parallel gated on SERVER_MODE + non-Windows + xasl->parallelism > 1
+  - scan-json-table re-evaluates RapidJSON Pointer per row (no path compile cache)
+  - XASL cache: SHA-1 keyed, session prepared statement holds stale refs (intentional)
+  - CAS reservation: `compare_exchange_weak` in-place update on failure; memory_order release/acquire pair
+  - MPMC slot ABA: sequence cycles i → i+cap → i+2·cap + separate `ready` atomic bool
+  - `atomic_instnum` uses `fetch_add` (CAS not needed — over-emit tolerated)
+  - `err_messages::move_top_error_message_to_this()` SWAPS thread-local error (clears context)
+  - REGISTER_WORKERPOOL runs at static-init (not in init()); call_once failure is permanent
+- AGENTS.md inaccuracy: new SQL function registration = `qdata_evaluate_function` switch in `query_opfunc.c`, not just `fetch.c`
+- Source-code defects surfaced: `sort_copy_sort_param` declared but not implemented in px_sort.c; `TASK_QUEUE_SIZE_PER_CORE = 2` constant unused; `reset_queue` epoch-bump invariant unclear
+
 ## [2026-04-23] ingest | CUBRID round 3e — `api`, `debugging`, `win_tools`, `heaplayers` (parallel)
 - Sources: `.raw/cubrid/src/{api,debugging,win_tools,heaplayers}/`
 - Summaries: [[cubrid-src-api]], [[cubrid-src-debugging]], [[cubrid-src-win-tools]], [[cubrid-src-heaplayers]]
