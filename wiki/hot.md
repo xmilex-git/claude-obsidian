@@ -11,7 +11,7 @@ status: active
 # Recent Context
 
 ## Last Updated
-2026-04-23. **CUBRID full src/ tree ingest complete.** Rounds 1–3e finished. **111 component pages, 27 source summaries.** All 23 src/ subdirectories from CUBRID's project AGENTS.md now have at least one wiki component page; major subsystems have 4–10 pages each.
+2026-04-23. **CUBRID deep-dive complete.** Rounds 1–5 finished. **150 component pages, 34 source summaries, 246 total wiki md.** `src/query/` + `src/query/parallel/` now have per-file / per-function granularity (34 pages in `query-*` + `parallel-*` namespaces alone). All 23 src/ subdirs covered + config/data/docs (`3rdparty`, `locales`, `timezones`, `msg`, `contrib`) + DML + DDL flow pages + lint.
 
 ## Wiki shape
 - `wiki/components/` (111 pages) — one section per CUBRID subsystem
@@ -35,7 +35,25 @@ status: active
 - `qexec_execute_mainblock` ~27 K lines = single dispatch for SELECT, all DML, set ops, CONNECT BY, MERGE.
 - `SCAN_ID` = polymorphic union over **15** scan types.
 - Hash GROUP BY 2-phase spill (2000 tuple calibration, 50% selectivity).
+- Hash join partition count computed upfront — **no mid-build spill**.
 - Parallel: single global named pool `"parallel-query"`, lock-free CAS reservation, log auto-degree.
+- `arithmetic.c` owns 22 JSON scalar functions + `SLEEP()` (server-thread `usleep`)
+- `DB_NUMERIC` is **16-byte two's-complement big-integer** (NOT BCD)
+- DBLink password crypto = time-seeded XOR **obfuscation** (not a cipher)
+- AND predicate short-circuits on V_FALSE, **NOT V_UNKNOWN** (correct 3VL)
+- `qdata_evaluate_generic_function` is dead stub
+- `scan-json-table` re-evaluates RapidJSON Pointer per row (no path cache)
+- New SQL function registration = `qdata_evaluate_function` switch in `query_opfunc.c`
+
+### Parallel query internals (post-round-5 deep dive)
+- CAS reservation: `compare_exchange_weak` in-place update on failure; `push_task` fetch_add(release) pairs with `wait_workers` acquire
+- MPMC slot ABA: sequence cycles `i → i+cap → i+2·cap`; dual CAS (enqueue expects `pos`, dequeue expects `pos+capacity`) + separate `ready` bool
+- `atomic_instnum` uses `fetch_add` (over-emit tolerated)
+- `err_messages::move_top_error_message_to_this()` SWAPS thread-local error into shared list
+- `REGISTER_WORKERPOOL` at static-init; `call_once` failure is permanent
+- Worker reservation via `try_reserve_workers(N)` returns 0 on contention (non-blocking)
+- Parallel query-executor supports nested parallelism via parent-executor ctor (borrows pool)
+- heap-scan trace uses Jansson JSON aggregator; query-executor trace uses XASL_STATS struct
 
 ### Storage / transactions
 - Buffer pool: **3-zone LRU** (hot/buffer/victim); only zone 3 evictable.
@@ -73,6 +91,10 @@ status: active
   - `query-compile-flow` — one SELECT through all 6 parser passes
   - LOB write path: `lob_locator_add` → `es_create_file` → commit/rollback cleanup
   - End-to-end `NET_SERVER_QM_QUERY_EXECUTE` (client pack → CSS → server dispatch → executor → reply)
+- **Source-code defects surfaced during round 5**:
+  - `sort_copy_sort_param` declared in `px_sort.h` but implementation missing in `px_sort.c`
+  - `TASK_QUEUE_SIZE_PER_CORE = 2` constant defined but `thread_create_worker_pool` passes `1`
+  - `reset_queue` epoch-bump invariant unclear — fires only when `pos % capacity == 0 && pos != 0`
 - **Component pages**: `slotted_page`, `xasl_cache`, `query_opfunc`, `vacuum.c` deeper dive, `trigger_manager`, `work_space` (MOP cache), `transform.c`
 - **Contradictions to file with `[!contradiction]` callouts**:
   - `wait_for_graph.c` ownership claim in [[cubrid-AGENTS]] vs reality (dead code)

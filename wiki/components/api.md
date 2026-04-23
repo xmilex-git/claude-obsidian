@@ -32,8 +32,8 @@ updated: 2026-04-23
 
 | File | Component | Role |
 |------|-----------|------|
-| `cubrid_log.h` | [[components/cubrid-log-cdc|cubrid-log-cdc]] | CDC public header |
-| `cubrid_log.c` | [[components/cubrid-log-cdc|cubrid-log-cdc]] | CDC client implementation |
+| `cubrid_log.h` | [[components/cubrid-log-cdc\|cubrid-log-cdc]] | CDC public header |
+| `cubrid_log.c` | [[components/cubrid-log-cdc\|cubrid-log-cdc]] | CDC client implementation |
 
 > [!key-insight] CS_MODE only
 > The entire `cubrid_log.c` is wrapped in `#if defined(CS_MODE)`. The CDC client is a pure client-library feature — it opens a dedicated raw CSS connection to the server and speaks the CDC sub-protocol. It cannot run in `SA_MODE` or `SERVER_MODE`.

@@ -23,9 +23,9 @@ CUBRID compiles **the same source tree** into three different binaries by toggli
 
 | Guard | Output | CMake target dir | Purpose |
 |-------|--------|------------------|---------|
-| `SERVER_MODE` | `cub_server` (binary) | [[modules/cubrid|`cubrid/`]] | DB server process |
-| `SA_MODE` | `cubridsa` (library) | [[modules/sa|`sa/`]] | Standalone — client + server in one process |
-| `CS_MODE` | `cubridcs` (library) | [[modules/cs|`cs/`]] | Client library — connects to remote server |
+| `SERVER_MODE` | `cub_server` (binary) | [[modules/cubrid\|`cubrid/`]] | DB server process |
+| `SA_MODE` | `cubridsa` (library) | [[modules/sa\|`sa/`]] | Standalone — client + server in one process |
+| `CS_MODE` | `cubridcs` (library) | [[modules/cs\|`cs/`]] | Client library — connects to remote server |
 
 ## Implications
 
