@@ -7,7 +7,7 @@ purpose: "MVCC, WAL, locking, deadlock detection, crash recovery, boot, vacuum c
 key_files:
   - "mvcc.c / mvcc.h (MVCC snapshot, visibility: mvcc_satisfies_snapshot)"
   - "lock_manager.c / lock_manager.h (LK_RES, LK_ENTRY, lock hierarchy)"
-  - "wait_for_graph.c / wait_for_graph.h (WFG deadlock detection, DFS cycle finder)"
+  - "wait_for_graph.c / wait_for_graph.h (legacy — gated by ENABLE_UNUSED_FUNCTION; active detector is in lock_manager.c)"
   - "log_append.cpp (WAL write path)"
   - "log_manager.c / log_manager.h (buffer, checkpoint, commit/abort)"
   - "log_record.hpp (LOG_RECORD_HEADER, LOG_RECTYPE enum, LSN)"
