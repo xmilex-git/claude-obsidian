@@ -92,7 +92,7 @@ The transaction layer is the concurrency-control and durability backbone of the 
 |------|-------|-----------|
 | MVCC visibility | `mvcc.c`, `mvcc.h` | [[components/mvcc]] |
 | Lock manager | `lock_manager.c`, `lock_manager.h` | [[components/lock-manager]] |
-| Deadlock detection | `wait_for_graph.c`, `wait_for_graph.h` | [[components/deadlock-detection]] |
+| Deadlock detection | inside `lock_manager.c` (active); `wait_for_graph.c` dead under `ENABLE_UNUSED_FUNCTION` | [[components/deadlock-detection]] |
 | WAL / log manager | `log_manager.c/h`, `log_append.cpp`, `log_record.hpp` | [[components/log-manager]] |
 | Crash recovery | `log_recovery.c` | [[components/recovery]] |
 | Vacuum GC | `src/query/vacuum.c/h` | [[components/vacuum]] |
