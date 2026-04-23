@@ -132,4 +132,5 @@ The `es_local_read_file` / `es_local_get_file_size` functions handle the `ES_LOC
 - Parent: [[components/storage|storage]]
 - [[components/heap-file]] — calls `es_delete_file` via `heap_attrinfo_delete_lob`
 - [[components/object|object]] — LOB locator (`lob_locator.cpp`) manages URI lifecycle
+- [[components/lob-locator|lob-locator]] — LOB locator state machine (TRANSIENT/PERMANENT); client-side lifecycle wrapper
 - [[components/transaction]] — postpone log for LOB deletion ordering
