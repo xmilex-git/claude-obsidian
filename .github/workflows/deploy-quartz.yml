@@ -45,6 +45,8 @@ jobs:
         run: npx quartz build
 
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true  # auto-enable Pages on first run (needs pages:write)
 
       - uses: actions/upload-pages-artifact@v3
         with:
