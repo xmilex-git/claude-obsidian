@@ -199,6 +199,12 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Debug Utilities (`src/debugging/`)
+
+- [[components/debugging|debugging]] — `type_helper.hpp`: compile-time type name stringification; `strict_warnings` (referenced, not yet in tree); zero runtime cost, debug-build-only
+
+---
+
 ## Executables (`src/executables/`)
 
 - [[components/executables|executables]] — hub: all CUBRID binary entry points, binary inventory, build-mode link split
