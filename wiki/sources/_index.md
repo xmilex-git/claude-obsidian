@@ -45,6 +45,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 - [[sources/cubrid-src-monitor|cubrid-src-monitor]] — `src/monitor/` performance statistics: primitives, transaction sheets, global registry, VACUUM ovfp threshold (2026-04-23)
 - [[sources/cubrid-src-session|cubrid-src-session]] — `src/session/` per-connection session state: SESSION_STATE struct, @var bindings, prepared statement cache, holdable cursors (2026-04-23)
 - [[sources/cubrid-src-executables|cubrid-src-executables]] — `src/executables/` binary entry points: cub_server, csql, cub_master, admin utilities (2026-04-23)
+- [[sources/cubrid-src-debugging|cubrid-src-debugging]] — `src/debugging/` compile-time type name helpers; header-only; zero release-build footprint (2026-04-23)
 
 ---
 
