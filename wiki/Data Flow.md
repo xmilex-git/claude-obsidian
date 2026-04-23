@@ -40,6 +40,11 @@ DB Server (src/)
 
 See [[Query Processing Pipeline]] for the full lexer → parser → name resolution → semantic check → XASL gen → serialize → deserialize → execute trace, with file/function pointers.
 
+## End-to-end flow pages
+
+- [[flows/dml-execution-path|DML execution path]] — INSERT / UPDATE / DELETE / MERGE: client compile → wire → server dispatch → heap + B-tree mutation → WAL → commit → vacuum aftermath
+- [[flows/ddl-execution-path|DDL execution path]] — CREATE / ALTER / DROP / GRANT: client-side SM_TEMPLATE copy-on-write + catalog update, no XASL
+
 ## Other flows to document
 
 - Commit + log write + recovery — files in [[components/transaction|`src/transaction/log_*`]]
