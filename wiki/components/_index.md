@@ -90,6 +90,15 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Compat Layer (`src/compat/`)
+
+- [[components/compat|compat]] — hub: public client API surface (`db_*` namespace) and `DB_VALUE` universal value container
+- [[components/db-value|db-value]] — `DB_VALUE` tagged union: `DB_TYPE` enum (41 types), `DB_DATA` union, `need_clear` ownership, `db_make_*` / `db_get_*` patterns
+- [[components/client-api|client-api]] — `db_*` families: connection, transaction, schema DDL, object CRUD, query compile/execute/fetch, LOB, sets
+- [[components/dbi-compat|dbi-compat]] — `dbi_compat.h` umbrella header, `SQLX_CMD_*` alias layer, error-code mirror (place 2 of the 6-place rule)
+
+---
+
 ## Base Utilities (`src/base/`)
 
 - [[components/base|base]] — hub: error handling, memory, lock-free, porting, i18n, perf monitoring, serialization, system config
