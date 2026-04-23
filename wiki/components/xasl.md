@@ -223,7 +223,33 @@ struct access_spec_node {
 };
 ```
 
-`TARGET_TYPE` drives which `HYBRID_NODE` member is valid. Key methods: `ACCESS_METHOD_SEQUENTIAL` (heap), `ACCESS_METHOD_INDEX` (B-tree), `ACCESS_METHOD_JSON_TABLE`, `ACCESS_METHOD_SEQUENTIAL_SAMPLING_SCAN`.
+### `TARGET_TYPE` family (complete)
+
+| Constant | Value | Hybrid union member | Meaning |
+|----------|-------|---------------------|---------|
+| `TARGET_CLASS` | 1 | `cls_node` (CLS_SPEC_TYPE) | Heap/index scan of a class |
+| `TARGET_CLASS_ATTR` | 2 | `cls_node` | Class attribute access |
+| `TARGET_LIST` | 3 | `list_node` (LIST_SPEC_TYPE) | Scan of a temp list file (join side, subquery output) |
+| `TARGET_SET` | 4 | `set_node` (SET_SPEC_TYPE) | Set expression scan |
+| `TARGET_JSON_TABLE` | 5 | json_table node | JSON_TABLE() function |
+| `TARGET_METHOD` | 6 | `method_node` (METHOD_SPEC_TYPE) | Method scan |
+| `TARGET_REGUVAL_LIST` | 7 | `reguval_list_node` | VALUES clause (multi-row INSERT) |
+| `TARGET_SHOWSTMT` | 8 | `showstmt_node` (SHOWSTMT_SPEC_TYPE) | SHOW statement |
+| `TARGET_DBLINK` | 9 | `dblink_node` (DBLINK_SPEC_TYPE) | DBLink remote scan |
+
+### `ACCESS_METHOD` family (complete)
+
+| Constant | Meaning |
+|----------|---------|
+| `ACCESS_METHOD_SEQUENTIAL` | Full heap scan |
+| `ACCESS_METHOD_INDEX` | B-tree index scan |
+| `ACCESS_METHOD_JSON_TABLE` | JSON_TABLE scan |
+| `ACCESS_METHOD_SCHEMA` | Schema (catalog) access |
+| `ACCESS_METHOD_SEQUENTIAL_RECORD_INFO` | Heap scan reading page/slot metadata |
+| `ACCESS_METHOD_SEQUENTIAL_PAGE_SCAN` | Page-only scan (no record data) |
+| `ACCESS_METHOD_INDEX_KEY_INFO` | Index scan for key info |
+| `ACCESS_METHOD_INDEX_NODE_INFO` | B-tree node info scan |
+| `ACCESS_METHOD_SEQUENTIAL_SAMPLING_SCAN` | Statistical sampling scan |
 
 ---
 
