@@ -24,6 +24,7 @@ Request paths, data flows, auth flows, and lifecycle sequences. Examples:
 | Page | Entry point | Exit point |
 |------|-------------|------------|
 | [[flows/dml-execution-path\|dml-execution-path]] | INSERT/UPDATE/DELETE/MERGE SQL | Modified rows + commit ack |
+| [[flows/ddl-execution-path\|ddl-execution-path]] | CREATE/ALTER/DROP/GRANT/REVOKE SQL | Schema commit + catalog updated |
 
 Populated by `ingest`.
 
