@@ -25,6 +25,15 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-23] scaffold | CUBRID Mode B overlay
+- Type: scaffold
+- Mode: B (GitHub / codebase)
+- Source tree: /Users/song/DEV/cubrid
+- Created folders: wiki/modules, wiki/components, wiki/decisions, wiki/dependencies, wiki/flows
+- Created hub pages: [[Architecture Overview]], [[Tech Stack]], [[Data Flow]], [[Dependency Graph]], [[Key Decisions]]
+- Created _templates: module, component, decision, dependency, flow
+- Updated CLAUDE.md with CUBRID scope and Mode B conventions
+
 ## [2026-04-08] save | claude-obsidian v1.4 Release Session
 - Type: session
 - Location: wiki/meta/claude-obsidian-v1.4-release-session.md
