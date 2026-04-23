@@ -17,6 +17,19 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Transaction Layer (`src/transaction/`)
+
+- [[components/transaction|transaction]] — hub: MVCC, WAL, locking, deadlock detection, recovery, boot, vacuum
+- [[components/mvcc|mvcc]] — `MVCC_REC_HEADER`, snapshot, `mvcc_satisfies_snapshot` visibility predicate
+- [[components/lock-manager|lock-manager]] — `LK_RES`/`LK_ENTRY`, 8 lock modes, hierarchical acquire/release, escalation
+- [[components/deadlock-detection|deadlock-detection]] — wait-for graph, DFS cycle finder, youngest-victim policy
+- [[components/log-manager|log-manager]] — WAL append path, `LOG_RECORD_HEADER`, 52 record types, checkpoint, commit/abort
+- [[components/recovery|recovery]] — ARIES crash recovery: analysis → redo → undo; CLR; 2PC; atomic sysops
+- [[components/vacuum|vacuum]] — MVCC GC daemon (in `src/query/`); master + up-to-50 workers; heap/btree cleanup
+- [[components/server-boot|server-boot]] — subsystem init order, `BOOT_DB_PARM`, crash-recovery entry point
+
+---
+
 ## Storage Layer (`src/storage/`)
 
 - [[components/storage|storage]] — overview: buffer pool, B-tree, heap, file/disk management, external sort, LOB
