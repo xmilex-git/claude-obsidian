@@ -1,0 +1,34 @@
+{
+  "sources": {
+    ".raw/cubrid/AGENTS.md": {
+      "hash": "946ec2715e851332b3d414853aebe1d4",
+      "ingested_at": "2026-04-23",
+      "pages_created": [
+        "wiki/sources/cubrid-AGENTS.md",
+        "wiki/entities/CUBRID.md",
+        "wiki/concepts/Query Processing Pipeline.md",
+        "wiki/concepts/Build Modes (SERVER SA CS).md",
+        "wiki/concepts/Memory Management Conventions.md",
+        "wiki/concepts/Error Handling Convention.md",
+        "wiki/concepts/Code Style Conventions.md",
+        "wiki/modules/src.md",
+        "wiki/modules/broker.md",
+        "wiki/modules/pl_engine.md",
+        "wiki/modules/unit_tests.md",
+        "wiki/components/parser.md",
+        "wiki/components/optimizer.md",
+        "wiki/components/storage.md",
+        "wiki/components/transaction.md"
+      ],
+      "pages_updated": [
+        "wiki/Architecture Overview.md",
+        "wiki/Tech Stack.md",
+        "wiki/Data Flow.md",
+        "wiki/Key Decisions.md",
+        "wiki/index.md",
+        "wiki/log.md",
+        "wiki/hot.md"
+      ]
+    }
+  }
+}

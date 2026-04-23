@@ -87,3 +87,6 @@ claude-obsidian-archive/
 
 # User-specific attachments
 _attachments/
+
+# CUBRID source-tree symlink (local-only path)
+.raw/cubrid

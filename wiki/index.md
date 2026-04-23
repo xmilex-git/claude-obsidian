@@ -52,15 +52,27 @@ Sub-indexes:
 
 ## Concepts
 
-- [[LLM Wiki Pattern]] — the pattern for building persistent, compounding knowledge bases using LLMs (status: mature)
-- [[Hot Cache]] — ~500-word session context file, updated after every ingest and session (status: mature)
-- [[Compounding Knowledge]] — why wiki knowledge grows more valuable over time, unlike RAG (status: mature)
-- [[cherry-picks]] — prioritized feature backlog from ecosystem research; 13 features to add to claude-obsidian (status: current)
+CUBRID:
+- [[Query Processing Pipeline]] — SQL → lexer → parser → name resolution → semantic check → XASL → execute (status: developing)
+- [[Build Modes (SERVER SA CS)]] — same source, three binaries via preprocessor guards (status: developing)
+- [[Memory Management Conventions]] — `free_and_init`, `db_private_alloc`, `parser_alloc`; no RAII (status: developing)
+- [[Error Handling Convention]] — C-style codes, six-place new-error-code rule (status: developing)
+- [[Code Style Conventions]] — CI-enforced formatting & naming (status: developing)
+
+LLM Wiki (legacy seed):
+- [[LLM Wiki Pattern]] — persistent, compounding knowledge base pattern (status: mature)
+- [[Hot Cache]] — ~500-word session context file (status: mature)
+- [[Compounding Knowledge]] — why wikis grow more valuable than RAG (status: mature)
+- [[cherry-picks]] — prioritized feature backlog (status: current)
 
 ---
 
 ## Entities
 
+CUBRID:
+- [[CUBRID]] — open-source C/C++17 RDBMS with Java PL engine; Apache 2.0; v11.5.x (status: developing)
+
+Legacy seed:
 - [[Andrej Karpathy]] — AI researcher, creator of the LLM Wiki pattern, former Tesla AI director (status: developing)
 - [[Ar9av-obsidian-wiki]] — multi-agent compatible LLM Wiki plugin; delta tracking manifest (status: current)
 - [[Nexus-claudesidian-mcp]] — native Obsidian plugin + MCP bridge; workspace memory, task management (status: current)
