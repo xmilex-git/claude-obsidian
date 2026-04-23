@@ -90,6 +90,16 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Threading Layer (`src/thread/`)
+
+- [[components/thread|thread]] — hub: `cubthread` namespace, manager, worker pools, daemons, THREAD_ENTRY
+- [[components/thread-manager|thread-manager]] — `cubthread::manager` singleton, pool/daemon registry, entry pool, `get_manager()`
+- [[components/worker-pool|worker-pool]] — `worker_pool_type`, `execute`, `execute_on_core`, core partitioning, stats variant
+- [[components/entry-task|entry-task]] — `entry_task` abstract base, retire pattern, `entry_manager`, `callable_task`
+- [[components/thread-daemon|thread-daemon]] — daemon lifecycle, `looper` strategies (INF/FIXED/INCREASING/CUSTOM), known daemons
+
+---
+
 ## Compat Layer (`src/compat/`)
 
 - [[components/compat|compat]] — hub: public client API surface (`db_*` namespace) and `DB_VALUE` universal value container
