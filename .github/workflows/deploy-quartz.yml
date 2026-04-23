@@ -30,15 +30,28 @@ jobs:
         with:
           node-version: 22
 
+      - name: Verify wiki/ is present
+        run: |
+          echo "--- pwd ---"
+          pwd
+          echo "--- repo root contents ---"
+          ls -la
+          echo "--- wiki count ---"
+          count=$(find wiki -name '*.md' 2>/dev/null | wc -l)
+          echo "wiki md files: $count"
+          [ "$count" -gt 100 ] || { echo "FAIL: wiki has fewer than 100 md files"; exit 1; }
+
       - name: Wire wiki/ into Quartz content
         working-directory: website
         run: |
           rm -rf content
-          cp -R ../wiki content
-          echo "--- content dir sample ---"
-          ls content | head -10
-          echo "--- total md files ---"
-          find content -name '*.md' | wc -l
+          mkdir -p content
+          cp -R ../wiki/. content/
+          echo "--- content/ contents ---"
+          ls -la content/ | head
+          count=$(find content -name '*.md' | wc -l)
+          echo "content md files: $count"
+          [ "$count" -gt 100 ] || { echo "FAIL: copy produced empty content/"; exit 1; }
 
       - name: Install deps
         working-directory: website
@@ -47,11 +60,12 @@ jobs:
       - name: Build Quartz
         working-directory: website
         run: |
-          npx quartz build
-          echo "--- public dir sample ---"
-          ls public | head -10
-          echo "--- total html files ---"
-          find public -name '*.html' | wc -l
+          npx quartz build 2>&1 | tee build.log
+          echo "--- public dir ---"
+          ls public | head -15
+          htmlcount=$(find public -name '*.html' | wc -l)
+          echo "html files: $htmlcount"
+          [ "$htmlcount" -gt 100 ] || { echo "FAIL: Quartz emitted fewer than 100 HTML files"; cat build.log; exit 1; }
 
       - uses: actions/configure-pages@v5
         with:
