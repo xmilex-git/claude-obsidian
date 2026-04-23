@@ -120,6 +120,14 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Communication Layer (`src/communication/`)
+
+- [[components/communication|communication]] — hub: NET_SERVER_REQUEST_LIST dispatch table, request handler registration, method/xs callback glue, per-request histogram
+- [[components/packer|packer]] — `cubpacking::packer` / `unpacker`: type-safe binary serialization; variadic `pack_all` / `set_buffer_and_pack_all`; `packable_object` interface
+- [[components/request-response|request-response]] — `net_request` struct, `net_req_act` bitmask flags, `net_server_func` handler contract, dispatch flow from CSS packet to function call
+
+---
+
 ## Connection Layer (`src/connection/`)
 
 - [[components/connection|connection]] — hub: CSS protocol, cub_master coordination, TCP + Unix sockets, HA heartbeat
