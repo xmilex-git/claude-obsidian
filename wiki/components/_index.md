@@ -62,6 +62,16 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/filter-pred-cache|filter-pred-cache]] — compiled filter predicate cache (filtered indexes)
 - [[components/memoize|memoize]] — subquery result memoization
 
+### Query Operator Family (`src/query/arithmetic.c`, `numeric_opfunc.c`, `string_opfunc.c`, `crypt_opfunc.c`, `string_regex.cpp`, `query_opfunc.c`, `query_evaluator.c`)
+
+- [[components/query-arithmetic|query-arithmetic]] — scalar math (FLOOR, CEIL, ROUND, TRUNC, MOD, trig, WIDTH_BUCKET) + 22 JSON functions
+- [[components/query-numeric|query-numeric]] — DB_NUMERIC fixed-point engine: binary big-int, precision/scale alignment, coercion
+- [[components/query-string|query-string]] — string/datetime/LOB/timezone built-ins (~28K lines); collation vtable dispatch
+- [[components/query-regex|query-regex]] — REGEXP/RLIKE: RE2 vs std::regex runtime dispatch; compiled-pattern caching per XASL node
+- [[components/query-crypto|query-crypto]] — MD5, SHA1/2, AES-128-ECB, CRC32, GUID via OpenSSL EVP; DBLink transport crypto
+- [[components/query-opfunc|query-opfunc]] — binary arithmetic/bitwise/concat operators + master function-code switch (40+ codes)
+- [[components/query-evaluator|query-evaluator]] — PRED_EXPR tree walk; three-valued logic (V_TRUE/V_FALSE/V_UNKNOWN/V_ERROR); AND/OR short-circuit; `eval_data_filter` / `eval_key_filter`
+
 ## Parallel Query (`src/query/parallel/`)
 
 - [[components/parallel-query|parallel-query]] — parallel execution subsystem hub
