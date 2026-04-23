@@ -57,7 +57,7 @@ Server-side implementations of all non-string, non-crypto scalar SQL functions. 
 | `db_typeof_dbval(result, value)` | TYPEOF — returns VARCHAR type-name string |
 | `db_width_bucket(result, v1, v2, v3, v4)` | WIDTH_BUCKET(operand, min, max, num_buckets) |
 | `db_sleep(result, value)` | SLEEP(seconds) — `usleep()` wrapped; returns 0 |
-| `db_crc32_dbval(result, value)` | CRC32 — delegates to `crypt_crc32()` in [[components/query-crypto|query-crypto]] |
+| `db_crc32_dbval(result, value)` | CRC32 — delegates to `crypt_crc32()` in [[components/query-crypto\|query-crypto]] |
 | `db_least_or_greatest(arg1, arg2, result, least)` | LEAST / GREATEST — generic compare via `tp_value_compare` |
 | `db_evaluate_json_*(result, args[], num_args)` | Full JSON scalar family (22 functions — see below) |
 | `db_accumulate_json_arrayagg / db_accumulate_json_objectagg` | JSON aggregate accumulators |

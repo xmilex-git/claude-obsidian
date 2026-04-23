@@ -51,8 +51,8 @@ Server-side + standalone only. Client code reaches this through XASL + network p
 |----------|---------|
 | `xserial_get_current_value` | Returns `CURRVAL` — same value the calling **session** last fetched via `NEXTVAL`. Session-local semantics per [[components/session]]. |
 | `xserial_get_next_value` | Returns `NEXTVAL` — bumps generator and returns the new value. Handles both manual `SELECT seq.NEXT_VAL` and auto-increment column path. |
-| `xserial_decache` | Drops the cache entry for a given OID. Called on `DROP SERIAL` / `ALTER SERIAL` from [[components/schema-manager|schema-manager]]. |
-| `serial_initialize_cache_pool` | Called from [[components/server-boot|server-boot]]. Sets up the per-engine shared cache and loads the `_db_serial` B-tree OID. |
+| `xserial_decache` | Drops the cache entry for a given OID. Called on `DROP SERIAL` / `ALTER SERIAL` from [[components/schema-manager\|schema-manager]]. |
+| `serial_initialize_cache_pool` | Called from [[components/server-boot\|server-boot]]. Sets up the per-engine shared cache and loads the `_db_serial` B-tree OID. |
 | `serial_finalize_cache_pool` | Called at server shutdown. Releases all `SERIAL_CACHE_ENTRY`s. |
 
 ## Data structures

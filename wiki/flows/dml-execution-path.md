@@ -284,21 +284,21 @@ Before any dirty page reaches its volume location, it passes through the [[compo
 
 | Component | Role in DML |
 |-----------|------------|
-| [[components/parser|parser]] | SQL → PT_NODE (client only) |
-| [[components/parse-tree|parse-tree]] | PT_NODE struct; `PT_INSERT/UPDATE/DELETE/MERGE` info members |
-| [[components/xasl-generation|xasl-generation]] | PT_NODE → XASL_NODE; `pt_to_insert_xasl` etc. |
-| [[components/xasl-stream|xasl-stream]] | XASL serialization; `xts_map_xasl_to_stream` / `stx_map_stream_to_xasl` |
-| [[components/communication|communication]] | `NET_SERVER_QM_QUERY_EXECUTE` dispatch; `sqmgr_execute_query` handler |
-| [[components/query-executor|query-executor]] | `qexec_execute_mainblock`; INSERT/UPDATE/DELETE/MERGE_PROC branches |
-| [[components/scan-manager|scan-manager]] | Source row iteration for UPDATE/DELETE/MERGE; `scan_op_type` controls MVCC lock mode |
-| [[components/heap-file|heap-file]] | `heap_insert/update/delete_logical`; MVCC record header; overflow records |
-| [[components/btree|btree]] | `btree_insert` / `btree_mvcc_delete`; `btree_op_purpose` enum |
-| [[components/mvcc|mvcc]] | `mvcc_satisfies_delete`; snapshot visibility; version chain via `prev_version_lsa` |
-| [[components/lock-manager|lock-manager]] | `lock_object`; SCH-S / IX / X lock hierarchy; deadlock detection |
-| [[components/log-manager|log-manager]] | `log_append_undoredo_data`; `LOG_MVCC_UNDOREDO_DATA`; `log_commit` / `log_abort` |
-| [[components/page-buffer|page-buffer]] | `pgbuf_fix/unfix/set_dirty`; WAL-safe flush; DWB integration |
-| [[components/db-value|db-value]] | `DB_VALUE` carries column values through parse → XASL → executor → storage |
-| [[components/vacuum|vacuum]] | Asynchronous reclaim of dead heap rows and stale index keys |
+| [[components/parser\|parser]] | SQL → PT_NODE (client only) |
+| [[components/parse-tree\|parse-tree]] | PT_NODE struct; `PT_INSERT/UPDATE/DELETE/MERGE` info members |
+| [[components/xasl-generation\|xasl-generation]] | PT_NODE → XASL_NODE; `pt_to_insert_xasl` etc. |
+| [[components/xasl-stream\|xasl-stream]] | XASL serialization; `xts_map_xasl_to_stream` / `stx_map_stream_to_xasl` |
+| [[components/communication\|communication]] | `NET_SERVER_QM_QUERY_EXECUTE` dispatch; `sqmgr_execute_query` handler |
+| [[components/query-executor\|query-executor]] | `qexec_execute_mainblock`; INSERT/UPDATE/DELETE/MERGE_PROC branches |
+| [[components/scan-manager\|scan-manager]] | Source row iteration for UPDATE/DELETE/MERGE; `scan_op_type` controls MVCC lock mode |
+| [[components/heap-file\|heap-file]] | `heap_insert/update/delete_logical`; MVCC record header; overflow records |
+| [[components/btree\|btree]] | `btree_insert` / `btree_mvcc_delete`; `btree_op_purpose` enum |
+| [[components/mvcc\|mvcc]] | `mvcc_satisfies_delete`; snapshot visibility; version chain via `prev_version_lsa` |
+| [[components/lock-manager\|lock-manager]] | `lock_object`; SCH-S / IX / X lock hierarchy; deadlock detection |
+| [[components/log-manager\|log-manager]] | `log_append_undoredo_data`; `LOG_MVCC_UNDOREDO_DATA`; `log_commit` / `log_abort` |
+| [[components/page-buffer\|page-buffer]] | `pgbuf_fix/unfix/set_dirty`; WAL-safe flush; DWB integration |
+| [[components/db-value\|db-value]] | `DB_VALUE` carries column values through parse → XASL → executor → storage |
+| [[components/vacuum\|vacuum]] | Asynchronous reclaim of dead heap rows and stale index keys |
 
 ---
 

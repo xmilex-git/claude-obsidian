@@ -179,7 +179,7 @@ Per-tuple probe cost: one `qfile_scan_list_next`, one `qdata_build_hscan_key` (e
 
 ## Contrast with Parallel Hash Join
 
-| Dimension | This module (serial) | [[components/parallel-hash-join|parallel-hash-join]] |
+| Dimension | This module (serial) | [[components/parallel-hash-join\|parallel-hash-join]] |
 |---|---|---|
 | Activation | Always the base; parallel is an upgrade path | Requires `SERVER_MODE`, non-Windows, `xasl->parallelism > 1`, worker pool available |
 | Build phase | Single-threaded `hjoin_build()` | Workers each scan a partition concurrently via `parallel_query::hash_join::build_partitions` |

@@ -139,12 +139,12 @@ cubthread::get_manager()->destroy_daemon(d);
 
 | Daemon | Subsystem | Loop type | Wakeup trigger |
 |--------|-----------|-----------|----------------|
-| Vacuum master | [[components/vacuum|vacuum]] | Increasing (fast when jobs available) | New MVCC GC work queued |
-| Vacuum workers (pool) | [[components/vacuum|vacuum]] | Worker pool tasks, not daemons | Dispatched by master |
-| Log flush daemon | [[components/log-manager|log-manager]] | Fixed or increasing | Log buffer threshold |
-| Page flusher | [[components/page-buffer|page-buffer]] | Increasing | LRU pressure / dirty threshold |
-| Checkpoint daemon | [[components/log-manager|log-manager]] | Fixed period | Timer |
-| DWB flush | [[components/double-write-buffer|double-write-buffer]] | Triggered | DWB buffer full |
+| Vacuum master | [[components/vacuum\|vacuum]] | Increasing (fast when jobs available) | New MVCC GC work queued |
+| Vacuum workers (pool) | [[components/vacuum\|vacuum]] | Worker pool tasks, not daemons | Dispatched by master |
+| Log flush daemon | [[components/log-manager\|log-manager]] | Fixed or increasing | Log buffer threshold |
+| Page flusher | [[components/page-buffer\|page-buffer]] | Increasing | LRU pressure / dirty threshold |
+| Checkpoint daemon | [[components/log-manager\|log-manager]] | Fixed period | Timer |
+| DWB flush | [[components/double-write-buffer\|double-write-buffer]] | Triggered | DWB buffer full |
 
 > [!note] Vacuum uses a hybrid model
 > The vacuum **master** is a daemon; it discovers work and dispatches tasks to a **worker pool**. Vacuum workers are `entry_task` instances in a pool, not individual daemons. This lets the worker count scale up via the pool while the master acts as the coordinator.

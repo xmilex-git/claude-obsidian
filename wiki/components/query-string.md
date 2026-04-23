@@ -52,7 +52,7 @@ The largest single file in `src/query/` (~28K lines). Implements every string ma
 | `db_string_trim(operand, charset, src, result)` | TRIM LEADING/TRAILING/BOTH |
 | `db_string_pad(operand, src, len, charset, result)` | LPAD/RPAD — fills with pad_charset pattern |
 | `db_string_like(src, pattern, esc, result)` | LIKE — calls `qstr_eval_like`; collation-sensitive |
-| `db_string_rlike(src, pattern, case_sensitive, comp_regex, result)` | RLIKE/REGEXP — delegates to [[components/query-regex|query-regex]] |
+| `db_string_rlike(src, pattern, case_sensitive, comp_regex, result)` | RLIKE/REGEXP — delegates to [[components/query-regex\|query-regex]] |
 | `db_string_regexp_count/instr/like/replace/substr` | REGEXP_* family — all delegate via `db_string_regexp_*` to `cubregex::` |
 | `db_string_replace(src, search, repl, result)` | REPLACE — collation-aware via `qstr_replace` |
 | `db_string_translate(src, from, to, result)` | TRANSLATE — character mapping |
@@ -61,8 +61,8 @@ The largest single file in `src/query/` (~28K lines). Implements every string ma
 | `db_str_to_date(date, format, lang, result, domain)` | STR_TO_DATE — MySQL-compatible |
 | `db_date_add_interval_expr / db_date_sub_interval_expr` | DATE_ADD / DATE_SUB with INTERVAL |
 | `db_format(number, decimals, lang, result, domain)` | FORMAT — locale decimal thousands separator |
-| `db_string_md5 / db_string_sha_one / db_string_sha_two` | MD5/SHA1/SHA2 — delegates to [[components/query-crypto|query-crypto]] |
-| `db_string_aes_encrypt / db_string_aes_decrypt` | AES encryption — delegates to [[components/query-crypto|query-crypto]] |
+| `db_string_md5 / db_string_sha_one / db_string_sha_two` | MD5/SHA1/SHA2 — delegates to [[components/query-crypto\|query-crypto]] |
+| `db_string_aes_encrypt / db_string_aes_decrypt` | AES encryption — delegates to [[components/query-crypto\|query-crypto]] |
 | `db_string_to_base64 / db_string_from_base64` | BASE64 encode/decode |
 | `db_inet_aton / db_inet_ntoa` | INET_ATON / INET_NTOA |
 | `db_guid(thread_p, result)` | GUID() — `!CS_MODE` only; uses `crypt_generate_random_bytes` |

@@ -88,7 +88,7 @@ The AES key generation (`aes_default_gen_key`) mimics MySQL's 128-bit AES key de
 | `AES_ENCRYPT(str, key)` | VARCHAR, VARCHAR | VARBIT (raw binary ciphertext, padded to block boundary) |
 | `AES_DECRYPT(str, key)` | VARBIT, VARCHAR | VARCHAR (decrypted plaintext) |
 | `CRC32(str)` | VARCHAR | INTEGER (signed 32-bit) |
-| `GUID()` | — | VARCHAR(36) lowercase UUID-format (from random bytes, formatted with hyphens in [[components/query-string|query-string]]) |
+| `GUID()` | — | VARCHAR(36) lowercase UUID-format (from random bytes, formatted with hyphens in [[components/query-string\|query-string]]) |
 
 ## DBLink Crypto Sub-system
 
