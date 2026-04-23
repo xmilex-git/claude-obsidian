@@ -20,6 +20,8 @@ public_api:
   - "partition_load_aggregate_helper(pcontext, spec, pruned_count, root_btid, helper) → int"
   - "partition_cache_init / partition_cache_finalize / partition_decache_class"
   - "partition_find_root_class_oid / partition_prune_partition_index"
+  - "partition_get_scancache(pcontext, partition_oid) → PRUNING_SCAN_CACHE*"
+  - "partition_new_scancache(pcontext) → PRUNING_SCAN_CACHE*"
 tags:
   - component
   - cubrid
@@ -31,7 +33,10 @@ related:
   - "[[components/query-executor|query-executor]]"
   - "[[components/scan-manager|scan-manager]]"
   - "[[components/aggregate-analytic|aggregate-analytic]]"
+  - "[[components/btree|btree]]"
+  - "[[components/heap-file|heap-file]]"
   - "[[Query Processing Pipeline]]"
+  - "[[Build Modes (SERVER SA CS)]]"
 created: 2026-04-23
 updated: 2026-04-23
 ---
