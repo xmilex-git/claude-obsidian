@@ -25,6 +25,33 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-23] ingest | CUBRID src/storage/ — Storage Layer
+- Source: `.raw/cubrid/src/storage/` (57 files, AGENTS.md present)
+- Summary: [[cubrid-src-storage]]
+- Pages created: [[components/page-buffer|page-buffer]], [[components/btree|btree]], [[components/heap-file|heap-file]], [[components/file-manager|file-manager]], [[components/double-write-buffer|double-write-buffer]], [[components/overflow-file|overflow-file]], [[components/extendible-hash|extendible-hash]], [[components/external-sort|external-sort]], [[components/external-storage|external-storage]]
+- Pages updated: [[components/storage|storage]] (stub → comprehensive), [[components/_index|components/_index]]
+- Key insight: 3-zone LRU buffer pool; DWB recovery precedes WAL redo; WAL-ordering enforced inside `pgbuf_flush_with_wal`; LOB delete uses `LOG_POSTPONE`; B-tree dispatch is parameterized by 18 `btree_op_purpose` values.
+
+## [2026-04-23] ingest | CUBRID src/parser/ — SQL Parser
+- Source: `.raw/cubrid/src/parser/` (39 files, AGENTS.md present)
+- Summary: [[cubrid-src-parser]]
+- Pages created: [[components/parse-tree|parse-tree]], [[components/name-resolution|name-resolution]], [[components/semantic-check|semantic-check]], [[components/xasl-generation|xasl-generation]], [[components/view-transform|view-transform]], [[components/parser-allocator|parser-allocator]], [[components/show-meta|show-meta]]
+- Pages updated: [[components/parser|parser]] (stub → comprehensive), [[components/_index|components/_index]]
+- Key insight: PT_NODE function tables ordinal-indexed (silent crash on misorder); `YYMAXDEPTH 1000000` + `container_2..11` Bison helpers; `parser_block_allocator::dealloc` is no-op (arena lifetime); `mq_translate` runs `mq_reset_ids` per view inline.
+
+## [2026-04-23] ingest | CUBRID src/query/ — XASL Execution Layer
+- Source: `.raw/cubrid/src/query/` (84 top-level files, AGENTS.md present; parallel/ excluded — separate ingest)
+- Summary: [[cubrid-src-query]]
+- Pages created: [[components/query|query]], [[components/query-executor|query-executor]], [[components/scan-manager|scan-manager]], [[components/cursor|cursor]], [[components/partition-pruning|partition-pruning]], [[components/dblink|dblink]], [[components/list-file|list-file]], [[components/aggregate-analytic|aggregate-analytic]], [[components/filter-pred-cache|filter-pred-cache]], [[components/memoize|memoize]]
+- Pages updated: [[components/_index]], [[sources/_index]]
+- Key insight: `qexec_execute_mainblock` ~27K lines (intentional); `SCAN_ID` polymorphic over 15 scan types incl. PARALLEL_HEAP_SCAN/DBLINK/JSON_TABLE/METHOD; hash GROUP BY 2-phase spill (2000 tuple calibration, 50% selectivity); memoize self-disables after 1000 iters at <50% hit rate; partition pruning enables O(1) MIN/MAX on partitioned tables; filter_pred_cache exclusive lease (no shared locks).
+
+## [2026-04-23] ingest | CUBRID src/query/parallel/ — Parallel Query Execution
+- Source: `.raw/cubrid/src/query/parallel/` (16 files + 3 subdirs)
+- Summary: [[cubrid-src-query-parallel]]
+- Pages created: [[components/parallel-query|parallel-query]], [[components/parallel-worker-manager|parallel-worker-manager]], [[components/parallel-task-queue|parallel-task-queue]], [[components/parallel-hash-join|parallel-hash-join]], [[components/parallel-heap-scan|parallel-heap-scan]], [[components/parallel-query-execute|parallel-query-execute]], [[components/parallel-sort|parallel-sort]]
+- Key insight: single global named pool ("parallel-query") with lock-free CAS reservation; logarithmic auto-degree (`floor(log2(pages/threshold))+2`); thread-local errors must be moved to shared `err_messages_with_lock`; spin-yield wait (not condvar) for short-lived bursts; SERVER_MODE/SA_MODE only.
+
 ## [2026-04-23] ingest | CUBRID AGENTS.md (project guide)
 - Source: `.raw/cubrid/AGENTS.md` (md5 946ec27...)
 - Summary: [[cubrid-AGENTS]]
