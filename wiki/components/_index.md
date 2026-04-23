@@ -110,6 +110,16 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Connection Layer (`src/connection/`)
+
+- [[components/connection|connection]] — hub: CSS protocol, cub_master coordination, TCP + Unix sockets, HA heartbeat
+- [[components/cub-master|cub-master]] — master process: dual-socket listen, FD passing, HA process registry, management commands
+- [[components/network-protocol|network-protocol]] — `NET_HEADER` packet format, packet types, request ID encoding, css_error_code
+- [[components/heartbeat|heartbeat]] — HA heartbeat: node states, 500 ms interval, 5-gap failover, HBP packet format, log applier tracking
+- [[components/tcp-layer|tcp-layer]] — socket primitives: `css_tcp_client_open`, `css_tcp_master_open`, SCM_RIGHTS fd passing, `css_peer_alive`
+
+---
+
 ## Object / Schema / Auth Layer (`src/object/`)
 
 - [[components/object|object]] — hub: schema, auth, catalog, class representation, LOB locator, workspace, triggers
