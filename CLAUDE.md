@@ -8,7 +8,23 @@ This folder is both a Claude Code plugin and an Obsidian vault.
 
 ## What This Vault Is For
 
-This vault demonstrates the LLM Wiki pattern — a persistent, compounding knowledge base for Claude + Obsidian. Drop any source, ask any question, and the wiki grows richer with every session.
+Primary scope: **Documenting the CUBRID relational database source tree** at `/Users/song/DEV/cubrid/` (Mode B — GitHub / codebase wiki). Captures modules, components, data flows, decisions, and dependencies.
+
+Secondary scope: A small seed cluster of pages about the LLM Wiki pattern itself (how this vault works) lives under `wiki/concepts/`, `wiki/entities/`, and `wiki/comparisons/`. These predate the CUBRID scope and are retained as meta-documentation.
+
+## Mode B Conventions (CUBRID)
+
+Structure under `wiki/`:
+- `modules/` — one page per top-level CUBRID directory (broker, src, cs, pl_engine, ...)
+- `components/` — subsystems (optimizer, page buffer, lock manager, ...)
+- `decisions/` — ADRs (`NNNN-short-title.md`)
+- `dependencies/` — one page per external / bundled library
+- `flows/` — request paths, lifecycles, recovery sequences
+
+Hub pages at `wiki/` root:
+- [[Architecture Overview]] · [[Tech Stack]] · [[Data Flow]] · [[Dependency Graph]] · [[Key Decisions]]
+
+Source of truth for CUBRID: `/Users/song/DEV/cubrid/` — **never write to the source tree**, only read.
 
 ## Vault Structure
 

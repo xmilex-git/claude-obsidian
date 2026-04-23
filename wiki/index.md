@@ -1,7 +1,7 @@
 ---
 type: meta
 title: "Wiki Index"
-updated: 2026-04-07
+updated: 2026-04-23
 tags:
   - meta
   - index
@@ -12,34 +12,67 @@ related:
   - "[[hot]]"
   - "[[dashboard]]"
   - "[[Wiki Map]]"
-  - "[[concepts/_index]]"
-  - "[[entities/_index]]"
-  - "[[sources/_index]]"
-  - "[[LLM Wiki Pattern]]"
-  - "[[Hot Cache]]"
-  - "[[Compounding Knowledge]]"
-  - "[[Andrej Karpathy]]"
+  - "[[Architecture Overview]]"
+  - "[[Tech Stack]]"
+  - "[[Data Flow]]"
+  - "[[Dependency Graph]]"
+  - "[[Key Decisions]]"
+  - "[[modules/_index]]"
+  - "[[components/_index]]"
+  - "[[decisions/_index]]"
+  - "[[dependencies/_index]]"
+  - "[[flows/_index]]"
 ---
 
 # Wiki Index
 
-Last updated: 2026-04-08 | Total pages: 26 | Sources ingested: 2
+Last updated: 2026-04-23 | Mode: B (CUBRID codebase) + legacy seed
 
 Navigation: [[overview]] | [[log]] | [[hot]] | [[dashboard]] | [[Wiki Map]] | [[getting-started]]
 
 ---
 
+## CUBRID (Mode B)
+
+Hub pages:
+- [[Architecture Overview]] — topology, subsystems, entry point
+- [[Tech Stack]] — languages, build, bundled libs
+- [[Data Flow]] — query path and lifecycles
+- [[Dependency Graph]] — internal + external deps
+- [[Key Decisions]] — ADR roll-up
+
+Sub-indexes:
+- [[modules/_index|Modules]] — per top-level source directory
+- [[components/_index|Components]] — subsystems (optimizer, lock mgr, …)
+- [[decisions/_index|Decisions]] — ADRs
+- [[dependencies/_index|Dependencies]] — external / bundled libs
+- [[flows/_index|Flows]] — request paths
+
+---
+
 ## Concepts
 
-- [[LLM Wiki Pattern]] — the pattern for building persistent, compounding knowledge bases using LLMs (status: mature)
-- [[Hot Cache]] — ~500-word session context file, updated after every ingest and session (status: mature)
-- [[Compounding Knowledge]] — why wiki knowledge grows more valuable over time, unlike RAG (status: mature)
-- [[cherry-picks]] — prioritized feature backlog from ecosystem research; 13 features to add to claude-obsidian (status: current)
+CUBRID:
+- [[Query Processing Pipeline]] — SQL → lexer → parser → name resolution → semantic check → XASL → execute (status: developing)
+- [[Build Modes (SERVER SA CS)]] — same source, three binaries via preprocessor guards (status: developing)
+- [[Memory Management Conventions]] — `free_and_init`, `db_private_alloc`, `parser_alloc`; no RAII (status: developing)
+- [[Error Handling Convention]] — C-style codes, six-place new-error-code rule (status: developing)
+- [[Code Style Conventions]] — CI-enforced formatting & naming (status: developing)
+
+LLM Wiki (legacy seed):
+- [[LLM Wiki Pattern]] — persistent, compounding knowledge base pattern (status: mature)
+- [[Hot Cache]] — ~500-word session context file (status: mature)
+- [[Compounding Knowledge]] — why wikis grow more valuable than RAG (status: mature)
+- [[cherry-picks]] — prioritized feature backlog (status: current)
 
 ---
 
 ## Entities
 
+CUBRID:
+- [[CUBRID]] — open-source C/C++17 RDBMS with Java PL engine; Apache 2.0; v11.5.x (status: developing)
+
+Legacy seed:
 - [[Andrej Karpathy]] — AI researcher, creator of the LLM Wiki pattern, former Tesla AI director (status: developing)
 - [[Ar9av-obsidian-wiki]] — multi-agent compatible LLM Wiki plugin; delta tracking manifest (status: current)
 - [[Nexus-claudesidian-mcp]] — native Obsidian plugin + MCP bridge; workspace memory, task management (status: current)
