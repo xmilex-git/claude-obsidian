@@ -74,13 +74,15 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ## Parallel Query (`src/query/parallel/`)
 
-- [[components/parallel-query|parallel-query]] — parallel execution subsystem hub
-- [[components/parallel-worker-manager|parallel-worker-manager]] — pool lifecycle and reservation
-- [[components/parallel-task-queue|parallel-task-queue]] — MPMC queue and callable_task
+- [[components/parallel-query|parallel-query]] — subsystem hub: `compute_parallel_degree`, `parallel_type` enum, `std::call_once` param caching
+- [[components/parallel-worker-manager|parallel-worker-manager]] — per-query handle: atomic `m_active_tasks`, yield-spin `wait_workers`, `db_private_alloc` lifecycle
+- [[components/parallel-worker-manager-global|parallel-worker-manager-global]] — singleton pool: `"parallel-query"` named pool, `std::call_once` init, CAS reservation loop
+- [[components/parallel-task-queue|parallel-task-queue]] — MPMC slot queue (sequence-number ABA) + `callable_task` std::function wrapper
+- [[components/parallel-interrupt|parallel-interrupt]] — `interrupt` atomic enum, `atomic_instnum` ROWNUM early-exit, `err_messages_with_lock` cross-thread errors
 - [[components/parallel-hash-join|parallel-hash-join]] — hash join parallelism
 - [[components/parallel-heap-scan|parallel-heap-scan]] — heap scan parallelism
 - [[components/parallel-query-execute|parallel-query-execute]] — subquery parallelism
-- [[components/parallel-sort|parallel-sort]] — external sort parallelism
+- [[components/parallel-sort|parallel-sort]] — external sort: `SORT_EXECUTE_PARALLEL` / `SORT_WAIT_PARALLEL` macros, condvar vs yield-spin
 
 ## XASL (`src/xasl/` + `src/query/xasl.h`)
 
