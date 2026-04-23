@@ -211,6 +211,13 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Public C API Extensions (`src/api/`)
+
+- [[components/api|api]] — hub: public C API extensions beyond `db_*`; CS_MODE-only; currently hosts the CDC interface
+- [[components/cubrid-log-cdc|cubrid-log-cdc]] — `cubrid_log.h/c`: CDC client API; four-phase state machine; DDL/DML/DCL/TIMER log item stream; LSA-based positioning; `supplemental_log` prerequisite
+
+---
+
 ## Executables (`src/executables/`)
 
 - [[components/executables|executables]] — hub: all CUBRID binary entry points, binary inventory, build-mode link split
