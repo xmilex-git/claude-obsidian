@@ -11,7 +11,7 @@ status: active
 # Recent Context
 
 ## Last Updated
-2026-04-23. **CUBRID full src/ tree ingest complete.** Rounds 1–3e finished. **111 component pages, 27 source summaries.** All 23 src/ subdirectories from CUBRID's project AGENTS.md now have at least one wiki component page; major subsystems have 4–10 pages each.
+2026-04-23. **CUBRID deep-dive complete.** Rounds 1–5 finished. **150 component pages, 34 source summaries, 246 total wiki md.** `src/query/` + `src/query/parallel/` now have per-file / per-function granularity (34 pages in `query-*` + `parallel-*` namespaces alone). All 23 src/ subdirs covered + config/data/docs (`3rdparty`, `locales`, `timezones`, `msg`, `contrib`) + DML + DDL flow pages + lint.
 
 ## Wiki shape
 - `wiki/components/` (111 pages) — one section per CUBRID subsystem
