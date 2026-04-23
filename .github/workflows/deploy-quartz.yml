@@ -34,7 +34,11 @@ jobs:
         working-directory: website
         run: |
           rm -rf content
-          ln -s ../wiki content
+          cp -R ../wiki content
+          echo "--- content dir sample ---"
+          ls content | head -10
+          echo "--- total md files ---"
+          find content -name '*.md' | wc -l
 
       - name: Install deps
         working-directory: website
@@ -42,7 +46,12 @@ jobs:
 
       - name: Build Quartz
         working-directory: website
-        run: npx quartz build
+        run: |
+          npx quartz build
+          echo "--- public dir sample ---"
+          ls public | head -10
+          echo "--- total html files ---"
+          find public -name '*.html' | wc -l
 
       - uses: actions/configure-pages@v5
         with:
