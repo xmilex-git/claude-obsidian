@@ -44,6 +44,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 - [[sources/cubrid-src-loaddb|cubrid-src-loaddb]] — `src/loaddb/` bulk loader: bison/flex grammar, parallel workers, direct heap insert (2026-04-23)
 - [[sources/cubrid-src-monitor|cubrid-src-monitor]] — `src/monitor/` performance statistics: primitives, transaction sheets, global registry, VACUUM ovfp threshold (2026-04-23)
 - [[sources/cubrid-src-session|cubrid-src-session]] — `src/session/` per-connection session state: SESSION_STATE struct, @var bindings, prepared statement cache, holdable cursors (2026-04-23)
+- [[sources/cubrid-src-executables|cubrid-src-executables]] — `src/executables/` binary entry points: cub_server, csql, cub_master, admin utilities (2026-04-23)
 
 ---
 
