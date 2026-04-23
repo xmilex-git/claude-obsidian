@@ -32,6 +32,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 - [[sources/cubrid-src-query|cubrid-src-query]] — `src/query/` XASL execution layer (2026-04-23)
 - [[sources/cubrid-src-object|cubrid-src-object]] — `src/object/` schema, auth, catalog, LOB locator (2026-04-23)
 - [[sources/cubrid-src-base|cubrid-src-base]] — `src/base/` core utilities: error, memory, lock-free, porting, system params (2026-04-23)
+- [[sources/cubrid-src-xasl|cubrid-src-xasl]] — `src/xasl/` XASL node type definitions + `src/query/xasl.h` + `regu_var.hpp` (2026-04-23)
 
 ---
 
