@@ -15,7 +15,7 @@ related:
 
 # CUBRID Dependency Graph
 
-> Stub. Populated from `CMakeLists.txt`, `3rdparty/`, and `.gitmodules` during ingest.
+> Partially populated. `3rdparty/` ingested 2026-04-23. Submodules still pending.
 
 ## Internal dependency sketch
 
