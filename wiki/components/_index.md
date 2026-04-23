@@ -171,3 +171,12 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/method|method]] — hub: scan-time C method + SP invocation; S_METHOD_SCAN; client-side callback handler
 - [[components/method-invoke-group|method-invoke-group]] — `cubmethod::method_invoke_group`: shared dispatch struct (used by both src/method/ and src/sp/)
 - [[components/method-scan|method-scan]] — `cubscan::method::scanner`: S_METHOD_SCAN backend wired into scan-manager
+
+---
+
+## Bulk Loader (`src/loaddb/`)
+
+- [[components/loaddb|loaddb]] — hub: `loaddb` utility bulk loader; own bison/flex grammar; parallel batch processing; direct heap insert bypassing SQL execution
+- [[components/loaddb-grammar|loaddb-grammar]] — `load_grammar.yy` LALR(1) C++ bison grammar + `load_lexer.l` flex scanner; event-driven (no parse tree)
+- [[components/loaddb-executor|loaddb-executor]] — `server_class_installer`, `server_object_loader`; string→DB_VALUE dispatch; `locator_multi_insert_force` bulk insert path
+- [[components/loaddb-driver|loaddb-driver]] — `driver` (scanner+parser orchestration), `session` (lifecycle + ordered batch-commit), `worker_entry_manager` (driver pool per thread)
