@@ -42,4 +42,11 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ## Parser (`src/parser/`)
 
-- [[components/parser|parser]] — SQL → parse tree (PT_NODE) → XASL generation
+- [[components/parser|parser]] — SQL frontend hub: lexer → bison → PT_NODE → name resolution → semantic check → XASL generation
+- [[components/parse-tree|parse-tree]] — PT_NODE tagged-union node; PARSER_CONTEXT arena; traversal API
+- [[components/name-resolution|name-resolution]] — SCOPES stack; identifier → DB_OBJECT binding; class hierarchy flattening
+- [[components/semantic-check|semantic-check]] — structural validation; union compatibility; expression type inference (type_checking.c)
+- [[components/xasl-generation|xasl-generation]] — SYMBOL_INFO/TABLE_INFO scope stack; PT_NODE → XASL_NODE emission
+- [[components/view-transform|view-transform]] — mq_translate view inlining; sargable term pushdown; updatability analysis
+- [[components/parser-allocator|parser-allocator]] — parser_block_allocator; arena lifetime model; dealloc no-op
+- [[components/show-meta|show-meta]] — SHOWSTMT_METADATA registry; DBA-only guard; per-type semantic check hooks
