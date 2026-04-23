@@ -175,12 +175,12 @@ Adversarial review flagged these gaps in v0.1. Each must be decided before the c
 
 ## Mapping to Claude-Obsidian
 
-| Mechanism | New | Extends |
-|---|---|---|
-| Fold operator | new skill `wiki-fold` | reads `log.md`, writes `wiki/folds/`, updates `index.md` |
-| Address anchors | new frontmatter field | assigned on create by `wiki-ingest`; validated by `wiki-lint` |
-| Semantic tiling | new lint check | `wiki-lint` with calibrated bands |
-| Boundary-first | new scoring in `autoresearch` | optional mechanism, agenda-control flagged |
+| Mechanism | Status | New | Extends |
+|---|---|---|---|
+| Fold operator | shipped (Phase 1, dry-run verified) | `skills/wiki-fold/` | reads `log.md`, writes `wiki/folds/`, updates `index.md` on commit |
+| Address anchors | shipped (Phase 2, opt-in) | `scripts/allocate-address.sh`, new frontmatter field | `wiki-ingest` (assignment), `wiki-lint` (validation) |
+| Semantic tiling | shipped (Phase 2/3, opt-in) | `scripts/tiling-check.py`, `.vault-meta/tiling-thresholds.json` | `wiki-lint` with banded thresholds, calibration procedure documented |
+| Boundary-first | **not implemented** | would be new scoring in `autoresearch` | proposal only; no code in `skills/autoresearch/` |
 
 The existing hot → index → domain → page hierarchy already implements self-similarity across scales. That's the one dragon-curve property this vault had before DragonScale.
 
