@@ -118,19 +118,31 @@ struct xasl_node {
 };
 ```
 
-Key `PROC_TYPE` values:
+### `PROC_TYPE` enum (complete)
 
-| Type | Usage |
-|------|-------|
-| `BUILDLIST_PROC` | `SELECT` result list; contains `AGGREGATE_TYPE *` + `ANALYTIC_EVAL_TYPE *` |
-| `BUILDVALUE_PROC` | Aggregate-only query (no grouping temp file) |
-| `SCAN_PROC` | Leaf scan node — drives `ACCESS_SPEC_TYPE` |
-| `UNION_PROC / DIFFERENCE_PROC / INTERSECTION_PROC` | Set operations |
-| `HASHJOIN_PROC` | Hash join |
-| `MERGELIST_PROC` | Sort-merge join |
-| `UPDATE_PROC / INSERT_PROC / DELETE_PROC / MERGE_PROC` | DML |
-| `CONNECTBY_PROC` | Hierarchical query |
-| `CTE_PROC` | CTE (recursive and non-recursive) |
+Exact values from `xasl.h` (`enum` order):
+
+| Ordinal | Constant | Usage / proc union member |
+|---------|----------|--------------------------|
+| 0 | `UNION_PROC` | `UNION ALL` / set union (shares `union_` proc) |
+| 1 | `DIFFERENCE_PROC` | `EXCEPT` — set difference |
+| 2 | `INTERSECTION_PROC` | `INTERSECT` — set intersection |
+| 3 | `OBJFETCH_PROC` | Object fetch by OID (`FETCH_PROC_NODE.arg`) |
+| 4 | `BUILDLIST_PROC` | SELECT result list; aggregates + analytic window functions (`BUILDLIST_PROC_NODE`) |
+| 5 | `BUILDVALUE_PROC` | Aggregate-only SELECT without grouping temp file (`BUILDVALUE_PROC_NODE`) |
+| 6 | `SCAN_PROC` | Leaf scan node — drives `ACCESS_SPEC_TYPE`; no dedicated proc union field |
+| 7 | `MERGELIST_PROC` | Sort-merge join (`MERGELIST_PROC_NODE`) |
+| 8 | `HASHJOIN_PROC` | Hash join (`HASHJOIN_PROC_NODE`) |
+| 9 | `UPDATE_PROC` | Server-side UPDATE (`UPDATE_PROC_NODE`) |
+| 10 | `DELETE_PROC` | Server-side DELETE (`DELETE_PROC_NODE`) |
+| 11 | `INSERT_PROC` | Server-side INSERT (`INSERT_PROC_NODE`); includes ODKU |
+| 12 | `CONNECTBY_PROC` | Hierarchical query (`CONNECTBY_PROC_NODE`) |
+| 13 | `DO_PROC` | `DO` statement — no output |
+| 14 | `MERGE_PROC` | `MERGE` statement (`MERGE_PROC_NODE`: update_xasl + insert_xasl + has_delete) |
+| 15 | `BUILD_SCHEMA_PROC` | `SHOW` statement schema queries |
+| 16 | `CTE_PROC` | CTE (`CTE_PROC_NODE`: non_recursive_part + recursive_part) |
+
+`PROC_TYPE` is serialized as an integer into the XASL stream. Adding new values must maintain ordinal stability.
 
 ### `XASL_ID`
 
