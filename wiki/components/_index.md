@@ -237,3 +237,11 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 ## Windows Tools (`src/win_tools/`) — Windows only
 
 - [[components/win-tools|win-tools]] — hub: NT service host (`CUBRIDService`), CLI control client (`ctrlservice`), MFC system-tray app (`CUBRID_Service_Tray`)
+
+---
+
+## Contributor Tools (`contrib/`)
+
+- [[components/contrib-language-drivers|contrib-language-drivers]] — Python/PHP/Perl/Ruby/ADO.NET/Hibernate drivers; each wraps CCI or JDBC
+- [[components/contrib-observability|contrib-observability]] — collectd-plugin (broker stats), pystatdump (statdump visualizer), coverage, gdb_debugging_scripts, cubmemc
+- [[components/contrib-deployment|contrib-deployment]] — cloud/ Docker + Kubernetes StatefulSet, init.d/ SysV script, bash tab-completion
