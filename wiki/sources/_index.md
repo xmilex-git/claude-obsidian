@@ -37,6 +37,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 - [[sources/cubrid-src-xasl|cubrid-src-xasl]] — `src/xasl/` XASL node type definitions + `src/query/xasl.h` + `regu_var.hpp` (2026-04-23)
 - [[sources/cubrid-src-transaction|cubrid-src-transaction]] — `src/transaction/` MVCC, WAL, locking, recovery, boot (2026-04-23)
 - [[sources/cubrid-src-connection|cubrid-src-connection]] — `src/connection/` CSS protocol, TCP, cub_master, HA heartbeat (2026-04-23)
+- [[sources/cubrid-src-thread|cubrid-src-thread]] — `src/thread/` worker pools, daemons, THREAD_ENTRY (2026-04-23)
 
 ---
 
