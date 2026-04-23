@@ -52,7 +52,7 @@ The heart of CUBRID. C/C++17. The same source compiles into three different bina
 | `session/` | Per-connection session state | [[components/session]] |
 | `communication/` | Internal protocol (C++) | [[components/communication]] |
 | `heaplayers/` | Embedded malloc/heap allocators (3rd-party) | [[components/heaplayers]] |
-| `cm_common/` | CUBRID Manager shared utils | [[components/cm_common-src]] |
+| `cm_common/` | CUBRID Manager shared utils | [[components/cm-common-src]] |
 | `api/` | Public C API extensions (`cubrid_log.c`) | [[components/api]] |
 | `debugging/` | Compiler warning helpers, type utilities | [[components/debugging]] |
 | `win_tools/` | Windows service / tray tools | [[components/win_tools]] |
