@@ -328,10 +328,12 @@ struct access_spec_node {
 - [[components/query|query]] — server-side query execution layer hub
 - [[components/query-executor|query-executor]] — `qexec_execute_mainblock` dispatches on `PROC_TYPE`
 - [[components/xasl-stream|xasl-stream]] — serialisation protocol deep dive
+- [[components/xasl-cache|xasl-cache]] — server-side plan cache; stores packed stream keyed by SHA-1
 - [[components/regu-variable|regu-variable]] — `REGU_VARIABLE` / expression atom
 - [[components/xasl-predicate|xasl-predicate]] — `PRED_EXPR` predicate tree
 - [[components/xasl-aggregate|xasl-aggregate]] — `AGGREGATE_TYPE` aggregate node
 - [[components/xasl-analytic|xasl-analytic]] — `ANALYTIC_TYPE` window-function node
+- [[components/subquery-cache|subquery-cache]] — correlated scalar subquery result cache (`XASL_USES_SQ_CACHE`)
 - [[Query Processing Pipeline]]
 - [[Build Modes (SERVER SA CS)]]
 - Source: [[sources/cubrid-src-xasl|cubrid-src-xasl]]
