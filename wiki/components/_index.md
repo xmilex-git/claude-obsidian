@@ -180,3 +180,11 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/loaddb-grammar|loaddb-grammar]] — `load_grammar.yy` LALR(1) C++ bison grammar + `load_lexer.l` flex scanner; event-driven (no parse tree)
 - [[components/loaddb-executor|loaddb-executor]] — `server_class_installer`, `server_object_loader`; string→DB_VALUE dispatch; `locator_multi_insert_force` bulk insert path
 - [[components/loaddb-driver|loaddb-driver]] — `driver` (scanner+parser orchestration), `session` (lifecycle + ordered batch-commit), `worker_entry_manager` (driver pool per thread)
+
+---
+
+## Performance Monitor (`src/monitor/`)
+
+- [[components/monitor|monitor]] — hub: runtime perf statistics; `statistic_value` wire type; global named registry; per-transaction sheet tracking; VACUUM ovfp threshold (server-only)
+- [[components/perfmon|perfmon]] — core API: primitive/atomic templates (accumulator, gauge, max, min), composite stats (`counter_timer_statistic`), autotimer RAII, name builders
+- [[components/stats-collection|stats-collection]] — aggregation model: always-on global counters + optional per-transaction sheet isolation; snapshot-delta pattern; overhead characteristics
