@@ -147,7 +147,19 @@ When `regu_variable_node::xasl != NULL`, the variable is a subquery reference. T
 - Sets `r->value.dbvalptr` to the single-tuple result value.
 - Status transitions: `XASL_INITIALIZED → XASL_SUCCESS / XASL_FAILURE`.
 
-## Recursive walker
+## Per-tuple vs compile-time evaluation
+
+`REGU_VARIABLE` types fall into three temporal categories:
+
+1. **Compile-time / stream constants**: `TYPE_DBVAL` — the `DB_VALUE` is packed directly into the XASL stream; evaluation is just a pointer dereference.
+2. **Per-tuple evaluated**: `TYPE_INARITH` (once-per-group), `TYPE_OUTARITH` (always), `TYPE_ATTR_ID`, `TYPE_FUNC`, `TYPE_POSITION` — re-evaluated on every call to `fetch_val_list` / `qexec_eval_regu`.
+3. **Subquery-driven**: `TYPE_LIST_ID` — the `QFILE_SORTED_LIST_ID` is populated by executing a subquery `XASL_NODE`; the `EXECUTE_REGU_VARIABLE_XASL` macro drives this path. Result is cached for the subquery's scope (see [[components/subquery-cache|subquery-cache]] for the per-execution memoization layer).
+
+`TYPE_INARITH` vs `TYPE_OUTARITH` distinction: `INARITH` expressions appear in the scan predicate (computed once per group key); `OUTARITH` appear in the SELECT output list (computed once per output tuple). The executor checks `REGU_VARIABLE_FETCH_NOT_CONST` / `REGU_VARIABLE_FETCH_ALL_CONST` flags before evaluating to short-circuit constant sub-expressions.
+
+---
+
+## Recursive walker — actual coverage
 
 ```cpp
 // Apply func to all REGU_VARIABLEs reachable from this node.
@@ -159,8 +171,12 @@ void regu_variable_node::map_regu_and_xasl(
   const map_xasl_func_type &xasl_func);
 ```
 
-> [!warning] Incomplete walker
-> The AGENTS.md notes: "implementation is not mature; only arithmetic and function children are mapped." Do not rely on `map_regu` to visit every reachable REGU_VARIABLE in all contexts.
+`map_regu` (in `regu_var.cpp`) visits children for: `TYPE_INARITH`, `TYPE_OUTARITH` (left + right via `arithptr`), `TYPE_SP` (all args), `TYPE_FUNC` (all operands), `TYPE_REGUVAL_LIST` (all items), `TYPE_REGU_VAR_LIST` (all nodes). ARITH `thirdptr` is **not** visited by `map_regu` — only left and right are traversed.
+
+> [!warning] map_regu does not visit ARITH thirdptr
+> `ARITH_TYPE.thirdptr` (used by BETWEEN, SUBSTR, etc.) is NOT visited by `map_regu`. Applications that use `map_regu` for tree modification must handle the three-operand case separately or use a direct walk of `ARITH_TYPE`.
+
+`map_regu_and_xasl` wraps `map_regu` with an additional callback for any `XASL_NODE *` pointers (via `regu.xasl`) found during the walk. This is used for clone-decache operations that must clear sub-plan accumulators.
 
 ## Serialisation
 
