@@ -192,6 +192,6 @@ Before invoking, `executor::execute()` calls `change_exec_rights(auth_name)`, wh
 - [[components/query-executor|query-executor]] — initiates SP calls during XASL evaluation
 - [[components/authenticate|authenticate]] — execution-rights stack consulted by `change_exec_rights`
 - [[components/system-catalog|system-catalog]] — `_db_stored_procedure` tables live here
-- [[components/method]] — method invocation (forward-ref; to be created)
+- [[components/method|method]] — method invocation layer; shares `method_invoke_group` for scan-time SP dispatch
 - [[Build Modes (SERVER SA CS)]]
 - Source: [[sources/cubrid-src-sp|cubrid-src-sp]]
