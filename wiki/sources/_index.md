@@ -29,6 +29,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 
 ## CUBRID Codebase Sources
 
+- [[sources/cubrid-src-compat|cubrid-src-compat]] — `src/compat/` client API & DB_VALUE (2026-04-23)
 - [[sources/cubrid-src-sp|cubrid-src-sp]] — `src/sp/` stored procedure JNI bridge (2026-04-23)
 - [[sources/cubrid-src-query|cubrid-src-query]] — `src/query/` XASL execution layer (2026-04-23)
 - [[sources/cubrid-src-object|cubrid-src-object]] — `src/object/` schema, auth, catalog, LOB locator (2026-04-23)
