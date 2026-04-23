@@ -30,4 +30,24 @@ Client libs (cs/) ──► Broker (broker/) ──► CAS ──► DB server (
 cubridmanager (Java GUI) ── depends on cm_common + shell tools
 ```
 
-See [[dependencies/_index]] for per-library pages.
+## 3rdparty library graph
+
+All libraries downloaded from `github.com/CUBRID/3rdparty` mirror at configure time. Static on Linux; prebuilt DLLs on Windows.
+
+```
+libcubrid.so ──► libexpat.a       (XML)
+             ──► libjansson.a     (JSON DOM)
+             ──► libssl.a + libcrypto.a  (TLS — OpenSSL 1.1.1w EOL)
+             ──► libodbc.so       (ODBC — unixODBC 2.3.9, shared)
+             ──► liblz4.a         (compression)
+             ──► libre2.a         (regex)
+             ──► [headers] rapidjson  (header-only JSON)
+             ──► libtbb.a         (parallel query — SERVER_MODE only)
+
+csql ────────► libedit.a          (line editing — Linux only)
+
+Build tools (not linked):
+             ──► flex + bison     (grammar → C++ codegen)
+```
+
+See [[dependencies/_index]] for per-library pages. See [[modules/3rdparty]] for CMake build integration.
