@@ -90,3 +90,6 @@ _attachments/
 
 # CUBRID source-tree symlink (local-only path)
 .raw/cubrid
+
+# Obsidian internal state — churns constantly, noise-only commits
+.obsidian/workspace.json
