@@ -120,6 +120,15 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Broker Layer (`src/broker/`)
+
+- [[components/broker-impl|broker-impl]] — hub: connection broker (multi-process router), CAS lifecycle, 3-tier topology, connection pooling
+- [[components/cas|cas]] — CAS worker process: request loop, `server_fn_table[]` dispatch, db connection via CSS
+- [[components/broker-shm|broker-shm]] — shared memory IPC: `T_SHM_BROKER`, `T_SHM_APPL_SERVER`, `T_APPL_SERVER_INFO`, semaphore protocol
+- [[components/shard-broker|shard-broker]] — optional shard proxy: range/hash routing, `shard_*` files, `T_SHM_PROXY`
+
+---
+
 ## Communication Layer (`src/communication/`)
 
 - [[components/communication|communication]] — hub: NET_SERVER_REQUEST_LIST dispatch table, request handler registration, method/xs callback glue, per-request histogram
