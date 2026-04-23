@@ -17,6 +17,21 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Storage Layer (`src/storage/`)
+
+- [[components/storage|storage]] — overview: buffer pool, B-tree, heap, file/disk management, external sort, LOB
+- [[components/page-buffer|page-buffer]] — buffer pool, LRU zones, fix/unfix, dirty tracking, DWB integration
+- [[components/btree|btree]] — B+tree index: find, range scan, insert, MVCC delete, bulk load, unique stats
+- [[components/heap-file|heap-file]] — row storage, MVCC paths, scan cache, class representation cache
+- [[components/file-manager|file-manager]] — three-layer I/O stack: file_manager, disk_manager, file_io
+- [[components/double-write-buffer|double-write-buffer]] — torn-write protection; DWB_SLOT; crash recovery ordering
+- [[components/overflow-file|overflow-file]] — linked-page overflow for large heap records and long B-tree keys
+- [[components/extendible-hash|extendible-hash]] — disk-resident extendible hash (internal use)
+- [[components/external-sort|external-sort]] — external merge sort; `sort_listfile` entry point; parallel sort bridge
+- [[components/external-storage|external-storage]] — LOB external storage API: POSIX, OWFS, LOCAL backends
+
+---
+
 ## Query Execution Layer (`src/query/`)
 
 - [[components/query|query]] — hub page: full XASL execution layer overview
