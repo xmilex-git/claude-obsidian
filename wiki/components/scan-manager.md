@@ -150,3 +150,5 @@ When `grouped = 1`, pages are fixed (pinned) across a block of tuples. Up to `QP
 - [[components/dblink|dblink]] — `S_DBLINK_SCAN` backend
 - [[components/parallel-query|parallel-query]] — `S_PARALLEL_HEAP_SCAN` backend
 - [[components/partition-pruning|partition-pruning]] — partitioned class access specs pruned before scan open
+- [[components/method-scan|method-scan]] — `S_METHOD_SCAN` backend (`METHOD_SCAN_ID msid`)
+- [[components/method|method]] — method invocation layer owning `cubscan::method::scanner`
