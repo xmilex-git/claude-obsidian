@@ -146,3 +146,11 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/sp-jni-bridge|sp-jni-bridge]] — invocation mechanics, DB_VALUE marshalling, unsupported types, interrupt handling
 - [[components/sp-method-dispatch|sp-method-dispatch]] — XASL METHOD_CALL_NODE → cubpl::executor dispatch; recursion limit; OUT arg write-back
 - [[components/sp-protocol|sp-protocol]] — UDS/TCP transport, SP_CODE opcodes, METHOD_CALLBACK bidirectional loop, epoch-based reconnect
+
+---
+
+## Method Invocation Layer (`src/method/`)
+
+- [[components/method|method]] — hub: scan-time C method + SP invocation; S_METHOD_SCAN; client-side callback handler
+- [[components/method-invoke-group|method-invoke-group]] — `cubmethod::method_invoke_group`: shared dispatch struct (used by both src/method/ and src/sp/)
+- [[components/method-scan|method-scan]] — `cubscan::method::scanner`: S_METHOD_SCAN backend wired into scan-manager
