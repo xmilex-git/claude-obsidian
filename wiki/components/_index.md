@@ -108,3 +108,12 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/system-catalog|system-catalog]] — `_db_class` and friends; info-schema virtual views; CI-enforced 9-rule SQL formatting
 - [[components/authenticate|authenticate]] — users, groups, privilege caching; `authenticate_context`; execution-rights stack for SPs
 - [[components/lob-locator|lob-locator]] — LOB locator state machine (TRANSIENT/PERMANENT); CS/SA mode dispatch
+
+---
+
+## Stored Procedure Bridge (`src/sp/`)
+
+- [[components/sp|sp]] — hub: C++ ↔ Java PL engine bridge; JVM lifecycle, connection pool, catalog DDL, error propagation
+- [[components/sp-jni-bridge|sp-jni-bridge]] — invocation mechanics, DB_VALUE marshalling, unsupported types, interrupt handling
+- [[components/sp-method-dispatch|sp-method-dispatch]] — XASL METHOD_CALL_NODE → cubpl::executor dispatch; recursion limit; OUT arg write-back
+- [[components/sp-protocol|sp-protocol]] — UDS/TCP transport, SP_CODE opcodes, METHOD_CALLBACK bidirectional loop, epoch-based reconnect
