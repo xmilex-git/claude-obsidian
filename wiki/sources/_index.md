@@ -41,6 +41,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 - [[sources/cubrid-src-thread|cubrid-src-thread]] — `src/thread/` worker pools, daemons, THREAD_ENTRY (2026-04-23)
 - [[sources/cubrid-src-method|cubrid-src-method]] — `src/method/` method/SP invocation from queries; S_METHOD_SCAN (2026-04-23)
 - [[sources/cubrid-src-broker|cubrid-src-broker]] — `src/broker/` connection broker, CAS workers, shared memory IPC, shard proxy (2026-04-23)
+- [[sources/cubrid-src-loaddb|cubrid-src-loaddb]] — `src/loaddb/` bulk loader: bison/flex grammar, parallel workers, direct heap insert (2026-04-23)
 
 ---
 
