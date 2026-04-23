@@ -1,7 +1,7 @@
 ---
 type: meta
 title: "Hot Cache"
-updated: 2026-04-08T19:00:00
+updated: 2026-04-24T00:45:00
 tags:
   - meta
   - hot-cache
@@ -11,7 +11,7 @@ related:
   - "[[log]]"
   - "[[Wiki Map]]"
   - "[[getting-started]]"
-  - "[[claude-obsidian-v1.4-release-session]]"
+  - "[[DragonScale Memory]]"
 ---
 
 # Recent Context
@@ -19,66 +19,53 @@ related:
 Navigation: [[index]] | [[log]] | [[overview]]
 
 ## Last Updated
-2026-04-15 (2): Claude SEO v1.9.0 slides + GitHub release complete. Built 15-slide HTML deck (`claude-seo-slides/v190.html`) with scroll-snap, IntersectionObserver, and screenshot fallbacks. Fixed hardcoded `/home/agricidaniel/` path in `release_report.py` (use `Path.home()`). Added `.claude/` and `.superpowers/` to `.gitignore`. Pushed 68 files (9,662 insertions). Tagged v1.9.0, created GitHub release with PDF attached. Session: [[2026-04-15-slides-and-release-session]].
 
-2026-04-15 (1): Claude SEO v1.9.0 Release Report PDF complete. 13 pages, dark theme, 1.53 MB at `~/Desktop/Claude-SEO-v1.9.0-Release-Report.pdf`. Key WeasyPrint fixes: file:// URI spaces need `urllib.parse.quote()`; `display:table-cell` is atomic (no page breaks inside); fixed `height:297mm` causes empty space; logo filename had double space "hub  pro". Pro Hub Challenge v2 live: keyword LEADS, $600 prize pool ($400/$200), deadline April 28. Session: [[2026-04-15-release-report-session]].
+2026-04-24: Phase 3.5 hardening pass. Cross-phase audit ran (codex rated original Phase 1-3 output cross-phase risk as "high" with 10 hold-ship items). All 10 resolved: doc-lint contradiction fixed, Mechanism 4 labeled NOT IMPLEMENTED, DragonScale Memory.md assigned `address: c-000001`, agents/wiki-ingest.md + agents/wiki-lint.md updated to reflect Phase 2+3, hooks.json extended to stage `.vault-meta/`, `bin/setup-dragonscale.sh` created as opt-in installer, `tests/` + `Makefile` added (all tests pass), versions synced to 1.5.0 across plugin.json + marketplace.json, CHANGELOG.md created.
+
+2026-04-23 (3): Phase 3 complete. Semantic tiling lint shipped as opt-in. `scripts/tiling-check.py` (485 lines) with flock-guarded atomic cache, localhost-locked OLLAMA_URL default, symlink rejection, model-drift invalidation, and banded thresholds (error>=0.90, review>=0.80, conservative seeds). 4 codex review rounds, 10/10 accept.
+
+2026-04-23 (2): Phase 2 complete. Deterministic page addresses MVP via `scripts/allocate-address.sh` (flock-guarded, recovers counter from max observed). New frontmatter `address: c-NNNNNN`. `wiki-ingest` and `wiki-lint` updated with opt-in Address Assignment and Validation sections. 3 codex rounds, 8/8 accept.
+
+2026-04-23 (1): Phase 0-1 complete. DragonScale Memory spec (`wiki/concepts/DragonScale Memory.md` v0.3) plus `skills/wiki-fold/` for Mechanism 1 (log rollups, dry-run verified). Survived multi-round codex review.
 
 ## Plugin State
-- **Version**: 1.4.1 (installed, enabled, user scope)
+
+- **Version**: 1.5.0 (bumped from 1.4.3; plugin.json + marketplace.json synced)
 - **Install ID**: `claude-obsidian@claude-obsidian-marketplace`
-- **Releases**: v1.1, v1.4.0, v1.4.1 on GitHub
-- **Skills**: 10 (wiki, wiki-ingest, wiki-query, wiki-lint, save, autoresearch, canvas, defuddle, obsidian-bases, obsidian-markdown)
-- **Hooks**: 4 (SessionStart, PostCompact, PostToolUse, Stop)
-- **Multi-agent**: bootstrap files for Codex, OpenCode, Gemini, Cursor, Windsurf, GitHub Copilot
+- **Skills**: 11 (wiki, wiki-ingest, wiki-query, wiki-lint, wiki-fold, save, autoresearch, canvas, defuddle, obsidian-bases, obsidian-markdown)
+- **Scripts**: `scripts/allocate-address.sh`, `scripts/tiling-check.py` (both opt-in; feature-detected by skills)
+- **Setup**: `bin/setup-vault.sh` (base vault), `bin/setup-dragonscale.sh` (opt-in DragonScale), `bin/setup-multi-agent.sh` (multi-agent bootstrap)
+- **Tests**: `make test` runs `tests/test_allocate_address.sh` + `tests/test_tiling_check.py`. Zero ollama dependency for core tests.
+- **Hooks**: 4 (SessionStart, PostCompact, PostToolUse [stages wiki/, .raw/, .vault-meta/], Stop)
 
-## Install Command (Correct Two-Step Flow)
-```bash
-claude plugin marketplace add AgriciDaniel/claude-obsidian
-claude plugin install claude-obsidian@claude-obsidian-marketplace
-```
+## DragonScale Mechanisms
 
-There is no `claude plugin install github:owner/repo` shortcut. Both steps are required. Full session note: [[claude-obsidian-v1.4-release-session]].
+1. **Fold operator** (Mechanism 1): `skills/wiki-fold/`, dry-run verified. No fold committed yet in this vault.
+2. **Deterministic addresses** (Mechanism 2): shipped; vault counter at 2 (DragonScale Memory.md holds c-000001).
+3. **Semantic tiling lint** (Mechanism 3): shipped; awaiting `ollama pull nomic-embed-text` to activate in this vault.
+4. **Boundary-first autoresearch** (Mechanism 4): **NOT IMPLEMENTED**. Design sketch only in the spec; `autoresearch/SKILL.md` unchanged.
 
-## Recent Release Cycle (v1.1 → v1.4.1)
-- **v1.1**: URL ingestion, vision ingestion, delta tracking manifest, 3 new skills (defuddle, obsidian-bases, obsidian-markdown), multi-depth query modes, PostToolUse auto-commit, removed invalid `allowed-tools` frontmatter field
-- **v1.4.0**: Dataview to Bases migration (new `wiki/meta/dashboard.base`), Canvas JSON 1.0 spec completeness, PostCompact hook, Obsidian CLI MCP option, 6 multi-agent bootstrap files, 249 em dashes scrubbed, security git history rewrite to remove placeholder email
-- **v1.4.1**: hotfix for wrong plugin install command syntax in README and install-guide.md
+## Key Lessons from This Release Cycle
 
-## Key Lessons (Recent)
-1. Plugin install is always two-step: `marketplace add` then `install plugin@marketplace`
-2. `allowed-tools` is NOT valid in skill frontmatter. Use only `name` and `description` (kepano convention).
-3. Obsidian Bases uses `filters/views/formulas`, not Dataview `from/where`
-4. Canvas edges have asymmetric defaults: `fromEnd="none"`, `toEnd="arrow"`
-5. Hook-injected context does not survive compaction. PostCompact hook is required to restore hot cache.
-6. `git filter-repo` needs two passes: `--replace-text` for blobs, `--replace-message` for commit messages
+1. Cross-phase audits are essential. Individual phase reviews miss drift between phases.
+2. Opt-in feature detection (`[ -x script ] && [ -f state ]`) preserves default plugin behavior for adopters and non-adopters alike.
+3. PostToolUse hook matcher is `Write|Edit` — Bash writes don't fire it. Scripts that mutate tracked state must be Bash-only to avoid side-effect commits.
+4. Seed-vault self-consistency matters: if the spec says post-rollout pages need addresses, the concept page itself has to have one.
+5. Codex adversarial review rounds stop when the punch list is empty, not when the author feels done.
 
-## Style Preferences (Saved to Memory)
-- **No em dashes** (U+2014) or `--` as punctuation anywhere. Use periods, commas, colons, or parentheses. Hyphens in compound words are fine (auto-commit, multi-agent).
-- Keep responses short and direct. No trailing "here's what I did" summaries.
+## Style Preferences
+
+- No em dashes (U+2014) or `--` as punctuation. Periods, commas, colons, or parentheses. Hyphens in compound words are fine.
+- Short and direct responses. No trailing summaries.
 - Parallel tool calls when independent.
 
-## Ecosystem Research (Done 2026-04-08)
-16+ Claude + Obsidian projects mapped. Full feature matrix at [[claude-obsidian-ecosystem]]. Prioritized backlog at [[cherry-picks]]. Top competitors: [[Ar9av-obsidian-wiki]] (multi-agent + delta tracking), [[rvk7895-llm-knowledge-bases]] (multi-depth query), [[ballred-obsidian-claude-pkm]] (goal cascade + auto-commit), [[kepano-obsidian-skills]] (authoritative Obsidian skills from Obsidian's own creator).
-
-## Blog Posts (agricidaniel.com)
-- 16 total blog posts, 23 sitemap URLs (+ claude-ads-v1-5-release not yet in sitemap)
-- Latest: how-i-got-8000-github-stars, claude-canvas-ai-visual-production, claude-obsidian-ai-second-brain (2026-04-10), claude-ads-v1-5-release (2026-04-13)
-- claude-ads-v1-5-release audited and fixed: added Key Takeaways box, 7/9 H2s as questions, answer-first stats, personal experience callout, cover PNG→WebP, meta desc trimmed, ads-demo.gif added
-- Google Indexing API submitted, Bing IndexNow submitted
-- Workflow: write JSON -> blogPosts.ts -> sitemap.xml -> llms.txt -> vite build -> prerender.mjs -> vercel deploy --prod -> google-index.py --submit -> IndexNow curl
-
-## GitHub Backlink State
-- 26 repos have Author section with agricidaniel.com + Skool + YouTube links
-- 5 SEO repos have rankenstein.pro mentions (claude-seo, claude-blog, on-page-seo, Keywordo-kun, marketing-skill-pack)
-- All repos have topics/tags set
-- All repos have homepage URLs set
-- For new repos: always add Author section + homepage URL + topics
-
 ## Active Threads
-- v1.5.0 backlog: `/adopt` command, vault graph analysis in wiki-lint, semantic search via qmd, Marp output
-- `community` remote (`avalonreset-pro/claude-obsidian`) still has pre-rewrite history. Force-push needed next time that remote is configured.
+
+- DragonScale Mechanism 4 (boundary-first autoresearch) is designed but not implemented; ship when a Phase 4 is triggered.
+- v1.5.0 not yet pushed to GitHub. User controls the push timing.
+- CLAUDE.md has one pre-existing uncommitted change ("Release Blog Post" section) that predates this session.
 
 ## Repo Locations
+
 - Working: `~/Desktop/claude-obsidian/`
 - Public: https://github.com/AgriciDaniel/claude-obsidian
-- Community (private): https://github.com/avalonreset-pro/claude-obsidian
