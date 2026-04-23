@@ -131,9 +131,116 @@ Multi-row DML statements (bulk INSERT, multi-row UPDATE) reuse `PRUNING_SCAN_CAC
 > [!key-insight] Partition-aware MIN/MAX optimization
 > When a query is `SELECT MIN(pk) FROM partitioned_table`, partition pruning combined with the aggregate optimizer can satisfy the result by reading a single leaf from one partition's index — O(1) rather than O(N).
 
+## SELECT vs DML Pruning Differences
+
+SELECT and DML use the same `PRUNING_CONTEXT` / `partition_prune_spec` mechanism but diverge in several ways:
+
+| Dimension | SELECT | INSERT / UPDATE |
+|---|---|---|
+| Entry point | `partition_prune_spec(thread_p, vd, access_spec)` | `partition_prune_insert` / `partition_prune_update` |
+| Evaluated against | Constant-folded WHERE predicates in `val_descr` | Actual row values from `RECDES` record |
+| Number of partitions | All matching partitions (range/list: subset; hash: single) | Exactly one target partition |
+| Cross-partition move | N/A | UPDATE re-evaluates; if partition key changed, old partition is deleted and new partition is inserted |
+| Scan cache reuse | `HEAP_SCANCACHE` opened per surviving partition | `PRUNING_SCAN_CACHE` reused across multiple rows in bulk DML |
+
+### `partition_prune_spec` detail
+- Loads `PRUNING_CONTEXT` from server cache or schema.
+- Evaluates `pcontext->partition_pred` (the partition expression function predicate) using `pcontext->attr_info`.
+- For RANGE: binary-searches partition ranges; any partition whose range overlaps the predicate's possible values survives.
+- For LIST: walks enumerated values; only partitions with a matching value survive.
+- For HASH: evaluates the hash function and identifies the single target bucket.
+- Updates `access_spec->pruned_partition_list` — only surviving partitions are opened by `scan_open_heap_scan` / `scan_open_index_scan`.
+
+## Partition Cache
+
+The server maintains a global cache of `PRUNING_CONTEXT` objects keyed by class OID (`partition_cache_init` / `partition_cache_finalize`):
+- `partition_load_pruning_context` checks the cache first; cache hit sets `pinfo->is_from_cache = true`.
+- `partition_decache_class` is called on DDL changes (ALTER TABLE PARTITION, DROP TABLE) to invalidate stale contexts.
+- Cached contexts must not be destructively modified — callers that need to modify the context copy it or work within the `pinfo->is_from_cache` constraint.
+
+> [!warning] Context ownership
+> When `is_from_cache = true`, `partition_clear_pruning_context` does **not** free the cached data. Only `partition_cache_finalize` at server shutdown reclaims those resources. Callers that create their own context (not from cache) must call `partition_clear_pruning_context` explicitly.
+
+## PRUNING_SCAN_CACHE and Multi-Row DML
+
+For bulk INSERT and multi-row UPDATE, opening a new `HEAP_SCANCACHE` per row would be prohibitively expensive. `PRUNING_SCAN_CACHE` amortises this:
+
+```c
+struct pruning_scan_cache {
+  HEAP_SCANCACHE scan_cache;           // cached heap scan for this partition
+  bool is_scan_cache_started;
+  func_pred_unpack_info *func_index_pred; // function index predicates (one per functional index)
+  int n_indexes;
+};
+```
+
+`partition_get_scancache(pcontext, partition_oid)` returns an existing cache if one is open for this partition; `partition_new_scancache(pcontext)` allocates a fresh one appended to `pcontext->scan_cache_list`. All caches in the list are closed and freed by `partition_clear_pruning_context`.
+
+## Aggregate Optimization (O(1) MIN/MAX)
+
+`partition_load_aggregate_helper` fills `HIERARCHY_AGGREGATE_HELPER` for the aggregate optimizer:
+
+```c
+// partition_sr.h
+extern int partition_load_aggregate_helper(
+  PRUNING_CONTEXT *pcontext,
+  access_spec_node *spec,
+  int pruned_count,
+  BTID *root_btid,
+  HIERARCHY_AGGREGATE_HELPER *helper
+);
+```
+
+The helper records the `BTID` and `HFID` for each surviving partition. When `qdata_evaluate_aggregate_optimize` (in `query_aggregate.hpp`) detects a `MIN` or `MAX` aggregate over a partition key with a B-tree index, it:
+1. Gets the helper from `partition_load_aggregate_helper`.
+2. For each partition's B-tree, reads only the first (for MIN) or last (for MAX) leaf entry.
+3. Takes the best value across all partitions.
+
+> [!key-insight] O(1) MIN/MAX across partitioned table
+> `SELECT MIN(pk) FROM partitioned_table` after pruning can be satisfied by reading a single B-tree leaf per surviving partition — each read is O(log N) where N is rows in that partition, but the aggregation over partition results is O(k) where k is the number of surviving partitions. Combined with aggressive pruning (e.g. `WHERE part_col = 5` on a list-partitioned table), k=1 and the query cost is O(log N) total instead of O(N).
+
+## 2-Phase Pruning (Static + Dynamic)
+
+Pruning operates in two phases:
+
+**Phase 1 — Static (query compile, client-side)**: The optimizer recognises constant predicates on the partition expression and can eliminate partitions entirely from the XASL plan before serialisation. This is done in `src/optimizer/` (not in `partition_sr.c`).
+
+**Phase 2 — Dynamic (server-side, at `qexec_execute_mainblock`)**: `partition_prune_spec` is called with the current `val_descr` at execution time, allowing pruning on host variables and session parameters that are only known at runtime (e.g. `WHERE part_col = ?`). This is the runtime pruning implemented in `partition_sr.c`.
+
+> [!key-insight] Two-phase pruning
+> Static pruning happens client-side during plan generation; the XASL stream may already contain only a subset of partitions. Dynamic pruning re-evaluates at execution time using actual bound parameter values. Both phases can be active on the same query — static eliminates what's known at compile time; dynamic finishes the job at runtime.
+
+## Constraints
+
+- **Server-mode only**: `partition_sr.h` enforces `#if !defined(SERVER_MODE) && !defined(SA_MODE) #error Belongs to server module`.
+- **MAX_PARTITIONS = 1024**: Hard limit in `partition.h`; attempting to define more partitions will fail at DDL time.
+- **Partition key type**: The partition expression must be a single scalar function predicate (`func_pred`). No multi-column partition keys.
+- **`attr_id` / `attr_position`**: `PRUNING_CONTEXT` tracks a single `ATTR_ID` (the partition attribute). For index-based pruning, `attr_position` is its position in the index key.
+- **Global indexes**: The commented-out `partition_is_global_index` (`#if 0`) suggests global secondary indexes were planned or partially implemented but are currently disabled.
+
+## Lifecycle
+
+```
+server start  : partition_cache_init() — allocate LF_HASH_TABLE for PRUNING_CONTEXT cache
+DDL           : partition_decache_class(thread_p, class_oid) — invalidate on ALTER/DROP
+query start   : partition_init_pruning_context(pinfo) — zero-fill
+load          : partition_load_pruning_context(thread_p, class_oid, pruning_type, pinfo)
+                  — cache lookup or schema load; sets partition_type, partitions[], count
+prune SELECT  : partition_prune_spec(thread_p, vd, access_spec)
+                  — evaluate pred; update access_spec->pruned_partition_list
+prune INSERT  : partition_prune_insert(thread_p, class_oid, recdes, ..., pruned_class_oid, pruned_hfid)
+prune UPDATE  : partition_prune_update(thread_p, class_oid, recdes, ...)
+agg opt       : partition_load_aggregate_helper(pcontext, spec, pruned_count, root_btid, helper)
+cleanup       : partition_clear_pruning_context(pinfo) — close scan caches; free if not from cache
+server stop   : partition_cache_finalize() — free all cached contexts
+```
+
 ## Related
 
 - Parent: [[components/query|query]]
 - [[components/query-executor|query-executor]] — calls `partition_prune_spec` before scan open
-- [[components/scan-manager|scan-manager]] — opens scans on pruned partitions only
-- [[components/aggregate-analytic|aggregate-analytic]] — aggregate optimizer uses partition hierarchy info
+- [[components/scan-manager|scan-manager]] — opens scans only on partitions surviving pruning
+- [[components/aggregate-analytic|aggregate-analytic]] — aggregate optimizer consumes `HIERARCHY_AGGREGATE_HELPER`
+- [[components/btree|btree]] — `partition_prune_unique_btid` and `partition_prune_partition_index` resolve B-tree IDs per partition
+- [[components/heap-file|heap-file]] — `HEAP_SCANCACHE` embedded in `PRUNING_SCAN_CACHE`
+- [[Build Modes (SERVER SA CS)]] — server/SA only; compile-time guard in `partition_sr.h`
