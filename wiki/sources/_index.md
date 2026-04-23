@@ -51,6 +51,14 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 - [[sources/cubrid-src-win-tools|cubrid-src-win-tools]] — `src/win_tools/` Windows NT service host, CLI control client, MFC tray app (2026-04-23)
 - [[sources/cubrid-msg|cubrid-msg]] — `msg/` localized message catalogs: POSIX catgets format, three catalogs, four locales, gencat + iconv build pipeline (2026-04-23)
 - [[sources/cubrid-3rdparty|cubrid-3rdparty]] — `3rdparty/` bundled/downloaded dependencies: 10 libraries, CMake ExternalProject orchestration (2026-04-23)
+- [[sources/cubrid-AGENTS|cubrid-AGENTS]] — root `AGENTS.md` project guide: structure map, query pipeline, build modes, anti-patterns (2026-04-23)
+- [[sources/cubrid-src-query-parallel|cubrid-src-query-parallel]] — `src/query/parallel/` parallel execution: worker pool, hash join, heap scan, sort (2026-04-23)
+- [[sources/cubrid-src-parser|cubrid-src-parser]] — `src/parser/` SQL parser, PT_NODE, Bison grammar, semantic check (2026-04-23)
+- [[sources/cubrid-src-storage|cubrid-src-storage]] — `src/storage/` page buffer, B-tree, heap file, DWB, external storage (2026-04-23)
+- [[sources/cubrid-src-cm-common|cubrid-src-cm-common]] — `src/cm_common/` CUBRID Manager shared utilities (2026-04-23)
+- [[sources/cubrid-locales|cubrid-locales]] — `locales/` LDML data + build toolchain for per-locale shared libs (2026-04-23)
+- [[sources/cubrid-timezones|cubrid-timezones]] — `timezones/` IANA tzdata + build toolchain → libcubrid_timezones (2026-04-23)
+- [[sources/cubrid-contrib|cubrid-contrib]] — `contrib/` contributor drivers (Python/PHP/Perl/Ruby/.NET/Hibernate), observability, deployment (2026-04-23)
 
 ---
 
