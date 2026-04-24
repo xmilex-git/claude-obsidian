@@ -268,6 +268,25 @@ struct access_spec_node {
 | `ACCESS_METHOD_INDEX_NODE_INFO` | B-tree node info scan |
 | `ACCESS_METHOD_SEQUENTIAL_SAMPLING_SCAN` | Statistical sampling scan |
 
+### `ACCESS_SPEC_FLAG_*` flags (complete bitmask)
+
+`access_spec_node.flags` bits, checked via `ACCESS_SPEC_IS_FLAGED`, set/cleared via `ACCESS_SPEC_SET_FLAG` / `ACCESS_SPEC_UNSET_FLAG`. Defined in `src/query/xasl.h`:
+
+| Bit | Constant | Meaning |
+|-----|----------|---------|
+| `0x0` | `ACCESS_SPEC_FLAG_NONE` | Default / no flags |
+| `0x1` | `ACCESS_SPEC_FLAG_FOR_UPDATE` | `SELECT … FOR UPDATE`; this spec will be locked at scan time (drives `mvcc_select_lock_needed`, maps to `S_UPDATE` scan_op_type) |
+| `0x2` | `ACCESS_SPEC_FLAG_NO_PARALLEL_HEAP_SCAN` | Disable parallel heap scan for this spec (set by `PT_HINT_NO_PARALLEL_HEAP_SCAN` and by the checker for non-parallelisable predicates) |
+| `0x4` | `ACCESS_SPEC_FLAG_NUM_PARALLEL_THREADS` | User-specified parallel worker count override via hint; presence overrides the auto-computed degree |
+| `0x8` | `ACCESS_SPEC_FLAG_MERGEABLE_LIST` | Result mode: workers produce per-thread list files that main merges (set-independent SELECT path — the fast, ordered case) |
+| `0x10` | `ACCESS_SPEC_FLAG_COUNT_DISTINCT` | Result mode: aggregate-only path (UPDATE STATISTICS, `COUNT(DISTINCT …)`). Workers accumulate per-thread, main merges |
+| `0x20` | `ACCESS_SPEC_FLAG_ONLY_MIN_MAX_SCAN` | MRO (Min/Max Range Optimization): read only the first or last index key and exit. Used for `MIN(col)`/`MAX(col)` over an indexed column; parallel-incompatible (reviewer checks this flag to reject parallel index scan) |
+| `0x40` | `ACCESS_SPEC_FLAG_FORCE_FIXED_SCAN` | Honour the `KEEP PAGE` hint; keeps pages fixed across slot iteration rather than releasing between rows |
+
+**Hint → parse-spec → access-spec propagation.** User hints arrive as `PT_HINT_*` tokens from the parser (`csql_grammar.y`), get set on the parse-tree spec as `PT_SPEC_FLAG_*` during semantic analysis (`name_resolution.c`, `scanner_support.c`), and are translated during XASL generation (`xasl_generation.c`) to the matching `ACCESS_SPEC_FLAG_*` bit on the runtime `access_spec_node`. The three namespaces run in parallel so callers on the execution side only deal with `ACCESS_SPEC_FLAG_*`.
+
+The `MERGEABLE_LIST` / `COUNT_DISTINCT` flags are also set **internally by the optimizer** when a plan is eligible for the respective parallel-heap-scan result mode — they are not only user-hint-driven.
+
 ---
 
 ## XASL flags (complete bitmask)

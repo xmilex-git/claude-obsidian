@@ -49,6 +49,7 @@ Deferred plan execution: user later says "apply reconciliation for PR #NNNN" →
 
 <!-- Newest first. Added automatically by the ingest protocol. -->
 
+- [[prs/PR-7062-parallel-scan-all-types|PR #7062 — Expand parallel heap scan to parallel scan (index, heap, list)]] (CBRD-26722, **OPEN**, Reconciliation Plan written) — generalises `parallel_heap_scan` namespace to `parallel_scan::manager<RT, ST>` over heap/list/index; new input handlers + slot iterators for list & index; `XASL_SNAPSHOT × LIST/INDEX` blocked by checker; new `parallel_scan_page_threshold` system param; hint surface unchanged via `NO_PARALLEL_HEAP_SCAN → NO_PARALLEL_SCAN` rename. 1 incidental wiki enhancement on [[components/xasl]].
 - [[prs/PR-6911-parallel-heap-scan-io-bottleneck|PR #6911 — Reduce I/O bottleneck when parallel heap scan]] (CBRD-26615, merged 2026-03-27, case-b retroactive) — replaces per-page mutex handoff with upfront sector allocation; pgbuf API left unchanged after review.
 
 ---
