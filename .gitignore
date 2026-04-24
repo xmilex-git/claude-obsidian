@@ -93,6 +93,11 @@ _attachments/
 
 # Obsidian internal state — churns constantly, noise-only commits
 .obsidian/workspace.json
+.obsidian/graph.json
+.obsidian/community-plugins.json
+
+# Personal curated canvas — user-specific, do not ship with repo
+wiki/Wiki Map.canvas
 
 # Quartz (website/) build & deps
 website/node_modules/
