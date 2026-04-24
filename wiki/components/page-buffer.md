@@ -19,6 +19,7 @@ public_api:
   - "pgbuf_promote_read_latch(thread_p, pgptr_p, condition)"
   - "pgbuf_assign_private_lru / pgbuf_release_private_lru"
   - "pgbuf_peek_stats(...) — expose LRU zone counts"
+  - "pgbuf_thread_variables_init(thread_p) — caches m_is_private_lru_enabled + m_holder_anchor on THREAD_ENTRY"
 tags:
   - component
   - cubrid
@@ -49,7 +50,8 @@ Each cached page has one `PGBUF_BCB` (internal, not in the public header). Key f
 | `zone_flags` | `atomic<int>` | Zone bits + BCB flags (dirty, flushing, victim, …) |
 | `count_fix_and_avoid_dealloc` | `atomic<int>` | High 16 bits = fix count, low 16 bits = avoid-dealloc count |
 | `lsa` | `LOG_LSA` | Page LSA at last dirty mark |
-| `mutex` | `pthread_mutex_t` | Protects BCB state transitions |
+| `atomic_latch` | `std::atomic<uint64_t>` | Packed `{latch_mode: uint16_t, waiter_exists: uint16_t, fcnt: int32_t}` union — single-word CAS primitive; replaced the legacy `pthread_mutex_t` for all BCB state transitions |
+| `latch_last_thread` | `THREAD_ENTRY *` (`SERVER_MODE`) | Last thread that acquired the latch — diagnostic aid for contention debugging |
 | `lru_prev/next` | `PGBUF_BCB*` | Position within LRU list |
 | `iopage_buffer` | `PGBUF_IOPAGE_BUFFER*` | Points to actual page data |
 
@@ -187,6 +189,46 @@ This prevents torn writes across power failures.
 ## Statistics and Monitoring
 
 `pgbuf_peek_stats` exposes counters for all three LRU zones, dirty page count, victim candidates, private LRU quota, and BCB waiter queues. Used by the `SHOW PAGE BUFFER STATUS` diagnostic command.
+
+## Atomic latch model
+
+Each BCB's mutable state (latch mode, waiter flag, fix count) lives in a single 64-bit `std::atomic<uint64_t>` called `atomic_latch`. A union overlay reinterprets the word as `{PGBUF_LATCH_MODE latch_mode (16 bits); uint16_t waiter_exists; int fcnt (32 bits)}`. Every state transition is a `compare_exchange_weak` retry loop — the mutex that used to guard this state is gone.
+
+CAS primitive helpers (all file-local inlines in `page_buffer.c`):
+
+| Primitive | Purpose |
+|---|---|
+| `set_latch(latch, mode)` | Rewrite `latch_mode`, preserve `fcnt` and `waiter_exists`. |
+| `add_fcnt(latch, cnt)` | Atomically add to `fcnt`. |
+| `set_latch_and_fcnt(latch, mode, cnt)` | Compound: rewrite mode AND set fcnt atomically. |
+| `set_latch_and_add_fcnt(latch, mode, cnt)` | Compound: rewrite mode AND add to fcnt atomically. |
+| `set_waiter_exists(latch, bool)` | Flip the waiter flag. |
+| `get_fcnt / get_waiter_exists / get_latch / get_impl` | Acquire-ordered reads of individual fields or the whole union. |
+
+Compound `_and_` setters update both fields in the same CAS — readers never observe a half-updated state.
+
+### Lockfree RO fast path
+
+For read-only fixes on pages already resident and not transitioning, a fast path entirely bypasses both the hash-anchor mutex and any BCB CAS contention:
+
+- `pgbuf_lockfree_fix_ro` — called from `pgbuf_fix` when the caller wants a READ latch on `OLD_PAGE` / `OLD_PAGE_MAYBE_DEALLOCATED`. Walks the hash chain via `pgbuf_search_hash_chain_no_bcb_lock` (no anchor mutex), then a gate CAS verifies `{VPID matches, latch_mode ∈ {NO_LATCH, READ}, waiter_exists == false}` and atomically increments `fcnt`. On failure, falls back to the slow path.
+- `pgbuf_lockfree_unfix_ro` — symmetric: CAS decrement `fcnt`. Falls back to slow path only if a waiter is present.
+
+The VPID recheck inside the gate CAS defends against ABA — a BCB being recycled to a different VPID between the lookup and the CAS.
+
+### `PGBUF_THREAD_HAS_PRIVATE_LRU` is on the hot path
+
+The predicate is consulted on every page fix. To minimize per-fix load overhead it reads a single cached bool `thread_p->m_is_private_lru_enabled` (on `cubthread::entry`) rather than recomputing `quota_enabled && private_lru_index != -1`.
+
+The cached bool is populated by `pgbuf_thread_variables_init(thread_p)`, called from three thread-reassignment sites:
+
+- `css_server_task::execute` — after `private_lru_index = session_get_private_lru_idx(session_p)`.
+- `vacuum_master_task::execute` — after boot guard, on master wake-up.
+- `session_set_conn_entry_data` — session attach / reconnect mid-task.
+
+**Contract**: any code that writes `thread_p->private_lru_index` **must** call `pgbuf_thread_variables_init` to refresh the cache. Missing a call leaves the bool stale and routes subsequent page fixes to the wrong LRU.
+
+The same init function also caches `thread_p->m_holder_anchor = &pgbuf_Pool.thrd_holder_info[thread_p->index]` to avoid per-fix array indexing. For daemons that never transit the three init sites (vacuum workers, log flush, checkpoint, DWB, CDC), four holder-accessor sites in `page_buffer.c` lazily bind the pointer on first use.
 
 ## Gotchas
 
