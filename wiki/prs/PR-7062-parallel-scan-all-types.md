@@ -96,7 +96,7 @@ baseline_before: "175442fc858bd0075165729756745be6f8928036"
 baseline_after: "175442fc858bd0075165729756745be6f8928036"
 reconciliation_applied: false
 reconciliation_applied_at:
-incidental_enhancements_count: 1
+incidental_enhancements_count: 4
 tags:
   - pr
   - cubrid
@@ -181,7 +181,11 @@ Heap scan was the only parallel-capable scan. Large list-file materialisations (
 
 - **List scan — temp-file sectors pre-split.** On open, `file_get_all_data_sectors` collects the disk-resident sectors of the backing `QFILE_LIST_ID` temp file, and the `ftab_set` is split evenly across workers. Workers then iterate their owned sector range without cross-thread coordination. **Membuf fallback:** if the list is small enough to live entirely in memory (`m_has_membuf == true`, no `temp_vfid`), sector partition is impossible and the scan falls back to single-threaded. **Dependent lists:** when the list references another (`dependent_list_id`), both temp files are merged into one collector so no sectors leak.
 
-- **New system parameter `parallel_scan_page_threshold`** (`PRM_ID_PARALLEL_SCAN_PAGE_THRESHOLD`): default `2048`, min `2048`, max `INT_MAX`, flags `PRM_FOR_SERVER | PRM_HIDDEN`. Kills parallelisation when the scan target has fewer than 2048 pages. History: originally introduced as `parallel_index_scan_page_threshold` with default `32` (commit `8827dd968`), raised to `2048` after measurement showed leaf-mutex contention outweighs parallelism on small indexes (`e17db63eb`), then renamed to `parallel_scan_page_threshold` and unified across all three scan types (`9551c8356`).
+- **Two system parameters, not one** (correction from first-pass reading). Final state after merge:
+  - `PRM_ID_PARALLEL_SCAN_PAGE_THRESHOLD` (name: `parallel_scan_page_threshold`): flags `PRM_FOR_SERVER | PRM_HIDDEN`, default `2048`, min `2048`, max `INT_MAX`. Hidden server-side kill-switch; used by `scan_manager` / `compute_parallel_degree`.
+  - `PRM_ID_PARALLEL_INDEX_SCAN_PAGE_THRESHOLD` (name: `parallel_index_scan_page_threshold`): flags `PRM_FOR_CLIENT | PRM_USER_CHANGE | PRM_FOR_SESSION`, default `32`, min `32`, max `INT_MAX`. **Separate client-side tuning knob** consumed only by the optimizer cost model in `qo_apply_parallel_index_scan_threshold` (`plan_generation.c`). End-users can set this per session to influence index-scan cost decisions without touching the server param.
+  - `PRM_ID_PARALLELISM` flags changed: was `PRM_FOR_SERVER` only, now `PRM_FOR_SERVER | PRM_FOR_CLIENT` — clients can now set the parallelism hint.
+  - History: originally introduced as a single `parallel_index_scan_page_threshold` default `32` (commit `8827dd968`); the server-side default was raised to `2048` after measurement showed leaf-mutex contention outweighs parallelism on small indexes (`e17db63eb`); finally split so the optimizer's input and the runtime kill-switch can tune independently (`9551c8356`).
 
 - **Hint grammar UNCHANGED from the user's perspective.** `/*+ NO_PARALLEL_SCAN */` replaces the identifier `/*+ NO_PARALLEL_HEAP_SCAN */` (old hint name no longer accepted), but the replacement one line now disables heap + list + index parallel scans globally for the statement. No other new hints introduced.
 
@@ -230,6 +234,82 @@ These files/symbols have no current wiki page. Listed for future dedicated inges
 - `parallel_scan::slot_iterator_list` — tuple iteration within sector range
 - `parallel_scan::SCAN_TYPE` enum + `scan_traits<ST>` template framework
 - `PRM_ID_PARALLEL_SCAN_PAGE_THRESHOLD` system parameter (no dedicated page for system params exists yet — candidate for `components/system-parameters.md`)
+
+## Deep analysis — supplementary findings (post initial ingest)
+
+This section captures findings from a full line-by-line read of the 10,396-line diff across 5 parallel sub-agent passes. The content above was written from the external review doc; items below are corrections and additions only visible from the code itself.
+
+### Corrections to the initial write-up
+
+- **BUILDVALUE_OPT scope is far wider than "COUNT DISTINCT"** (the previous claim). The rename from `COUNT_DISTINCT` → `BUILDVALUE_OPT` reflects an actual capability expansion. The new `is_buildvalue_opt_supported_function()` checker whitelists **11 aggregate functions**: `PT_COUNT_STAR`, `PT_COUNT`, `PT_MIN`, `PT_MAX`, `PT_SUM`, `PT_AVG`, `PT_STDDEV`, `PT_STDDEV_POP`, `PT_STDDEV_SAMP`, `PT_VARIANCE`, `PT_VAR_POP`, `PT_VAR_SAMP`, `PT_GROUP_CONCAT`. DISTINCT aggregates (non-MIN/MAX) use per-worker `qfile` sort-distinct lists; MIN/MAX use collation-aware compare + coerce; SUM/AVG/STDDEV/VARIANCE use `qdata_add_dbval` with per-row domain-resolution fallback. The previous one-liner in this page understated the change significantly.
+- **Two system parameters, not one** — corrected in the Behavioral section above.
+- **`qexec_resolve_domains_for_aggregation_for_parallel_heap_scan_buildvalue_proc` retains the `heap_scan` substring in its name post-merge** — the function is called from the new `BUILDVALUE_OPT` `write()` path (`px_scan_result_handler.cpp:6425`) but its identifier was never renamed. Latent inconsistency; cleanup candidate for a follow-up PR.
+
+### Lifecycle / resource-ownership invariants not in the review doc
+
+- **Placement-new + explicit destructor + db_private_free triplet.** `manager`, `input_handler`, and `result_handler` are allocated via `db_private_alloc()`, constructed via placement-new, destroyed via an explicit `~manager()` call, then freed via `db_private_free`. Error paths in `scan_open_parallel_*` must run the destructor before the free or worker-pool reservations leak. `px_scan.cpp:~2550-2570` (heap), `~3100-3150` (index/list). Destructor itself must call `worker_manager->release_workers()` — not optional.
+- **Deferred promotion for index scan** is distinct from heap/list. `scan_open_parallel_index_scan` allocates a `parallel_index_scan_pending` struct, stashes it in `scan_id->s.isid.parallel_pending`, and **does not** open the manager. `scan_start_scan` later calls `scan_try_promote_parallel_index_scan` which consumes the pending struct to attempt worker reservation. If the reservation fails (workers unavailable, `need_count_only` flipped since prepare, etc.), the `isid/pisid` union fallback is clean. Pending state is freed by `scan_close_parallel_index_scan` if never consumed. This pattern exists because aggregate fast-path decisions (especially `need_count_only`) may be made between `open` and `start` and should be respected. Heap and list have no analogous pending state.
+- **`scan_clear_parallel_index_pending` count(\*)-safety hook.** `qexec_intprt_fnc` invokes this helper when `need_count_only == true` to discard any stashed parallel-index promotion — forces the single-thread `count(*)` fast path. Without this the pending struct would attempt promotion mid-execution.
+- **Trace storage lazy allocation.** `trace_storage` is allocated not at `scan_open()` but on the first `scan_reset_scan_block_parallel_*` call when `thread_p->on_trace == true`. If a scan errors before reset, trace stats are lost — no fallback to earlier allocation.
+- **Error propagation MOVES rather than copies.** Worker errors reach main via `m_err_messages_p->move_top_error_message_to_this()`. Only the first worker to acquire the lock has its error recorded; subsequent worker errors are silently discarded. No error queue.
+- **`scan_regu_key_to_index_key` publicity change.** Was `static` in `scan_manager.c`; now `extern` and declared in `scan_manager.h`. Required by the parallel-index input handler for key-range setup.
+
+### Index slot iterator — invariants beyond §2.2 of review doc
+
+- **Fence key skip is required for correctness, not just performance.** Every leaf has sentinel fence records at boundaries (detected via `btree_leaf_record_is_fence`). These duplicate edge entries across adjacent leaves; skipping them prevents double-counting in GROUP BY / aggregates under parallel iteration. Fence check happens only **after** `spage_get_record` succeeds (`px_scan_slot_iterator_index.cpp:7969, 7979`).
+- **Multi-OID per key.** Non-unique indexes may store multiple OIDs per leaf key (overflow chain). `btree_key_process_objects()` callback (`collect_oid_callback` at 7757-7776) collects visible OIDs through MVCC snapshot filtering, then each OID is processed by `process_oid()` — heap fetch, predicate eval, val_list fill.
+- **Covering index vs heap-fetch handshake.** Covering-index path reads output directly from the B-tree key via `btree_attrinfo_read_dbvalues` (7811). Non-covering path does `heap_get_visible_version` (7856). Two different filter functions: `eval_key_filter` for covering, `eval_data_filter` for non-covering (7797-7846 vs 8082-8118).
+- **Range cursor optimization.** When multiple ranges are specified, keys arrive in sorted B-tree order, so `m_current_range_idx` advances monotonically — once a range's upper bound is passed it is never revisited. Ranges are pre-sorted by lower bound in `convert_key_range` (7321-7520).
+- **`part_key_desc` bound swap.** If the last partial-key domain is DESC, the B-tree physically stores keys in reverse order for that domain. The iterator swaps lower/upper bounds and inverts range operators (GT↔LT) exactly like `btree_prepare_bts` (7449-7462). Correctness critical; not obvious from SQL semantics.
+- **NULL midxkey rejection with Oracle-empty-string exception.** Replicates `btree_apply_key_range_and_filter`: NULL in the `num_index_term`-th composite-key element fails `<, <=, >, >=, BETWEEN`. BUT: if `PRM_ID_ORACLE_STYLE_EMPTY_STRING` is set and the element is an empty-string char/bit, it's treated as non-NULL (8041-8077).
+- **Reversal semantics for `use_desc_index` (checker-blocked, code-ready).** The iterator physically supports descending traversal (slot counts down from `m_num_keys`, leaf chain reads `prev_vpid`). The checker currently blocks `use_desc_index` from parallel outright (precautionary; review-doc §3.1 says "relatively untested path"). Enabling later requires no iterator change.
+- **No explicit handling for mid-iteration btree splits/merges.** If a leaf splits after a worker reads `next_vpid` but before the next worker fixes it, the new sibling is silently skipped. Acceptable because (a) filtering is stateless and (b) B-tree pages are not reused within a session — the stale page will simply appear empty or missing, not corrupt. **Caveat**: relies on the "pages not reused" invariant holding.
+
+### Input handlers — invariants beyond §2.3 of review doc
+
+- **List handler membuf-worker assignment.** Worker 0 always becomes the membuf-worker (`m_tl_is_membuf_worker = (idx == 0 && m_has_membuf)`). Membuf pages (volid `NULL_VOLID`) are consumed by worker 0 in Phase 1 before it joins the disk-sector iteration in Phase 2. Other workers skip Phase 1 entirely.
+- **List handler dependent-list chain.** When a `QFILE_LIST_ID` has `dependent_list_id` set (e.g., join intermediate feeding another intermediate), the handler walks the chain via `for (dep = list_id->dependent_list_id; dep; dep = dep->dependent_list_id)` and appends every dependent's sectors to the shared collector via the new `ftab_set::append_from_collector()` method. **Risk**: if a dependent is still being written, sector collection can be incomplete. Mitigation: executor guarantees full materialisation before parallel-list open.
+- **Overflow-tuple page skipping.** After computing a page VPID from the sector bitmap, the handler briefly fixes the page and checks `QFILE_GET_TUPLE_COUNT`. If the marker is `QFILE_OVERFLOW_TUPLE_COUNT_FLAG == -2`, the page is skipped (`continue`) — overflow pages are already consumed by the primary page's `qfile_get_tuple` handler, so duplicate processing would violate correctness. One extra read-only I/O per overflow page, unavoidable given sector-level partitioning has no tuple awareness.
+- **Heap handler — pure rename with one addition.** The renamed `px_scan_input_handler_heap.cpp` is byte-for-byte logic-identical to baseline `px_heap_scan_input_handler_ftabs.cpp` — EXCEPT the new `ftab_set::append_from_collector()` method added to the shared `ftab_set` class. Heap itself never calls it; exists solely to support the list-handler dependent-chain case.
+- **Atomic index assignment is seq_cst.** `m_splited_ftab_set_idx.fetch_add(1)` uses default `std::memory_order_seq_cst`. Called once per worker at init; not perf-critical; conservative ordering is fine.
+- **Lock order is mutex → page latch.** The index handler's `m_leaf_mutex` is held during `pgbuf_fix` of the leaf page. CUBRID has no explicit rule for mutex/latch ordering; this precedent was set by the heap `input_handler_single_table` in [[prs/PR-6911-parallel-heap-scan-io-bottleneck|PR #6911]] and carried forward. Follow-up question in review comments (documented above) accepted the precedent.
+
+### BTree integration — new public helpers
+
+- **`btree_leaf_record_is_fence`** (`btree.c:1911-1927`, declared in `btree.h:831`): now public. The fence-record detector needed by parallel-scan slot iteration.
+- **`btree_key_process_objects` + `BTREE_PROCESS_OBJECT_FUNCTION` typedef** (`btree.c:520-537, 24503`, declared in `btree.h:835-844`): moved from file-static to public API. Function changed from `static int` to `int`. Needed by `collect_oid_callback` in the index slot iterator.
+
+### Optimizer cost logic — new 137-line function
+
+`qo_apply_parallel_index_scan_threshold` (`plan_generation.c:2925-3061`) is **not covered by the review doc**:
+
+- Descends the plan tree via `qo_find_driving_scan_plan` to locate the leftmost `SCAN_PLANTYPE_SCAN`.
+- Computes selectivity via `QO_TERM_SELECTIVITY` product over the driving table's filter predicates.
+- Cost formula: `metric = ceil(sel * index_leaf_pages)`. If `metric < threshold`, marks the spec `NO_PARALLEL_SCAN`.
+- Degree formula: `floor(log2(metric / threshold)) + 2`, capped by `PRM_ID_PARALLELISM` / `PRM_MAX_PARALLELISM`. Matches the runtime `compute_parallel_degree` formula.
+- Respects `PARALLEL(N)` hint: if `N <= 1`, mark `NO_PARALLEL`.
+- Added `#include <math.h>` for `ceil()`.
+
+### Trace handler — new 434-line file
+
+- Per-worker `child_stats` struct with heap fields (`fetches`, `ioreads`, `fetch_time`, `read_rows`, `qualified_rows`, `elapsed_time`) plus index-specific fields (`read_keys`, `qualified_keys`, `key_qualified_rows`, `data_qualified_rows`, `elapsed_lookup`, `covered_index`, `multi_range_opt`, `index_skip_scan`, `loose_index_scan`, `need_count_only`).
+- `merge_stats` sums into main via `perfmon_add_at_offset_to_local` for perfmon integration. Boolean flags OR'd (covered_index etc. set if ANY worker detected).
+- `accumulative_trace_storage` retains per-worker history across scan iterations.
+- `dump_stats_json` emits 70-line JSON object with `parallel_workers` count, time ranges, key/row ranges, gather mode (`mergeable list` / `row by row` / `buildvalue` / `unknown`), per-index flags — visible in EXPLAIN JSON output.
+- `dump_stats_text` produces text-mode equivalent.
+- No Jansson in the .cpp file; uses `json_pack` / `json_object_set_new` (Jansson already via shared perfmon path).
+
+### Code concerns / smells spotted
+
+- **Dangling `heap_scan` substring in a public function name.** `qexec_resolve_domains_for_aggregation_for_parallel_heap_scan_buildvalue_proc` (see Corrections). Not a bug but an inconsistency with the rest of the rename.
+- **Old TODO survives the PR unchanged.** `src/base/system_parameter.c:~250` retains `sprintf(newval, "%d", 32); /* TODO: 0 ? */` despite the parameter being renamed/split. No resolution in PR history.
+- **Redundant field clears in `scan_reset_scan_block_parallel_heap_scan`.** Comments in the diff mark several `single_fetched`/`null_fetched`/`qualified_block` assignments as "TODO: cleared by scan_reset_scan_block; redundant?". Dead-code or duplicated effort — neither confirmed nor removed in this PR.
+- **Index-handler fallback label uses generic `ER_FAILED` + `er_clear()`.** The `init_on_main` fallback path sets a generic error then clears the stack, relying on callers not checking `er_errid()` afterwards. Fragile — if any caller pattern inverts, the failure becomes silent.
+- **`write_initialize` on DISTINCT aggregates can return without setting an interrupt flag in some branches.** Observed in earlier commits; later fixed in the same PR series, but the window of undefined behavior in the intermediate state is worth flagging for any bisect.
+- **No assert that the fixed page is a leaf.** Index iterator's `pgbuf_fix(m_current_leaf_vpid)` does not validate `node_level == 1` after fix. Corruption (pointing at a non-leaf) would lead to wrong data being read via `spage_get_record` rather than a hard failure. `assert(btree_get_node_header(...)->node_level == 1)` after fix would harden the contract.
+- **`set_page()` defers key range conversion to first call.** If an empty-index scan never calls `set_page`, ranges are never converted. Safe in practice but creates an implicit ordering dependency.
+- **No NULL guard on `indx_info->key_info.key_ranges`** when `key_cnt > 0`. Mirrors the non-parallel path's assumption, but worth auditing upstream INDX_INFO construction to confirm the invariant holds.
+- **Non-leaf record byte layout is a hidden contract.** The `OR_GET_INT(rec.data)` + `OR_GET_SHORT(rec.data + OR_INT_SIZE)` pattern in `init_on_main` (parsing pageid + volid directly from the record buffer) means any future change to the B-tree non-leaf record format silently breaks this reader. No abstraction layer protects it.
 
 ## Review discussion highlights
 
@@ -382,14 +462,22 @@ The design-convergence highlights worth calling out (from review doc §7): `comp
 
 ## Incidental wiki enhancements
 
-**1 enhancement applied** (baseline truths surfaced during deep code analysis, independent of this PR's changes):
+**4 enhancements applied** (baseline truths surfaced during deep code analysis, independent of this PR's changes). Each is a fact about the tree at the current baseline `175442fc8` — the PR's changes will retroactively require small updates to two of them (flagged in the Reconciliation Plan).
 
-- **[[components/xasl]]** — added a complete `ACCESS_SPEC_FLAG_*` table (all 7 flags: `NONE`, `FOR_UPDATE`, `NO_PARALLEL_HEAP_SCAN`, `NUM_PARALLEL_THREADS`, `MERGEABLE_LIST`, `COUNT_DISTINCT`, `ONLY_MIN_MAX_SCAN`, `FORCE_FIXED_SCAN`) with bit values and semantics. Previously the page only referenced two by name in prose. Also added a paragraph explaining the `PT_HINT_* → PT_SPEC_FLAG_* → ACCESS_SPEC_FLAG_*` propagation pipeline between parser and XASL generation. These are baseline facts reflecting the current state at commit `175442fc8`; on PR #7062 merge, the table will need the two renames (`NO_PARALLEL_HEAP_SCAN → NO_PARALLEL_SCAN`, `COUNT_DISTINCT → BUILDVALUE_OPT`) applied via Reconciliation Plan entry above.
+1. **[[components/xasl]]** — added a complete `ACCESS_SPEC_FLAG_*` table (all 7 flags: `NONE`, `FOR_UPDATE`, `NO_PARALLEL_HEAP_SCAN`, `NUM_PARALLEL_THREADS`, `MERGEABLE_LIST`, `COUNT_DISTINCT`, `ONLY_MIN_MAX_SCAN`, `FORCE_FIXED_SCAN`) with bit values and semantics. Previously the page only referenced two by name in prose. Also added a paragraph explaining the `PT_HINT_* → PT_SPEC_FLAG_* → ACCESS_SPEC_FLAG_*` propagation pipeline between parser and XASL generation.
 
-Additional candidate enhancements (not applied this round — bounded scope):
-- The `MRO / ISS / ILS` index-scan optimizations (referenced by the checker) have no dedicated wiki coverage and are acronyms scattered across `components/btree.md` and `components/scan-manager.md`.
-- The "no page-latch → mutex ordering rule" CUBRID convention (surfaced in review comments) is a latent cross-cutting concern not documented.
-- The `thread_local static` ftab_set pattern (from PR #6911) is a convention worth its own short page.
+2. **[[components/btree]]** — expanded the "Fence Keys" section with the `btree_leaf_record_is_fence` public API contract and the double-counting hazard that motivates it; added new "Leaf-page header and leaf-chain pointers" section documenting `BTREE_NODE_HEADER.next_vpid/prev_vpid/node_level/num_keys` (what makes the leaf chain traversable); added new "Non-leaf record byte layout" section with the 6-byte `(pageid: INT32, volid: INT16)` prefix contract that direct parsers (e.g. parallel scan's root-to-leaf descent) depend on; added new "MVCC visibility filtering during B-tree iteration" section documenting `btree_mvcc_info_to_heap_mvcc_header` and `btree_key_process_objects` with `BTREE_PROCESS_OBJECT_FUNCTION` callback typedef.
+
+3. **[[components/list-file]]** — expanded the `QFILE_LIST_ID` section with three new subsections: "Dependent-list chain" (the `dependent_list_id` linked-list pattern used by nested-loop join intermediates), "Membuf vs disk backing" (the two-backend storage model of `QMGR_TEMP_FILE` and the membuf-first-then-spill transition), and "`QFILE_OVERFLOW_TUPLE_COUNT_FLAG`" (the `-2` sentinel marking overflow pages that must be skipped during sector-level iteration).
+
+4. **[[components/file-manager]]** — added new "Data-sector harvesting (`file_get_all_data_sectors`)" subsection under Layer 1 documenting the `FILE_FTAB_COLLECTOR` API, the PART_FTAB+FULL_FTAB walk that produces the per-sector page bitmaps, the `VFID *` argument type (widened from `HFID *` during review for non-heap file reusability), and the main-thread / single-threaded-at-open contract.
+
+### Additional candidate enhancements (not applied this round)
+
+- `MRO / ISS / ILS` index-scan optimizations — referenced by the checker in this PR but have no dedicated wiki coverage. Scattered across `components/btree.md` and `components/scan-manager.md` as acronyms only.
+- The "no page-latch → mutex ordering rule" CUBRID convention — surfaced in review comments as a latent cross-cutting convention not documented anywhere.
+- The `thread_local static` class-member pattern for parallel-scan workers (originating in [[prs/PR-6911-parallel-heap-scan-io-bottleneck|PR #6911]]) — convention worth a short dedicated page.
+- Deferred-promotion pattern (`parallel_pending` struct consumed between `open` and `start`) — specific to parallel index scan; would benefit from a scan-manager section.
 
 These are left for future ingests to pick up.
 

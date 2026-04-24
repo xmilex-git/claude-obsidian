@@ -48,7 +48,24 @@ List files are CUBRID's mechanism for materializing intermediate and final query
 typedef struct qfile_list_id QFILE_LIST_ID;
 ```
 
-Key fields: page-count, type list (`QFILE_TUPLE_VALUE_TYPE_LIST`), sort list, tuple count, `QUERY_ID`. `QFILE_LIST_ID` is what `qexec_execute_query` returns to the client; the cursor wraps it.
+Key fields: page-count, type list (`QFILE_TUPLE_VALUE_TYPE_LIST`), sort list, tuple count, `QUERY_ID`, backing `QMGR_TEMP_FILE *tfile_vfid` (NULL if the list is purely in memory). `QFILE_LIST_ID` is what `qexec_execute_query` returns to the client; the cursor wraps it.
+
+### Dependent-list chain
+
+A `QFILE_LIST_ID` may reference another via the `dependent_list_id` field (singly-linked). This appears when one intermediate result feeds another — e.g. the inner side of a nested-loop join whose rows are materialised into a secondary list. Consumers iterating the primary list must also iterate every dependent in the chain to produce the full tuple stream; the parallel list scan's input handler walks the chain and aggregates all sectors from base plus dependents into a single `FILE_FTAB_COLLECTOR` before splitting work across workers.
+
+### Membuf vs disk backing
+
+`QMGR_TEMP_FILE` has two storage backends that co-exist:
+
+- **Membuf** — a short fixed-size page array held in memory. Populated first; small lists (typical intermediate results from selective queries) never leave membuf. Membuf pages carry `volid = NULL_VOLID`.
+- **Temp file** — disk-resident, allocated via the file manager when membuf fills up. `temp_vfid` identifies the file; data-bearing sectors are harvested via `file_get_all_data_sectors` (see [[components/file-manager]]).
+
+A list can be (a) membuf-only, (b) membuf + disk (membuf pages are still consumed first), or (c) disk-only after spill. The parallel list scan dedicates worker 0 to any membuf pages present (Phase 1), then all workers iterate disk sectors in parallel (Phase 2).
+
+### `QFILE_OVERFLOW_TUPLE_COUNT_FLAG`
+
+Wide tuples that exceed a page's capacity spill to an overflow chain. Overflow pages carry the sentinel tuple-count marker `QFILE_OVERFLOW_TUPLE_COUNT_FLAG = -2` in their page header. Sector-level parallel scans must detect this marker after a speculative page read and skip the page — overflow pages are already consumed by the primary page's `qfile_get_tuple` handler, so processing them again would double-count.
 
 ## Page Layout
 

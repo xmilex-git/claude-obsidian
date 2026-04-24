@@ -26,6 +26,24 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-24] pr-ingest-deep | PR #7062 — Deep-read pass with 5 parallel subagents
+- Expanded the initial [[prs/PR-7062-parallel-scan-all-types|PR-7062]] ingest beyond the authoritative external review doc by dispatching 5 parallel sub-agents to read the full 10,396-line diff line-by-line across file clusters: (1) `px_scan.cpp` + `task`, (2) `slot_iterator_index`, (3) input handlers (list/index/heap + ftab_set + slot_iterator_list), (4) `result_handler` + `checker` + `trace_handler`, (5) C-side integration (`scan_manager`, `query_executor`, `plan_generation`, grammar/parser, `btree.c/h`, `system_parameter`).
+- **Key corrections surfaced** (added as "Deep analysis — supplementary findings" section in the PR page):
+  - **Two system parameters, not one.** `PRM_ID_PARALLEL_SCAN_PAGE_THRESHOLD` (server-hidden, default 2048) is the runtime kill-switch; `PRM_ID_PARALLEL_INDEX_SCAN_PAGE_THRESHOLD` (client-session, default 32) is a separate optimizer tuning knob used by the new cost logic in `plan_generation.c`. The review doc documented the merged history, not the final state.
+  - **BUILDVALUE_OPT scope far beyond COUNT DISTINCT.** Rename from `COUNT_DISTINCT` → `BUILDVALUE_OPT` reflects an actual capability expansion — whitelist of 11 aggregates (`COUNT_STAR`, `COUNT`, `MIN`, `MAX`, `SUM`, `AVG`, `STDDEV*`, `VARIANCE*`, `GROUP_CONCAT`) via new `is_buildvalue_opt_supported_function()`.
+  - **Deferred-promotion pattern for index scan.** `scan_open_parallel_index_scan` stashes `parallel_pending` in the union; `scan_start_scan` → `scan_try_promote_parallel_index_scan` consumes it. Heap and list have no analogous state. `qexec_intprt_fnc` clears the pending when `need_count_only` flips.
+  - **`qexec_resolve_domains_for_aggregation_for_parallel_heap_scan_buildvalue_proc` retains `heap_scan` in its name post-merge** — latent rename inconsistency.
+  - **New public btree helpers.** `btree_leaf_record_is_fence` (new), `btree_key_process_objects` + `BTREE_PROCESS_OBJECT_FUNCTION` (moved from file-static to public). `scan_regu_key_to_index_key` promoted from static to extern.
+  - New 137-line optimizer cost function `qo_apply_parallel_index_scan_threshold` in `plan_generation.c` (computes `metric = ceil(sel * index_leaf_pages)`, degree `floor(log2(metric/threshold)) + 2`).
+  - 8 dispatch points in `scan_manager.c` receive `S_PARALLEL_LIST_SCAN` + `S_PARALLEL_INDEX_SCAN` cases. `qexec_clear_access_spec_list` consolidated from inline switch to a single wrapper.
+- **Incidental wiki enhancements expanded from 1 → 4** (all applied now as baseline-truth additions):
+  - [[components/xasl]] (from first pass) — ACCESS_SPEC_FLAG_* 7-flag table.
+  - [[components/btree]] — fence-key contract, BTREE_NODE_HEADER leaf-chain fields, non-leaf record 6-byte prefix layout, MVCC visibility filtering via `btree_mvcc_info_to_heap_mvcc_header`, `btree_key_process_objects` public API.
+  - [[components/list-file]] — QFILE_LIST_ID `dependent_list_id` chain, membuf vs disk backing, `QFILE_OVERFLOW_TUPLE_COUNT_FLAG = -2` overflow sentinel.
+  - [[components/file-manager]] — `file_get_all_data_sectors` / `FILE_FTAB_COLLECTOR` API under Layer 1.
+- Code-concerns backlog added to PR page: dangling `heap_scan` in function name, surviving `TODO: 0 ?` in system_parameter.c, redundant reset_scan_block field clears, generic `ER_FAILED + er_clear()` in index fallback, missing leaf-level assert after `pgbuf_fix`, deferred key-range conversion in `set_page`, missing NULL guard on `indx_info->key_info.key_ranges`, hidden non-leaf byte-layout contract.
+- Lesson: initial pass did file-sampling based on the review doc + skimmed diff; user pushback required dispatching 5 parallel subagents for full-read coverage. Incorporated into protocol — see next log entry.
+
 ## [2026-04-24] pr-ingest | PR #7062 — Expand parallel heap scan to parallel scan (index, heap, list) (CBRD-26722)
 - Upstream: https://github.com/CUBRID/cubrid/pull/7062 · state **OPEN** (non-draft) · author `@xmilex-git`
 - Case: **open** — Reconciliation Plan written in full, no component-page edits applied for PR-induced changes. `reconciliation_applied: false`. Executable later via "apply reconciliation for PR #7062".
@@ -34,8 +52,9 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 - Key design: mutex-guarded leaf-chain cursor for index scans (amortised via `parallel_scan_page_threshold ≥ 2048`); sector pre-split + membuf fallback for list scans; heap path unchanged (rename only). Result matrix is 7-of-9 (XASL_SNAPSHOT × {LIST,INDEX} blocked in checker).
 - Author-attached external design doc: https://github.com/user-attachments/files/26920618/pr_7062_code_review.md (358 lines — primary source for the PR page synthesis).
 - Reconciliation Plan covers 16 existing pages (parallel-heap-scan family rename + semantic repurposing, scan-manager enum/union additions, checker expansion, xasl flag renames, btree integration, parser rename propagation) + 5 new pages to create on merge (`parallel-scan-input-handler-{list,index}`, `parallel-scan-slot-iterator-{list,index}`, `parallel-scan-type`).
-- **Incidental enhancement (applied now, baseline-truth):** [[components/xasl]] — added a complete `ACCESS_SPEC_FLAG_*` table (7 flags with bit values + semantics) + paragraph on the `PT_HINT_* → PT_SPEC_FLAG_* → ACCESS_SPEC_FLAG_*` propagation pipeline. Previously the page only mentioned 2 flags in prose.
+- Initial pass incidental enhancement: [[components/xasl]] — added a complete `ACCESS_SPEC_FLAG_*` table (7 flags with bit values + semantics) + paragraph on the `PT_HINT_* → PT_SPEC_FLAG_* → ACCESS_SPEC_FLAG_*` propagation pipeline. Previously the page only mentioned 2 flags in prose.
 - No baseline bump (PR not merged).
+- Superseded by "pr-ingest-deep" entry above once the user requested full-read coverage.
 
 ## [2026-04-24] pr-ingest | PR #6911 — Reduce I/O bottleneck when parallel heap scan (CBRD-26615)
 - Upstream: https://github.com/CUBRID/cubrid/pull/6911 · merge commit `45730b9` · merged 2026-03-27

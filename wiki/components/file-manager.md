@@ -95,6 +95,18 @@ File descriptors store type-specific metadata alongside the VFID:
 > [!key-insight] Two-phase deallocation for MVCC
 > When a file page is deallocated under MVCC, it may still be visible to older snapshots. File manager uses `FILE_DROPPED_FILES` tracking and a postpone-operation pattern to defer physical reclamation until after all concurrent transactions that might see the page have committed.
 
+### Data-sector harvesting (`file_get_all_data_sectors`)
+
+`int file_get_all_data_sectors(THREAD_ENTRY *, VFID *, FILE_FTAB_COLLECTOR *)` walks the file's allocation metadata and emits every data-bearing sector into the collector.
+
+- `FILE_FTAB_COLLECTOR` accumulates `(vsid, bitmap)` entries — one per allocated sector — where the bitmap marks which of the 64 pages inside that sector actually hold data.
+- The walk covers both `PART_FTAB` (partial sectors — sectors with mixed free + allocated pages) and `FULL_FTAB` (full sectors — all 64 pages allocated).
+- The argument type is `VFID *` — the helper is file-type agnostic (callable for heap files, temp/list files, etc.). Earlier draft used `HFID *`; widened during review (`@hornetmj`) so the same collector works for non-heap files like `QMGR_TEMP_FILE`.
+- Used by: parallel heap scan (sector pre-split of a table's heap), parallel list scan (sector pre-split of a temp file plus its dependent chain).
+- Thread safety: the collector lives on the caller's frame; `file_get_all_data_sectors` is called single-threaded on the main thread at scan open, before workers start.
+
+The `FILE_FULL_PAGE_BITMAP` macros in `file_manager.h` encode the per-sector 64-page presence vector as a `uint64_t`.
+
 ## Layer 2: Disk Manager (`disk_manager.c`)
 
 ### Volume Model

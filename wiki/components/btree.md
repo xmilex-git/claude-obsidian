@@ -197,6 +197,37 @@ Every structural change has a corresponding `btree_rv_*` function pair (`undo` /
 
 Leaf pages use fence keys (OID-marker sentinels) to bound the key range of each page. `btree_capacity.fence_key_cnt` counts them; they are invisible to query results but critical for correct range scans and merges.
 
+`btree_leaf_record_is_fence(RECDES *)` is the public helper (`btree.h`) that classifies a slot as a fence. Callers that iterate leaf slots directly — e.g. parallel index scans that bypass the single-thread cursor — **must call this before treating a record as a key**, otherwise boundary entries duplicated across adjacent leaves cause double-counting in aggregates and GROUP BY. The check is only valid after `spage_get_record` succeeds; the fence record's OID slot carries the sentinel marker rather than a real OID.
+
+## Leaf-page header and leaf-chain pointers
+
+`BTREE_NODE_HEADER` is stored as record 0 of every B-tree page (leaf or internal). For leaf pages the header carries:
+
+- `next_vpid` — the VPID of the next leaf in ascending-key order; `VPID_ISNULL` marks the right end of the leaf chain.
+- `prev_vpid` — the VPID of the previous leaf; `VPID_ISNULL` marks the left end.
+- `node_level` — `1` for leaf, `>1` for internal nodes.
+- `max_key_len`, `num_oids`, `num_nulls`, `num_keys` — cardinality metadata.
+
+The forward/backward leaf chain is what makes `btree_range_scan` and parallel leaf-cursor iteration possible without repeated root traversals. The cursor in parallel index scan (`src/query/parallel/px_scan/px_scan_input_handler_index.cpp`) advances by reading `next_vpid` (or `prev_vpid` under `use_desc_index`) inside a mutex and then releasing it.
+
+## Non-leaf record byte layout
+
+Non-leaf records carry `(child_vpid, first_key)` pairs. The first 6 bytes of the record's `data` buffer are **raw-parsable** as the child VPID:
+
+| Offset | Size | Field | Parse macro |
+|---|---|---|---|
+| `0` | 4 bytes | `pageid` (INT32) | `OR_GET_INT(rec.data)` |
+| `4` | 2 bytes | `volid` (INT16) | `OR_GET_SHORT(rec.data + OR_INT_SIZE)` |
+| `6` | variable | key data | `btree_read_fixed_portion_of_non_leaf_record` |
+
+This byte layout is a **hidden contract** — callers that descend root-to-leaf without going through `btree_find_first()` (such as `parallel_scan::input_handler_index::init_on_main`) parse these offsets directly. Any future change to the non-leaf record format must keep this prefix compatible or update every direct parser in sync.
+
+## MVCC visibility filtering during B-tree iteration
+
+`btree_mvcc_info_to_heap_mvcc_header(BTREE_MVCC_INFO *, MVCC_REC_HEADER *)` converts the per-OID MVCC fields stored in a leaf record into the heap-header form that `mvcc_satisfies_snapshot` expects. Used by object-processing callbacks — e.g. the parallel-index `collect_oid_callback` in `px_scan_slot_iterator_index.cpp` — to filter out OIDs that are invisible to the current snapshot before returning them to the executor. This is why filtered indexes and mid-scan UPDATE/DELETE do not produce stale results from the btree path.
+
+`btree_key_process_objects(thread_p, btid, key, leaf_rec, BTREE_PROCESS_OBJECT_FUNCTION *fn, void *args)` is the public iteration API over all OIDs (base + overflow chain) for a given leaf key, invoking `fn` per OID; the callback decides whether to accept, reject, or stop. `BTREE_PROCESS_OBJECT_FUNCTION` is the typedef for the callback signature. Both moved from file-static to `btree.h` public surface for use by parallel-scan machinery.
+
 ## Key Functions Summary
 
 | Function | Role |
