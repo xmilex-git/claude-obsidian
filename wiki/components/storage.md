@@ -171,7 +171,7 @@ All page modifications must follow the Write-Ahead Logging protocol:
 ### LOB Cross-Cutting with Object Layer
 
 LOB data crosses two components:
-- **LOB locator** lives in [[components/object|`src/object/lob_locator.cpp`]].
+- **LOB locator** lives in [[components/object|src/object/lob_locator.cpp]].
 - **Physical storage** is handled here by `es.c`, routing to a POSIX or OWFS backend.
 - Heap operations (`heap_attrinfo_delete_lob`) bridge the two: they detect LOB attributes and call `es_delete_file`.
 

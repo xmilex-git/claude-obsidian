@@ -34,10 +34,10 @@ updated: 2026-04-23
 
 # LOB Locator (`src/object/lob_locator.cpp`)
 
-The LOB locator module tracks the per-transaction lifecycle of BLOB and CLOB locator strings. A locator is an opaque string that names a specific external file managed by [[components/external-storage|`src/storage/es.c`]].
+The LOB locator module tracks the per-transaction lifecycle of BLOB and CLOB locator strings. A locator is an opaque string that names a specific external file managed by [[components/external-storage|src/storage/es.c]].
 
 > [!info] LOB handling is a cross-cutting concern
-> The locator state machine lives here (client side, `src/object/`). The physical byte storage is in [[components/external-storage|`src/storage/es.c`]] (POSIX or OWFS backend). Heap operations (`heap_attrinfo_delete_lob` in `heap_file.c`) bridge the two layers by detecting LOB attributes and calling `es_delete_file`. Any behavioral change touches multiple files.
+> The locator state machine lives here (client side, `src/object/`). The physical byte storage is in [[components/external-storage|src/storage/es.c]] (POSIX or OWFS backend). Heap operations (`heap_attrinfo_delete_lob` in `heap_file.c`) bridge the two layers by detecting LOB attributes and calling `es_delete_file`. Any behavioral change touches multiple files.
 
 ## Locator String Structure
 

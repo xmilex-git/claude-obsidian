@@ -60,7 +60,7 @@ The heart of CUBRID. C/C++17. The same source compiles into three different bina
 ## Critical gotchas
 
 > [!warning] Two `broker/` directories
-> Top-level [[modules/broker|`broker/`]] (CMake target + configs) ≠ `src/broker/` (actual implementation). Don't confuse them.
+> Top-level [[modules/broker|broker/]] (CMake target + configs) ≠ `src/broker/` (actual implementation). Don't confuse them.
 
 > [!warning] `csql_grammar.y` is 646 KB
 > Bison grammar in `parser/`. Edits need extreme care; regeneration is slow.

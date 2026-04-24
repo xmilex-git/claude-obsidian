@@ -172,7 +172,7 @@ The `HEAP_HFID_TABLE` (`heap_hfid_table`) is a lock-free hash table (`LF_HASH_TA
 
 ## Large Records (REC_BIGONE)
 
-Records too large for a single page are stored as multi-page overflow sequences via [[components/overflow-file|`overflow_file.c`]]:
+Records too large for a single page are stored as multi-page overflow sequences via [[components/overflow-file|overflow_file.c]]:
 1. `heap_assign_address` assigns an OID with `REC_ASSIGN_ADDRESS`.
 2. `heap_insert_logical` detects `is_big_length(length)` and calls `overflow_insert` to write overflow pages.
 3. The heap slot contains a `REC_BIGONE` record with the VPID of the first overflow page.

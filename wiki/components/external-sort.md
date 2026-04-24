@@ -92,7 +92,7 @@ Top-level context:
 ## Parallel Sort Integration
 
 > [!key-insight] sort_listfile is the bridge to parallel sort
-> When `sort_parallel_type` is set and `parallelism > 1`, `sort_listfile` internally invokes `SORT_EXECUTE_PARALLEL` / `SORT_WAIT_PARALLEL` macros defined in [[components/parallel-sort|`px_sort.h`]]. The parallel sort subsystem splits input runs across worker threads, then merges the sorted runs on the main thread.
+> When `sort_parallel_type` is set and `parallelism > 1`, `sort_listfile` internally invokes `SORT_EXECUTE_PARALLEL` / `SORT_WAIT_PARALLEL` macros defined in [[components/parallel-sort|px_sort.h]]. The parallel sort subsystem splits input runs across worker threads, then merges the sorted runs on the main thread.
 
 `SORT_PARALLEL_TYPE` enum:
 

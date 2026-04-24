@@ -24,7 +24,7 @@ updated: 2026-04-23
 
 # `pl_engine/` — Java PL Engine
 
-Java-based stored procedure server. Built with **Gradle**. Bridged to the C++ engine via JNI through [[components/sp|`src/sp/`]].
+Java-based stored procedure server. Built with **Gradle**. Bridged to the C++ engine via JNI through [[components/sp|src/sp/]].
 
 ## Why a separate Java process
 

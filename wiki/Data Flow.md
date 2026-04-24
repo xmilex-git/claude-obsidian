@@ -47,7 +47,7 @@ See [[Query Processing Pipeline]] for the full lexer → parser → name resolut
 
 ## Other flows to document
 
-- Commit + log write + recovery — files in [[components/transaction|`src/transaction/log_*`]]
+- Commit + log write + recovery — files in [[components/transaction|src/transaction/log_*]]
 - HA replication (primary → standby)
 - Prepared statement / cursor lifecycle
 - Stored procedure dispatch — [[components/sp]] + [[modules/pl_engine|pl_engine]]

@@ -26,7 +26,7 @@ updated: 2026-04-23
 Top-level directory for the **broker target**: configs, SSL certs, and the CMake glue that builds the broker binary.
 
 > [!warning] Not the implementation
-> The actual broker source code lives in [[components/broker-impl|`src/broker/`]]. This top-level `broker/` directory only assembles configs and the build target. Don't edit broker behavior here.
+> The actual broker source code lives in [[components/broker-impl|src/broker/]]. This top-level `broker/` directory only assembles configs and the build target. Don't edit broker behavior here.
 
 ## What it contains
 
@@ -44,7 +44,7 @@ Broker is a multi-process connection router: it listens for client connections, 
 
 ## Configs of interest
 
-(Will be filled when [[modules/conf|`conf/`]] is ingested.)
+(Will be filled when [[modules/conf|conf/]] is ingested.)
 
 ## Related
 
