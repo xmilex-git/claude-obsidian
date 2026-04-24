@@ -14,7 +14,7 @@ status: active
 
 Top-level CUBRID source modules. Each page summarizes purpose, key entry points, dependencies, and notable files.
 
-Source: `/Users/song/DEV/cubrid/`
+Source: `~/dev/cubrid/`
 
 ## Core
 

@@ -8,7 +8,7 @@ This folder is both a Claude Code plugin and an Obsidian vault.
 
 ## What This Vault Is For
 
-Primary scope: **Documenting the CUBRID relational database source tree** at `/Users/song/DEV/cubrid/` (Mode B — GitHub / codebase wiki). Captures modules, components, data flows, decisions, and dependencies.
+Primary scope: **Documenting the CUBRID relational database source tree** at `~/dev/cubrid/` (Mode B — GitHub / codebase wiki). Captures modules, components, data flows, decisions, and dependencies.
 
 Secondary scope: A small seed cluster of pages about the LLM Wiki pattern itself (how this vault works) has been archived under `wiki/_legacy/` (see [[_legacy/_index]]). These predate the CUBRID scope and are retained as meta-documentation; do not extend them — all new content goes into the Mode B CUBRID structure below.
 
@@ -24,7 +24,7 @@ Structure under `wiki/`:
 Hub pages at `wiki/` root:
 - [[Architecture Overview]] · [[Tech Stack]] · [[Data Flow]] · [[Dependency Graph]] · [[Key Decisions]]
 
-Source of truth for CUBRID: `/Users/song/DEV/cubrid/` — **never write to the source tree**, only read.
+Source of truth for CUBRID: `~/dev/cubrid/` — **never write to the source tree**, only read.
 
 ### CUBRID Baseline Commit
 
@@ -34,14 +34,14 @@ Source of truth for CUBRID: `/Users/song/DEV/cubrid/` — **never write to the s
 
 1. Check the current HEAD of the CUBRID source tree:
    ```
-   git -C /Users/song/DEV/cubrid/ rev-parse HEAD
+   git -C ~/dev/cubrid/ rev-parse HEAD
    ```
 2. If HEAD == `175442fc858bd0075165729756745be6f8928036`, proceed normally.
-3. If HEAD is **newer** (i.e. `git -C /Users/song/DEV/cubrid/ merge-base --is-ancestor 175442fc858bd0075165729756745be6f8928036 HEAD` exits 0), do this before writing anything:
+3. If HEAD is **newer** (i.e. `git -C ~/dev/cubrid/ merge-base --is-ancestor 175442fc858bd0075165729756745be6f8928036 HEAD` exits 0), do this before writing anything:
    a. Compute the delta for the path you are about to ingest/update:
       ```
-      git -C /Users/song/DEV/cubrid/ log --oneline 175442fc858bd0075165729756745be6f8928036..HEAD -- <path>
-      git -C /Users/song/DEV/cubrid/ diff --stat 175442fc858bd0075165729756745be6f8928036..HEAD -- <path>
+      git -C ~/dev/cubrid/ log --oneline 175442fc858bd0075165729756745be6f8928036..HEAD -- <path>
+      git -C ~/dev/cubrid/ diff --stat 175442fc858bd0075165729756745be6f8928036..HEAD -- <path>
       ```
    b. For each changed file in that delta, grep existing wiki pages for references to the file path or affected symbols (`grep -rn '<filename>\|<symbol>' wiki/ --include='*.md'`).
    c. Update those wiki pages to reflect the new state. Flag removed/renamed items with `> [!contradiction]` or `> [!gap]` callouts citing both commits.
@@ -53,12 +53,14 @@ This rule supersedes "just ingest" behavior: the baseline is authoritative, drif
 ## Vault Structure
 
 ```
-.raw/               source documents — immutable, Claude reads but never modifies
+.raw/               ingestable documents (PDFs, transcripts, articles) — immutable; Claude reads but never modifies
 wiki/               Claude-generated knowledge base (CUBRID Mode B)
 wiki/_legacy/       archived pre-CUBRID seed (LLM Wiki pattern meta-docs; do not extend)
 _templates/         Obsidian Templater templates
 _attachments/       images and PDFs referenced by wiki pages
 ```
+
+The CUBRID source tree lives **outside this vault** at `~/dev/cubrid/` and is read directly by absolute path. **Do not create a `.raw/cubrid/` symlink** — `.raw/` is for documents to ingest, not for source-tree access. Older wiki pages may still mention such a symlink as a Mac-era convention; treat those as historical and reference `~/dev/cubrid/<path>` directly going forward.
 
 ## How to Use
 

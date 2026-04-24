@@ -2,7 +2,7 @@
 type: source
 title: "CUBRID src/query/parallel/ — Parallel Query Subsystem"
 source_type: directory
-source_path: ".raw/cubrid/src/query/parallel/"
+source_path: "~/dev/cubrid/src/query/parallel/"
 ingested: 2026-04-23
 status: summarized
 tags:
@@ -77,4 +77,4 @@ Component pages (under `wiki/components/`):
 
 ## Source location
 
-`.raw/cubrid/src/query/parallel/` (symlink → `/Users/song/DEV/cubrid/src/query/parallel/`).
+`~/dev/cubrid/src/query/parallel/` (read directly from the source tree).

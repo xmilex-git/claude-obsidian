@@ -31,7 +31,7 @@ Open-source object-relational database management system (RDBMS).
 - **License:** Apache 2.0
 - **Languages:** C/C++17 (engine), Java (PL engine, JDBC, Manager), Python/PHP/Perl (contrib drivers)
 - **Version:** 11.5.x (current at time of ingest)
-- **Source:** `/Users/song/DEV/cubrid/`
+- **Source:** `~/dev/cubrid/`
 
 ## Architecture in one line
 

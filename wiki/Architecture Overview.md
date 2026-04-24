@@ -20,7 +20,7 @@ related:
 
 ## At a glance
 
-CUBRID is an open-source, ACID-compliant relational database management system written primarily in C/C++17 with a Java PL engine for stored procedures. Source tree: `/Users/song/DEV/cubrid/`. Apache 2.0. v11.5.x.
+CUBRID is an open-source, ACID-compliant relational database management system written primarily in C/C++17 with a Java PL engine for stored procedures. Source tree: `~/dev/cubrid/`. Apache 2.0. v11.5.x.
 
 Three-process-group topology:
 

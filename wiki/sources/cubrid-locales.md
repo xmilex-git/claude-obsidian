@@ -2,7 +2,7 @@
 type: source
 title: "CUBRID locales/ — Locale Data + Build Toolchain"
 source_type: directory
-source_path: ".raw/cubrid/locales/"
+source_path: "~/dev/cubrid/locales/"
 ingested: 2026-04-23
 status: summarized
 tags:
@@ -48,4 +48,4 @@ CUBRID's locale and collation data, plus the toolchain that compiles per-locale 
 - Collation algorithm details (`ducet.txt` consumption, tailoring rules from LDML) live in `src/base/locale_support.c` (or similar). Deeper ingest could file a `wiki/components/collation-engine.md` page.
 
 ## Source location
-`.raw/cubrid/locales/` (symlink → `/Users/song/DEV/cubrid/locales/`).
+`~/dev/cubrid/locales/` (read directly from the source tree).

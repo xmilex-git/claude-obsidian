@@ -3,7 +3,7 @@ status: active
 created: 2026-04-23
 type: source
 title: "CUBRID src/xasl/ — XASL Node Type Definitions"
-source_path: "/Users/song/DEV/cubrid/src/xasl/"
+source_path: "~/dev/cubrid/src/xasl/"
 date_ingested: 2026-04-23
 ingestion_mode: B (codebase)
 tags:

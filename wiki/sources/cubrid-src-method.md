@@ -20,7 +20,7 @@ related:
 
 # Source: `src/method/`
 
-Ingested 2026-04-23. Source: CUBRID engine, `/Users/song/DEV/cubrid/src/method/`.
+Ingested 2026-04-23. Source: CUBRID engine, `~/dev/cubrid/src/method/`.
 
 ## Files Read
 

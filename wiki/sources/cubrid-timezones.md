@@ -2,7 +2,7 @@
 type: source
 title: "CUBRID timezones/ — IANA tzdata + Build Toolchain"
 source_type: directory
-source_path: ".raw/cubrid/timezones/"
+source_path: "~/dev/cubrid/timezones/"
 ingested: 2026-04-23
 status: summarized
 tags:
@@ -55,4 +55,4 @@ tzdata (IANA region files)
 - The CDC API ([[components/cubrid-log-cdc]]) emits TZ-aware columns — sender + reader must use the same tzlib build, worth a callout.
 
 ## Source location
-`.raw/cubrid/timezones/` (symlink → `/Users/song/DEV/cubrid/timezones/`).
+`~/dev/cubrid/timezones/` (read directly from the source tree).

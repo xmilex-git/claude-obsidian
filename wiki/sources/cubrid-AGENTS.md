@@ -2,7 +2,7 @@
 type: source
 title: "CUBRID AGENTS.md (project guide)"
 source_type: file
-source_path: ".raw/cubrid/AGENTS.md"
+source_path: "~/dev/cubrid/AGENTS.md"
 ingested: 2026-04-23
 hash: 946ec2715e851332b3d414853aebe1d4
 status: summarized
@@ -73,4 +73,4 @@ Top-level orientation document for the CUBRID source tree. Targeted at engineers
 
 ## Source location
 
-`.raw/cubrid/AGENTS.md` (symlink → `/Users/song/DEV/cubrid/AGENTS.md`). Note: the source tree's `CLAUDE.md` is a symlink to `AGENTS.md`, so both names point to the same file.
+`~/dev/cubrid/AGENTS.md` (read directly from the source tree; no `.raw/` symlink required). Note: the source tree's `CLAUDE.md` is a symlink to `AGENTS.md`, so both names point to the same file.

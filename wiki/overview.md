@@ -27,7 +27,7 @@ Navigation: [[index]] | [[hot]] | [[log]] | [[dashboard]] | [[Wiki Map.canvas|Wi
 
 ## Purpose
 
-Primary scope: **Documenting the CUBRID relational database source tree** (Mode B — GitHub / codebase wiki). The vault maps CUBRID's subsystems, data structures, data flows, conventions, and design decisions from the C/C++17 source at `/Users/song/DEV/cubrid/`.
+Primary scope: **Documenting the CUBRID relational database source tree** (Mode B — GitHub / codebase wiki). The vault maps CUBRID's subsystems, data structures, data flows, conventions, and design decisions from the C/C++17 source at `~/dev/cubrid/`.
 
 Secondary scope: Legacy seed pages about the LLM Wiki pattern and claude-obsidian plugin history are archived under `wiki/_legacy/` — see [[_legacy/_index|Legacy Seed Index]].
 
