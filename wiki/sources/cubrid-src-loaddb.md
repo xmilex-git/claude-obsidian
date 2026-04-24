@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/loaddb/ — Bulk Loader"
 source_path: "src/loaddb/"

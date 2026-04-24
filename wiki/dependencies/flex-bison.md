@@ -1,4 +1,5 @@
 ---
+status: reference
 type: dependency
 name: "Flex / Bison"
 version: "flex 2.6.4 / bison 3.4.1 (Linux); winflexbison 2.5.22 (Windows)"

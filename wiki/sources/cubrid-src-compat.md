@@ -1,4 +1,6 @@
 ---
+status: active
+created: 2026-04-23
 type: source
 title: "CUBRID src/compat/ — Client API & DB_VALUE"
 date: 2026-04-23

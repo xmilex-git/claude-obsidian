@@ -1,7 +1,8 @@
 ---
 type: meta
 title: "Wiki Index"
-updated: 2026-04-23
+created: 2026-04-07
+updated: 2026-04-24
 tags:
   - meta
   - index
@@ -11,7 +12,7 @@ related:
   - "[[log]]"
   - "[[hot]]"
   - "[[dashboard]]"
-  - "[[Wiki Map]]"
+  - "[[Wiki Map.canvas]]"
   - "[[Architecture Overview]]"
   - "[[Tech Stack]]"
   - "[[Data Flow]]"
@@ -22,13 +23,14 @@ related:
   - "[[decisions/_index]]"
   - "[[dependencies/_index]]"
   - "[[flows/_index]]"
+  - "[[_legacy/_index]]"
 ---
 
 # Wiki Index
 
-Last updated: 2026-04-23 | Mode: B (CUBRID codebase) + legacy seed
+Last updated: 2026-04-24 | Mode: B (CUBRID codebase)
 
-Navigation: [[overview]] | [[log]] | [[hot]] | [[dashboard]] | [[Wiki Map]] | [[getting-started]]
+Navigation: [[overview]] | [[log]] | [[hot]] | [[dashboard]] | [[Wiki Map.canvas|Wiki Map]]
 
 ---
 
@@ -52,56 +54,20 @@ Sub-indexes:
 
 ## Concepts
 
-CUBRID:
-- [[Query Processing Pipeline]] — SQL → lexer → parser → name resolution → semantic check → XASL → execute (status: developing)
-- [[Build Modes (SERVER SA CS)]] — same source, three binaries via preprocessor guards (status: developing)
-- [[Memory Management Conventions]] — `free_and_init`, `db_private_alloc`, `parser_alloc`; no RAII (status: developing)
-- [[Error Handling Convention]] — C-style codes, six-place new-error-code rule (status: developing)
-- [[Code Style Conventions]] — CI-enforced formatting & naming (status: developing)
-
-LLM Wiki (legacy seed):
-- [[LLM Wiki Pattern]] — persistent, compounding knowledge base pattern (status: mature)
-- [[Hot Cache]] — ~500-word session context file (status: mature)
-- [[Compounding Knowledge]] — why wikis grow more valuable than RAG (status: mature)
-- [[cherry-picks]] — prioritized feature backlog (status: current)
+- [[Query Processing Pipeline]] — SQL → lexer → parser → name resolution → semantic check → XASL → execute
+- [[Build Modes (SERVER SA CS)]] — same source, three binaries via preprocessor guards
+- [[Memory Management Conventions]] — `free_and_init`, `db_private_alloc`, `parser_alloc`; no RAII
+- [[Error Handling Convention]] — C-style codes, six-place new-error-code rule
+- [[Code Style Conventions]] — CI-enforced formatting & naming
 
 ---
 
 ## Entities
 
-CUBRID:
-- [[CUBRID]] — open-source C/C++17 RDBMS with Java PL engine; Apache 2.0; v11.5.x (status: developing)
-
-Legacy seed:
-- [[Andrej Karpathy]] — AI researcher, creator of the LLM Wiki pattern, former Tesla AI director (status: developing)
-- [[Ar9av-obsidian-wiki]] — multi-agent compatible LLM Wiki plugin; delta tracking manifest (status: current)
-- [[Nexus-claudesidian-mcp]] — native Obsidian plugin + MCP bridge; workspace memory, task management (status: current)
-- [[ballred-obsidian-claude-pkm]] — goal cascade PKM; auto-commit hooks, /adopt command (status: current)
-- [[rvk7895-llm-knowledge-bases]] — 3-depth query system, Marp slides, parallel deep research (status: current)
-- [[kepano-obsidian-skills]] — official skills from Obsidian creator; defuddle, obsidian-bases (status: current)
-- [[Claudian-YishenTu]] — native Obsidian plugin embedding Claude Code; plan mode, @mention (status: current)
+- [[CUBRID]] — open-source C/C++17 RDBMS with Java PL engine; Apache 2.0; v11.5.x
 
 ---
 
-## Sources
+## Legacy seed (pre-CUBRID)
 
-- [[claude-obsidian-ecosystem-research]] — 2026-04-08 | web research across 16+ repos | 8 wiki pages created
-
----
-
-## Questions
-
-- [[How does the LLM Wiki pattern work]] — how the pattern works and why it outperforms RAG at human scale (status: developing)
-
----
-
-## Comparisons
-
-- [[Wiki vs RAG]] — when to use a wiki knowledge base versus RAG; verdict: wiki wins at <1000 pages
-- [[claude-obsidian-ecosystem]] — feature matrix of 16+ Claude+Obsidian projects; where claude-obsidian wins and gaps
-
----
-
-## Domains
-
-<!-- Add domain entries here after scaffold -->
+Pages about the LLM Wiki pattern itself and the claude-obsidian plugin's release history have been moved to `wiki/_legacy/`. See [[_legacy/_index|Legacy Seed Index]].

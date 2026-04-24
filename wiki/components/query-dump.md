@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: component
 title: "query-dump — XASL Plan Pretty-Printer (EXPLAIN)"
 parent_module: "[[modules/src|src]]"

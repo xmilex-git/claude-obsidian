@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/api/ — Public C API Extensions"
 source_path: "src/api/"

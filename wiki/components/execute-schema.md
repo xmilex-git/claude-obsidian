@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: component
 title: "execute-schema — DDL Execution Helpers"
 parent_module: "[[modules/src|src]]"

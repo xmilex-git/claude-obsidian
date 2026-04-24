@@ -1,7 +1,8 @@
 ---
+created: 2026-04-23
 type: meta
 title: "Operation Log"
-updated: 2026-04-23
+updated: 2026-04-24
 tags:
   - meta
   - log
@@ -24,6 +25,28 @@ Entry format: `## [YYYY-MM-DD] operation | Title`
 Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
+
+## [2026-04-24] lint + cleanup | Top-5 lint fixes + legacy seed archive
+- Filed [[lint-report-2026-04-24]] (delta report vs 04-23).
+- Applied top-5 lint fixes:
+  1. `[[Wiki Map]]` → `[[Wiki Map.canvas|Wiki Map]]` across `index.md`, `overview.md`, `concepts/_index.md` (prior dead link on every vault open — resolved).
+  2. `components/query-reevaluation` — cross-linked from `components/scan-manager` + `components/mvcc` (new orphan fixed).
+  3. Frontmatter batch: `created: 2026-04-23` added to 46 pages missing the field; `status` added to 24 pages (10 `dependencies/*` → `reference`; 6 `parallel-*` components + 2 `flows/*` → `developing`; 6 `sources/*` → `active`).
+  4. `decisions/_index.md` status: `active` → `stub` (directory still contains only `_index.md`).
+  5. `overview.md` — removed 2 dead canvas wikilinks (`[[AI Marketing Hub Cover Images Canvas]]`, `[[claude-obsidian-presentation]]`).
+- Legacy seed archived under `wiki/_legacy/`: 18 pre-CUBRID pages moved via `git mv` (history preserved):
+  - 4 concepts (LLM Wiki Pattern, Hot Cache, Compounding Knowledge, cherry-picks)
+  - 7 entities (Karpathy + 6 ecosystem-research projects)
+  - 2 comparisons (whole dir)
+  - 1 question (whole dir)
+  - 3 plugin release-session meta pages
+  - 1 ecosystem-research source
+  - getting-started onboarding
+- Created `[[_legacy/_index|Legacy Seed Index]]` as landing page.
+- Hub pages rewritten: `index.md`, `overview.md`, `concepts/_index.md`, `entities/_index.md`, `meta/dashboard.md` — legacy first-class listings stripped, single pointer to `_legacy/_index` added.
+- `CLAUDE.md` updated: secondary-scope paragraph now points to `_legacy/`; vault-structure block shows `wiki/_legacy/` as archived subdir; rule added: "do not extend — all new content goes into Mode B CUBRID structure".
+- Dashboard dataview queries filtered out `_legacy` content; `comparisons/` + `questions/` queries removed (dirs moved).
+- Net result: active-content dead-link count down to editorial backlog only (module/submodule stubs `cubrid-cci`/`cubrid-jdbc`/`cubridmanager` + CUBRID build-dir stubs `cs`/`sa`/`cubrid`/`conf`/`win`/`cm_common`). Zero unintentional orphans in active content.
 
 ## [2026-04-23] ingest | CUBRID round 5 — src/query + src/query/parallel DEEP DIVE (6 parallel agents)
 - Scope: per-file / per-function granularity for all of `src/query/` top-level (80+ files) + `src/query/parallel/` (top-level + 3 subdirs)

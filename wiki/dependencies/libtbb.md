@@ -1,4 +1,5 @@
 ---
+status: reference
 type: dependency
 name: "Intel oneTBB"
 version: "2021.11.0"

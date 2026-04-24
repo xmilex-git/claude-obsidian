@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/executables/ — Binary Entry Points"
 source_path: "src/executables/"

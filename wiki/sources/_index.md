@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: meta
 title: "Sources Index"
 updated: 2026-04-23

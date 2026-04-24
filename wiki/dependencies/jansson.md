@@ -1,4 +1,5 @@
 ---
+status: reference
 type: dependency
 name: "Jansson"
 version: "2.10"

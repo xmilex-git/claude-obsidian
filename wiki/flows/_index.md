@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: index
 title: "CUBRID Flows"
 updated: 2026-04-23

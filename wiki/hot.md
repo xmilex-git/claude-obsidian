@@ -1,7 +1,8 @@
 ---
+created: 2026-04-23
 type: meta
 title: "Hot Cache"
-updated: 2026-04-23T22:30:00
+updated: 2026-04-24
 tags:
   - meta
   - hot
@@ -11,7 +12,9 @@ status: active
 # Recent Context
 
 ## Last Updated
-2026-04-23. **CUBRID deep-dive complete.** Rounds 1–5 finished. **150 component pages, 34 source summaries, 246 total wiki md.** `src/query/` + `src/query/parallel/` now have per-file / per-function granularity (34 pages in `query-*` + `parallel-*` namespaces alone). All 23 src/ subdirs covered + config/data/docs (`3rdparty`, `locales`, `timezones`, `msg`, `contrib`) + DML + DDL flow pages + lint.
+2026-04-24. **Lint + legacy cleanup session.** Filed `lint-report-2026-04-24` (delta vs 04-23). Top-5 lint fixes applied: `[[Wiki Map]]` → `[[Wiki Map.canvas]]` everywhere, `components/query-reevaluation` cross-linked from `scan-manager` + `mvcc`, frontmatter batch (+`created` on 46 pages, +`status` on 24 pages), `decisions/_index` demoted `active`→`stub`, `overview.md` legacy dead canvas links removed. **Legacy seed archived:** 18 pre-CUBRID pages moved into `wiki/_legacy/` (LLM Wiki pattern concepts, ecosystem-research entities, comparisons dir, questions dir, 3 plugin release-session meta pages, ecosystem-research source, getting-started onboarding). `wiki/_legacy/_index.md` created as legacy landing page. Hub pages (`index`, `overview`, `concepts/_index`, `entities/_index`, `meta/dashboard`) rewritten to strip legacy-first-class listings and point to `_legacy/_index` instead. `CLAUDE.md` updated to reflect the move.
+
+**Prior session (2026-04-23):** CUBRID deep-dive rounds 1–5 finished. 150 component pages, 34 source summaries, 246 total wiki md. `src/query/` + `src/query/parallel/` now have per-file / per-function granularity (34 pages in `query-*` + `parallel-*` namespaces alone). All 23 src/ subdirs covered + config/data/docs (`3rdparty`, `locales`, `timezones`, `msg`, `contrib`) + DML + DDL flow pages + lint.
 
 ## Wiki shape
 - `wiki/components/` (111 pages) — one section per CUBRID subsystem

@@ -1,12 +1,13 @@
 ---
 type: index
 title: "CUBRID Decisions (ADRs)"
-updated: 2026-04-23
+created: 2026-04-23
+updated: 2026-04-24
 tags:
   - index
   - cubrid
   - decision
-status: active
+status: stub
 ---
 
 # Architecture Decision Records

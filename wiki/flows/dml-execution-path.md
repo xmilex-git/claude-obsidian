@@ -1,4 +1,5 @@
 ---
+status: developing
 type: flow
 actors: [client, broker/CAS, db_server]
 entry_point: "INSERT/UPDATE/DELETE/MERGE SQL statement"

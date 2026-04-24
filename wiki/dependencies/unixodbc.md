@@ -1,4 +1,5 @@
 ---
+status: reference
 type: dependency
 name: "unixODBC"
 version: "2.3.9"

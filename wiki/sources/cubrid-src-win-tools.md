@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/win_tools/ — Windows Service & Tray Tools"
 source_path: "src/win_tools/"

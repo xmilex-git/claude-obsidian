@@ -1,4 +1,5 @@
 ---
+status: reference
 type: dependency
 name: "libexpat"
 version: "2.6.4 (tarball SHA256: fd03b7172…); README says 2.2.5"

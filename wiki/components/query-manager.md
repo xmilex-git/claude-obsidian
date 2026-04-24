@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: component
 title: "query-manager — Query Lifecycle and Per-Query Context"
 parent_module: "[[modules/src|src]]"

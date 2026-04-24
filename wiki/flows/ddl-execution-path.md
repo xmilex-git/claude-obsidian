@@ -1,4 +1,5 @@
 ---
+status: developing
 type: flow
 actors: [client, broker/CAS, db_server]
 entry_point: "CREATE/ALTER/DROP TABLE/INDEX/USER/VIEW; GRANT/REVOKE SQL statement"

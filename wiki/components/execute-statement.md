@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: component
 title: "execute-statement — Server-Side Statement Dispatch (Post-XASL)"
 parent_module: "[[modules/src|src]]"

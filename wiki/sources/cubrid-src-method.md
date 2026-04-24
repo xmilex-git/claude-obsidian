@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/method/ — Method/SP Invocation from Queries"
 source_path: "src/method/"

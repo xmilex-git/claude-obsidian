@@ -1,4 +1,6 @@
 ---
+status: active
+created: 2026-04-23
 type: source
 title: "CUBRID src/base/ — Core Utilities & Infrastructure"
 source_path: "src/base/"

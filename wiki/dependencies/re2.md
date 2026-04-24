@@ -1,4 +1,5 @@
 ---
+status: reference
 type: dependency
 name: "RE2"
 version: "2022-06-01 snapshot"

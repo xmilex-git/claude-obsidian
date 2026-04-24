@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/debugging/ — Compiler & Debug Utilities"
 date_ingested: 2026-04-23

@@ -1,4 +1,5 @@
 ---
+status: reference
 type: dependency
 name: "LZ4"
 version: "1.9.4 (tarball); README lists 1.9.2"

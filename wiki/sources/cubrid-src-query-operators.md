@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/query/ — Operator & Evaluator Family"
 date: 2026-04-23

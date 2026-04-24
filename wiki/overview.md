@@ -2,7 +2,7 @@
 type: overview
 title: "Wiki Overview"
 created: 2026-04-07
-updated: 2026-04-23
+updated: 2026-04-24
 tags:
   - meta
   - overview
@@ -14,14 +14,14 @@ related:
   - "[[dashboard]]"
   - "[[CUBRID]]"
   - "[[Architecture Overview]]"
-  - "[[LLM Wiki Pattern]]"
+  - "[[_legacy/_index]]"
 sources:
   - "[[cubrid-AGENTS]]"
 ---
 
 # Wiki Overview
 
-Navigation: [[index]] | [[hot]] | [[log]] | [[dashboard]] | [[Wiki Map]]
+Navigation: [[index]] | [[hot]] | [[log]] | [[dashboard]] | [[Wiki Map.canvas|Wiki Map]]
 
 ---
 
@@ -29,21 +29,21 @@ Navigation: [[index]] | [[hot]] | [[log]] | [[dashboard]] | [[Wiki Map]]
 
 Primary scope: **Documenting the CUBRID relational database source tree** (Mode B — GitHub / codebase wiki). The vault maps CUBRID's subsystems, data structures, data flows, conventions, and design decisions from the C/C++17 source at `/Users/song/DEV/cubrid/`.
 
-Secondary scope: A small cluster of legacy seed pages about the LLM Wiki pattern itself (how this vault works) is retained as meta-documentation.
+Secondary scope: Legacy seed pages about the LLM Wiki pattern and claude-obsidian plugin history are archived under `wiki/_legacy/` — see [[_legacy/_index|Legacy Seed Index]].
 
 ---
 
 ## Current State
 
-- **Total wiki pages:** ~209
-- **Components:** 116 (one per CUBRID subsystem)
+- **Total wiki pages:** ~246
+- **Components:** 111 (one per CUBRID subsystem)
 - **Modules:** 10 (top-level source directories)
-- **Sources ingested:** 32 (21 CUBRID source-tree ingests + legacy seed sources)
-- **Concepts:** 10 (5 CUBRID conventions + 5 legacy seed)
+- **Sources ingested:** 27 (21 CUBRID source-tree ingests + a few composed query-family pages)
+- **Concepts:** 5 (CUBRID conventions only; LLM Wiki pattern pages in `_legacy/`)
 - **Flows:** 2 composed + `_index` (DML / DDL execution paths)
-- **Dependencies:** 11 (bundled 3rd-party libraries)
-- **Entities:** 9 ([[CUBRID]] + legacy)
-- **Last major activity:** 2026-04-23 — full src/ tree + resource dirs (3rdparty, locales, timezones, msg, contrib) ingested; DML + DDL flow pages composed; wiki linted.
+- **Dependencies:** 10 (bundled 3rd-party libraries) + `_index`
+- **Entities:** 1 ([[CUBRID]]); legacy seed entities in `_legacy/entities/`
+- **Last major activity:** 2026-04-24 — legacy seed archived under `_legacy/`; lint report 2026-04-24 filed.
 
 ---
 
@@ -68,8 +68,8 @@ Secondary scope: A small cluster of legacy seed pages about the LLM Wiki pattern
 - [[decisions/_index|Decisions]] — ADRs (mostly empty — populated by lint follow-ups)
 - [[dependencies/_index|Dependencies]] — 3rd-party libraries
 - [[flows/_index|Flows]] — request paths and lifecycles
-- [[concepts/_index|Concepts]] — conventions and patterns
-- [[entities/_index|Entities]] — products, orgs, people
+- [[concepts/_index|Concepts]] — CUBRID conventions and patterns
+- [[entities/_index|Entities]] — CUBRID product entity
 
 ---
 
@@ -85,16 +85,10 @@ Secondary scope: A small cluster of legacy seed pages about the LLM Wiki pattern
 
 ## Canvases
 
-- [[Wiki Map]] — central knowledge graph canvas
-- [[claude-obsidian-presentation]] — legacy seed presentation
-- [[AI Marketing Hub Cover Images Canvas]] — legacy seed brand assets
+- [[Wiki Map.canvas|Wiki Map]] — central knowledge graph canvas
 
 ---
 
-## Key Themes (inherited from the LLM Wiki pattern)
+## How the Vault Works
 
-**Knowledge compounds.** Unlike RAG, the wiki pre-compiles synthesis. Cross-references are already there. Contradictions are flagged (see callouts in [[components/transaction]], [[components/dbi-compat]]). Every ingest enriches existing pages rather than adding isolated chunks.
-
-**The hot cache is the force multiplier.** [[hot]] (~500 words) captures recent context. New sessions start with full context at minimal token cost.
-
-**Obsidian is the IDE, Claude is the programmer.** The graph view shows what's connected. The human curates sources and asks questions. Claude writes and maintains everything else.
+Knowledge compounds across ingests. The wiki pre-compiles synthesis and cross-references; contradictions are flagged with `> [!contradiction]` callouts (see [[components/transaction]], [[components/dbi-compat]]). Every ingest enriches existing pages rather than adding isolated chunks. The hot cache ([[hot]], ~500 words) captures recent context and loads automatically at session start.

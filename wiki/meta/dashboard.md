@@ -1,7 +1,8 @@
 ---
 type: meta
 title: "Dashboard"
-updated: 2026-04-08
+created: 2026-04-08
+updated: 2026-04-24
 tags:
   - meta
   - dashboard
@@ -11,7 +12,6 @@ related:
   - "[[overview]]"
   - "[[log]]"
   - "[[concepts/_index]]"
-  - "[[Compounding Knowledge]]"
 ---
 
 # Wiki Dashboard
@@ -34,35 +34,35 @@ If you are on Obsidian < 1.9.10 or prefer Dataview, the queries below still work
 ### Recent Activity
 
 ```dataview
-TABLE type, status, updated FROM "wiki" SORT updated DESC LIMIT 15
+TABLE type, status, updated FROM "wiki" WHERE !contains(file.folder, "_legacy") SORT updated DESC LIMIT 15
 ```
 
-### Seed Pages (Need Development)
+### Seed / Developing Pages
 
 ```dataview
-LIST FROM "wiki" WHERE status = "seed" SORT updated ASC
+LIST FROM "wiki" WHERE (status = "seed" OR status = "developing") AND !contains(file.folder, "_legacy") SORT updated ASC
 ```
 
-### Entities Missing Sources
+### CUBRID Sources
 
 ```dataview
-LIST FROM "wiki/entities" WHERE !sources OR length(sources) = 0
+TABLE date_ingested, updated FROM "wiki/sources" WHERE type = "source" SORT updated DESC LIMIT 10
 ```
 
-### Open Questions
+### Recent Components
 
 ```dataview
-LIST FROM "wiki/questions" WHERE status = "developing" OR status = "seed" SORT updated DESC
+TABLE parent_module, status, updated FROM "wiki/components" WHERE type = "component" SORT updated DESC LIMIT 15
 ```
 
-### Comparisons
+### Flows
 
 ```dataview
-TABLE verdict FROM "wiki/comparisons" SORT updated DESC
+LIST FROM "wiki/flows" WHERE type = "flow"
 ```
 
-### Sources
+### Lint reports
 
 ```dataview
-TABLE author, date_published, updated FROM "wiki/sources" WHERE type = "source" SORT updated DESC LIMIT 10
+LIST FROM "wiki/meta" WHERE contains(file.name, "lint-report") SORT file.name DESC LIMIT 5
 ```

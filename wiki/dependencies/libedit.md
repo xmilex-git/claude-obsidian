@@ -1,4 +1,5 @@
 ---
+status: reference
 type: dependency
 name: "libedit (Editline)"
 version: "csql_v1.2 (CUBRID fork of libedit)"

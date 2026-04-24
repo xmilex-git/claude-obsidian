@@ -1,4 +1,5 @@
 ---
+status: developing
 type: component
 parent_module: "[[modules/src|src]]"
 path: "src/query/parallel/px_hash_join/px_hash_join_spawn_manager.hpp"

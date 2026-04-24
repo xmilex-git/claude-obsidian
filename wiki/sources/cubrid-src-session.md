@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/session/ — Per-connection session state"
 source_path: "src/session/"

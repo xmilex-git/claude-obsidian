@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: component
 title: "query-reevaluation — MVCC Predicate Re-Evaluation"
 parent_module: "[[modules/src|src]]"

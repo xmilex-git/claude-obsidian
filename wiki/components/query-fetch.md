@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: component
 title: "query-fetch — REGU_VARIABLE Evaluation and Tuple Value Fetch"
 parent_module: "[[modules/src|src]]"

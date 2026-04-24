@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "cubrid src/monitor/ — Performance Statistics"
 source_path: "src/monitor/"

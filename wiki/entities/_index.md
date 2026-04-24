@@ -1,7 +1,8 @@
 ---
 type: meta
 title: "Entities Index"
-updated: 2026-04-07
+created: 2026-04-07
+updated: 2026-04-24
 tags:
   - meta
   - index
@@ -9,35 +10,26 @@ tags:
 status: evergreen
 related:
   - "[[index]]"
-  - "[[Andrej Karpathy]]"
   - "[[hot]]"
-  - "[[LLM Wiki Pattern]]"
+  - "[[CUBRID]]"
 ---
 
 # Entities Index
 
 Navigation: [[index]] | [[concepts/_index|Concepts]] | [[sources/_index|Sources]]
 
-All entity pages — people, organizations, products, and tools.
+Products, organizations, and people relevant to CUBRID.
 
 ---
 
-## People
+## Products
 
-- [[Andrej Karpathy]] — AI researcher, educator; originated the LLM Wiki pattern
-
----
-
-## Organizations
-
-<!-- Add organization pages here -->
+- [[CUBRID]] — open-source C/C++17 RDBMS with Java PL engine; Apache 2.0; v11.5.x
 
 ---
 
-## Products & Tools
+## Legacy seed entities
 
-<!-- Add tool and product pages here -->
+People and projects from the pre-CUBRID ecosystem research are under `_legacy/entities/` — see [[_legacy/_index|Legacy Seed Index]].
 
----
-
-## Add new entities here as they are identified during ingests.
+## Add new CUBRID-related entities here as they are identified.

@@ -1,4 +1,6 @@
 ---
+status: active
+created: 2026-04-23
 type: source
 title: "CUBRID 3rdparty/ — Bundled Third-Party Dependencies"
 source_path: "3rdparty/"

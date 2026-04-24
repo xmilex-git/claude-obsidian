@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/thread/ — Worker Pools & Daemon Threads"
 source_path: "src/thread/"

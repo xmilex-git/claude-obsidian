@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: component
 title: "query-cl — Client-Side Query Entry Points"
 parent_module: "[[modules/src|src]]"

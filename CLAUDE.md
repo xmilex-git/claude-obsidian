@@ -10,7 +10,7 @@ This folder is both a Claude Code plugin and an Obsidian vault.
 
 Primary scope: **Documenting the CUBRID relational database source tree** at `/Users/song/DEV/cubrid/` (Mode B — GitHub / codebase wiki). Captures modules, components, data flows, decisions, and dependencies.
 
-Secondary scope: A small seed cluster of pages about the LLM Wiki pattern itself (how this vault works) lives under `wiki/concepts/`, `wiki/entities/`, and `wiki/comparisons/`. These predate the CUBRID scope and are retained as meta-documentation.
+Secondary scope: A small seed cluster of pages about the LLM Wiki pattern itself (how this vault works) has been archived under `wiki/_legacy/` (see [[_legacy/_index]]). These predate the CUBRID scope and are retained as meta-documentation; do not extend them — all new content goes into the Mode B CUBRID structure below.
 
 ## Mode B Conventions (CUBRID)
 
@@ -29,10 +29,11 @@ Source of truth for CUBRID: `/Users/song/DEV/cubrid/` — **never write to the s
 ## Vault Structure
 
 ```
-.raw/           source documents — immutable, Claude reads but never modifies
-wiki/           Claude-generated knowledge base
-_templates/     Obsidian Templater templates
-_attachments/   images and PDFs referenced by wiki pages
+.raw/               source documents — immutable, Claude reads but never modifies
+wiki/               Claude-generated knowledge base (CUBRID Mode B)
+wiki/_legacy/       archived pre-CUBRID seed (LLM Wiki pattern meta-docs; do not extend)
+_templates/         Obsidian Templater templates
+_attachments/       images and PDFs referenced by wiki pages
 ```
 
 ## How to Use

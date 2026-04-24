@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: overview
 title: "CUBRID Dependency Graph"
 updated: 2026-04-23

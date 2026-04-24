@@ -1,7 +1,8 @@
 ---
 type: meta
 title: "Concepts Index"
-updated: 2026-04-07
+created: 2026-04-07
+updated: 2026-04-24
 tags:
   - meta
   - index
@@ -11,29 +12,29 @@ status: evergreen
 related:
   - "[[index]]"
   - "[[dashboard]]"
-  - "[[Wiki Map]]"
-  - "[[Hot Cache]]"
-  - "[[LLM Wiki Pattern]]"
-  - "[[Compounding Knowledge]]"
-  - "[[LLM Wiki Pattern]]"
-  - "[[Hot Cache]]"
-  - "[[Compounding Knowledge]]"
+  - "[[Wiki Map.canvas]]"
 ---
 
 # Concepts Index
 
 Navigation: [[index]] | [[entities/_index|Entities]] | [[sources/_index|Sources]]
 
-All concept pages — ideas, patterns, and frameworks extracted from sources.
+CUBRID conventions, patterns, and cross-cutting ideas extracted from the source tree.
 
 ---
 
-## Knowledge Management
+## CUBRID Conventions
 
-- [[LLM Wiki Pattern]] — the core architecture for persistent, compounding knowledge bases
-- [[Hot Cache]] — ~500-word session context file, updated after every ingest
-- [[Compounding Knowledge]] — why the wiki grows more valuable over time, unlike RAG
+- [[Query Processing Pipeline]] — SQL → lexer → parser → name resolution → semantic check → XASL → execute
+- [[Build Modes (SERVER SA CS)]] — same source, three binaries via preprocessor guards
+- [[Memory Management Conventions]] — `free_and_init`, `db_private_alloc`, `parser_alloc`; no RAII in C++ code
+- [[Error Handling Convention]] — C-style codes, six-place new-error-code rule
+- [[Code Style Conventions]] — CI-enforced formatting & naming
 
 ---
 
-## Add new concepts here as they are extracted from sources.
+## Legacy seed (LLM Wiki pattern itself)
+
+Moved to `_legacy/` — see [[_legacy/_index|Legacy Seed Index]].
+
+## Add new CUBRID concepts here as they are extracted.

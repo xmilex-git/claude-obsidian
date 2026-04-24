@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/communication/ — Network Interface Layer"
 path: "src/communication/"

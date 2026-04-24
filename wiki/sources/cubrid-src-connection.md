@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/connection/ — Client-Server TCP / Heartbeat Layer"
 source_path: "src/connection/"

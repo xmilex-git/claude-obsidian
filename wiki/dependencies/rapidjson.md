@@ -1,4 +1,5 @@
 ---
+status: reference
 type: dependency
 name: "RapidJSON"
 version: "1.1.0"

@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID query/ SCAN FAMILY deep dive"
 date: 2026-04-23

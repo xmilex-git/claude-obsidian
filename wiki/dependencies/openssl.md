@@ -1,4 +1,5 @@
 ---
+status: reference
 type: dependency
 name: "OpenSSL"
 version: "1.1.1w (tarball); README lists 1.1.1f"

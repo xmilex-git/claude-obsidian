@@ -162,4 +162,5 @@ All visibility decisions instrument `perfmon_mvcc_snapshot()` when `PERFMON_ACTI
 - [[components/btree|btree]] — 18 `btree_op_purpose` values map to MVCC operations; uses `mvcc_satisfies_snapshot` during index scans
 - [[components/vacuum|vacuum]] — calls `mvcc_satisfies_vacuum`; reclaims dead versions
 - [[components/log-manager|log-manager]] — MVCC log records (`LOG_MVCC_*`) written by WAL
+- [[components/query-reevaluation|query-reevaluation]] — re-runs predicates on current row version when MVCC detects concurrent modification during scan
 - Source: [[sources/cubrid-src-transaction]]

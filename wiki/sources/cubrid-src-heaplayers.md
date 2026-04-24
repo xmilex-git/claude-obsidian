@@ -1,4 +1,5 @@
 ---
+created: 2026-04-23
 type: source
 title: "CUBRID src/heaplayers/ — Embedded Heap Allocator Library"
 source_path: "src/heaplayers/"
