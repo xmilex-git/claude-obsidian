@@ -68,6 +68,7 @@ Secondary scope: Legacy seed pages about the LLM Wiki pattern and claude-obsidia
 - [[decisions/_index|Decisions]] — ADRs (mostly empty — populated by lint follow-ups)
 - [[dependencies/_index|Dependencies]] — 3rd-party libraries
 - [[flows/_index|Flows]] — request paths and lifecycles
+- [[prs/_index|PRs]] — documented merged upstream PRs (triggers baseline bumps)
 - [[concepts/_index|Concepts]] — CUBRID conventions and patterns
 - [[entities/_index|Entities]] — CUBRID product entity
 

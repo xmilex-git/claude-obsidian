@@ -20,6 +20,7 @@ Structure under `wiki/`:
 - `decisions/` — ADRs (`NNNN-short-title.md`)
 - `dependencies/` — one page per external / bundled library
 - `flows/` — request paths, lifecycles, recovery sequences
+- `prs/` — documented merged upstream PRs (`PR-NNNN-short-slug.md`); see PR Ingest protocol below
 
 Hub pages at `wiki/` root:
 - [[Architecture Overview]] · [[Tech Stack]] · [[Data Flow]] · [[Dependency Graph]] · [[Key Decisions]]
@@ -50,13 +51,49 @@ Source of truth for CUBRID: `~/dev/cubrid/` — **never write to the source tree
 
 This rule supersedes "just ingest" behavior: the baseline is authoritative, drift must be reconciled before new content lands, and the baseline only moves forward after reconciliation.
 
+### PR Ingest (merged PRs only)
+
+When the user says "ingest PR #NNNN" (or equivalent), it refers to an upstream `CUBRID/cubrid` pull request. **Only merged PRs are accepted** — open / draft / closed-without-merge PRs are proposed or abandoned changes, not part of the "what the code is" record, and must not land in the wiki.
+
+Inferred repo: `git -C ~/dev/cubrid/ config --get remote.origin.url` (currently `https://github.com/CUBRID/cubrid`). Do not hard-code; reinfer on every ingest.
+
+**Protocol:**
+
+1. Fetch PR metadata and diff (all via `gh`; no web scraping, no MCP needed):
+   ```
+   gh pr view NNNN --repo CUBRID/cubrid --json number,title,body,author,state,url,baseRefName,headRefName,baseRefOid,headRefOid,mergeCommit,mergedAt,files,commits,reviews,comments > /tmp/pr-NNNN.json
+   gh pr diff NNNN --repo CUBRID/cubrid > /tmp/pr-NNNN.diff
+   ```
+2. **Gate on merged state.** Parse `state` from the JSON. If `state != "MERGED"`, **stop** and report the state to the user. Do not create any wiki page.
+3. **Classify the PR's merge commit relative to the current baseline** (baseline = the hash recorded in this file above):
+   - `merge_commit = mergeCommit.oid`
+   - Case (a) `merge_commit == baseline` — wiki already at this state; ingest as documentation only, no reconciliation, no bump.
+   - Case (b) `git -C ~/dev/cubrid/ merge-base --is-ancestor <merge_commit> <baseline>` exits 0 — the PR was already absorbed into an earlier bump. Ingest as retroactive documentation: create the `wiki/prs/PR-NNNN-<slug>.md` page but skip reconciliation and skip bump. Note `triggered_baseline_bump: false` in frontmatter.
+   - Case (c) `git -C ~/dev/cubrid/ merge-base --is-ancestor <baseline> <merge_commit>` exits 0 — the PR is newer than baseline. Full reconciliation + bump (see step 5).
+   - Case (d) neither ancestor relationship holds — divergent branch / force-push / rebase. **Stop** and ask the user how to proceed.
+4. **Create `wiki/prs/PR-NNNN-<slug>.md`** using `_templates/pr.md` as the skeleton. Slug: kebab-case, derived from PR title, max ~6 words. Fill frontmatter from the JSON: `pr_number`, `pr_url`, `repo`, `author`, `merged_at`, `merge_commit`, `base_ref`, `head_ref`, `base_sha`, `head_sha`, `files_changed`. Populate body sections (Summary, Motivation, Changes, Review discussion highlights) by synthesizing — never paste the raw PR body or raw diff verbatim.
+5. **Reconciliation (Case c only).** For each file in `files_changed`:
+   a. `grep -rn '<filename-basename>' wiki/ --include='*.md'` — find every wiki page that references it.
+   b. Read each hit's context. Determine whether the claim is still accurate post-PR.
+   c. For pages that need updating, edit the relevant section and add a `> [!update]` callout citing `PR #NNNN` and the merge commit short-sha. For removed/renamed items, use `> [!contradiction]` with before/after commit hashes.
+   d. If a changed file has **no** existing wiki reference, note it in the PR page's "Wiki impact" section as "new surface — not yet documented" (candidate for future ingest).
+6. **Baseline bump (Case c only).** After all affected pages are reconciled:
+   a. Update the baseline hash in this file (`CLAUDE.md` § "CUBRID Baseline Commit") — replace the old full hash.
+   b. Update the baseline hash in `wiki/hot.md` § "CUBRID Baseline Commit".
+   c. Append an entry to `wiki/log.md` at the TOP under `## [YYYY-MM-DD] baseline-bump | <old-sha7> → <new-sha7> (PR #NNNN)` with a bulleted list of the reconciled pages.
+   d. Set `triggered_baseline_bump: true`, `baseline_before: <old>`, `baseline_after: <new>` in the PR page frontmatter.
+7. **Optional companion ADR.** If the PR represents a major design choice (new subsystem, API break, behavioral semantics shift), file an accompanying `wiki/decisions/NNNN-<slug>.md` citing the PR page. Judgment call — not every PR earns an ADR.
+
+`gh` auth: the user runs `gh auth status` to confirm; if unauthenticated, prompt them to run `gh auth login` in the terminal (`!gh auth login` in chat). Do not attempt to authenticate on their behalf.
+
 ## Vault Structure
 
 ```
 .raw/               ingestable documents (PDFs, transcripts, articles) — immutable; Claude reads but never modifies
 wiki/               Claude-generated knowledge base (CUBRID Mode B)
+wiki/prs/           documented merged CUBRID upstream PRs (PR-NNNN-<slug>.md)
 wiki/_legacy/       archived pre-CUBRID seed (LLM Wiki pattern meta-docs; do not extend)
-_templates/         Obsidian Templater templates
+_templates/         Obsidian Templater templates (component.md, decision.md, pr.md, ...)
 _attachments/       images and PDFs referenced by wiki pages
 ```
 

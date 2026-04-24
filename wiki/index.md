@@ -23,6 +23,7 @@ related:
   - "[[decisions/_index]]"
   - "[[dependencies/_index]]"
   - "[[flows/_index]]"
+  - "[[prs/_index]]"
   - "[[_legacy/_index]]"
 ---
 
@@ -49,6 +50,7 @@ Sub-indexes:
 - [[decisions/_index|Decisions]] — ADRs
 - [[dependencies/_index|Dependencies]] — external / bundled libs
 - [[flows/_index|Flows]] — request paths
+- [[prs/_index|PRs]] — documented merged upstream PRs
 
 ---
 
