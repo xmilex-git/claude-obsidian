@@ -1,6 +1,6 @@
 ---
 type: index
-title: "CUBRID PRs (Merged)"
+title: "CUBRID PRs"
 created: 2026-04-24
 updated: 2026-04-24
 tags:
@@ -15,7 +15,7 @@ related:
   - "[[decisions/_index]]"
 ---
 
-# CUBRID Merged Pull Requests
+# CUBRID Pull Requests
 
 Navigation: [[index]] | [[modules/_index|Modules]] | [[components/_index|Components]] | [[decisions/_index|Decisions]]
 
@@ -45,9 +45,9 @@ Filename convention: `PR-NNNN-short-slug.md` where `NNNN` is the upstream PR num
 
 Deferred plan execution: user later says "apply reconciliation for PR #NNNN" → plan is read, revalidated against current state, executed, and `reconciliation_applied` flag set.
 
-## Merged PRs
+## Ingested PRs
 
-<!-- Newest first. Added automatically by the ingest protocol. -->
+<!-- All states accepted (merged, open, draft, closed-unmerged). Newest first. -->
 
 - [[prs/PR-6753-optimizer-histogram-support|PR #6753 — Add Optimizer Histogram Support]] (CBRD-26202, **OPEN**, Reconciliation Plan written) — new `src/optimizer/histogram/` subsystem (6 files, 3300 LOC), `_db_histogram` catalog + `db_histogram` view, `ANALYZE TABLE … UPDATE|DROP HISTOGRAM` and `SHOW HISTOGRAM` DDL, MCV+equi-depth buckets with `HST1` blob format, Poisson sampling-scan weight, new `default_histogram_bucket_count` sysprm (default 300). 5 incidental wiki enhancements. 47 supplementary findings beyond existing bot reviews — incl. HISTOGRAM/BUCKETS reserved-word breaking change, `oid_Histogram_class` never populated (disabled MVCC-skip), privilege gap, TRUNCATE leak, unload regression.
 - [[prs/PR-7062-parallel-scan-all-types|PR #7062 — Expand parallel heap scan to parallel scan (index, heap, list)]] (CBRD-26722, **OPEN**, Reconciliation Plan written) — generalises `parallel_heap_scan` namespace to `parallel_scan::manager<RT, ST>` over heap/list/index; new input handlers + slot iterators for list & index; `XASL_SNAPSHOT × LIST/INDEX` blocked by checker; new `parallel_scan_page_threshold` system param; hint surface unchanged via `NO_PARALLEL_HEAP_SCAN → NO_PARALLEL_SCAN` rename. 1 incidental wiki enhancement on [[components/xasl]].
