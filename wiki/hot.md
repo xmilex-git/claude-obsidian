@@ -11,6 +11,9 @@ status: active
 
 # Recent Context
 
+## CUBRID Baseline Commit
+**`175442fc858bd0075165729756745be6f8928036`** — all wiki claims, file paths, line numbers reflect this commit of `/Users/song/DEV/cubrid/`. Before any new ingest, check repo HEAD; if newer, compute `git log <baseline>..HEAD -- <path>` and reconcile affected wiki pages before writing. Protocol: `CLAUDE.md` § "CUBRID Baseline Commit".
+
 ## Last Updated
 2026-04-24. **Lint + legacy cleanup session.** Filed `lint-report-2026-04-24` (delta vs 04-23). Top-5 lint fixes applied: `[[Wiki Map]]` → `[[Wiki Map.canvas]]` everywhere, `components/query-reevaluation` cross-linked from `scan-manager` + `mvcc`, frontmatter batch (+`created` on 46 pages, +`status` on 24 pages), `decisions/_index` demoted `active`→`stub`, `overview.md` legacy dead canvas links removed. **Legacy seed archived:** 18 pre-CUBRID pages moved into `wiki/_legacy/` (LLM Wiki pattern concepts, ecosystem-research entities, comparisons dir, questions dir, 3 plugin release-session meta pages, ecosystem-research source, getting-started onboarding). `wiki/_legacy/_index.md` created as legacy landing page. Hub pages (`index`, `overview`, `concepts/_index`, `entities/_index`, `meta/dashboard`) rewritten to strip legacy-first-class listings and point to `_legacy/_index` instead. `CLAUDE.md` updated to reflect the move.
 

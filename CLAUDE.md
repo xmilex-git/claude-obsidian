@@ -26,6 +26,30 @@ Hub pages at `wiki/` root:
 
 Source of truth for CUBRID: `/Users/song/DEV/cubrid/` — **never write to the source tree**, only read.
 
+### CUBRID Baseline Commit
+
+**All wiki content under `wiki/` (outside `_legacy/`) is anchored to CUBRID commit `175442fc858bd0075165729756745be6f8928036`.** Every claim, file path, line number, and structural observation reflects the source tree at that commit.
+
+**Before any new CUBRID ingest, analysis, or wiki update, you MUST:**
+
+1. Check the current HEAD of the CUBRID source tree:
+   ```
+   git -C /Users/song/DEV/cubrid/ rev-parse HEAD
+   ```
+2. If HEAD == `175442fc858bd0075165729756745be6f8928036`, proceed normally.
+3. If HEAD is **newer** (i.e. `git -C /Users/song/DEV/cubrid/ merge-base --is-ancestor 175442fc858bd0075165729756745be6f8928036 HEAD` exits 0), do this before writing anything:
+   a. Compute the delta for the path you are about to ingest/update:
+      ```
+      git -C /Users/song/DEV/cubrid/ log --oneline 175442fc858bd0075165729756745be6f8928036..HEAD -- <path>
+      git -C /Users/song/DEV/cubrid/ diff --stat 175442fc858bd0075165729756745be6f8928036..HEAD -- <path>
+      ```
+   b. For each changed file in that delta, grep existing wiki pages for references to the file path or affected symbols (`grep -rn '<filename>\|<symbol>' wiki/ --include='*.md'`).
+   c. Update those wiki pages to reflect the new state. Flag removed/renamed items with `> [!contradiction]` or `> [!gap]` callouts citing both commits.
+   d. After all affected pages are reconciled, update the baseline hash in this file (`CLAUDE.md`) and in `wiki/hot.md` to the new HEAD, and log the bump in `wiki/log.md` under `## [YYYY-MM-DD] baseline-bump | <old-sha7> → <new-sha7>` with the list of files reconciled.
+4. If HEAD is **older** or on a divergent branch, stop and ask the user — do not silently proceed.
+
+This rule supersedes "just ingest" behavior: the baseline is authoritative, drift must be reconciled before new content lands, and the baseline only moves forward after reconciliation.
+
 ## Vault Structure
 
 ```
