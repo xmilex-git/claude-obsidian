@@ -34,7 +34,7 @@ Filename convention: `PR-NNNN-short-slug.md` where `NNNN` is the upstream PR num
 
 <!-- Newest first. Added automatically by the ingest protocol. -->
 
-_(none yet — first ingest will populate this list)_
+- [[prs/PR-6911-parallel-heap-scan-io-bottleneck|PR #6911 — Reduce I/O bottleneck when parallel heap scan]] (CBRD-26615, merged 2026-03-27, case-b retroactive) — replaces per-page mutex handoff with upfront sector allocation; pgbuf API left unchanged after review.
 
 ---
 
