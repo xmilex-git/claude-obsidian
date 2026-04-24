@@ -51,7 +51,9 @@ Source of truth for CUBRID: `~/dev/cubrid/` — **never write to the source tree
 
 This rule supersedes "just ingest" behavior: the baseline is authoritative, drift must be reconciled before new content lands, and the baseline only moves forward after reconciliation.
 
-### PR Ingest (merged PRs only)
+### PR Ingest (merged PRs only, user-specified only)
+
+PR ingest is **strictly on-demand**. Only run this flow when the user explicitly names a PR (e.g. "ingest PR #NNNN", "파일 PR #NNNN"). **Never** autonomously scan `gh pr list`, poll for recent merges, batch-ingest, or run a background loop over PRs on your own initiative. If you notice an unreferenced merged PR, do not ingest it — ask the user first or stay silent. If the user later sets up a cron/loop themselves via `/loop` or `/schedule`, that is their decision; until then, one PR per explicit request.
 
 When the user says "ingest PR #NNNN" (or equivalent), it refers to an upstream `CUBRID/cubrid` pull request. **Only merged PRs are accepted** — open / draft / closed-without-merge PRs are proposed or abandoned changes, not part of the "what the code is" record, and must not land in the wiki.
 

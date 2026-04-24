@@ -26,7 +26,7 @@ Documented merged PRs from the CUBRID upstream (`CUBRID/cubrid`). Each PR page c
 - Which wiki pages were reconciled because of it
 - Baseline-bump before/after hashes
 
-**Only merged PRs are ingested.** Open PRs are upcoming-change proposals, not part of the "what the code is" record. See `CLAUDE.md` § "PR Ingest (merged PRs only)" for the full protocol.
+**Only merged PRs are ingested, and only when the user explicitly names one.** Claude does not scan, poll, or batch PRs on its own initiative. Open PRs are upcoming-change proposals, not part of the "what the code is" record. See `CLAUDE.md` § "PR Ingest (merged PRs only, user-specified only)" for the full protocol.
 
 Filename convention: `PR-NNNN-short-slug.md` where `NNNN` is the upstream PR number.
 
