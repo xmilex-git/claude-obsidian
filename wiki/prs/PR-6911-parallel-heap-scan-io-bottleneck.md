@@ -38,6 +38,9 @@ triggered_baseline_bump: false
 baseline_before: "175442fc858bd0075165729756745be6f8928036"
 baseline_after: "175442fc858bd0075165729756745be6f8928036"
 ingest_case: "b-already-absorbed"
+reconciliation_applied: false
+reconciliation_applied_at:
+incidental_enhancements_count: 0
 tags:
   - pr
   - cubrid
@@ -130,6 +133,10 @@ The review history shows a **design convergence**: the initial approach (extend 
 **None** (case b).
 - Before: `175442fc858bd0075165729756745be6f8928036`
 - After:  `175442fc858bd0075165729756745be6f8928036` (unchanged)
+
+## Incidental wiki enhancements
+
+**None** — this PR was ingested before the protocol mandated deep-code-analysis + incidental enhancement. Candidate for backfill: re-analyze the 11 touched files (`src/query/parallel/px_heap_scan/*`, `src/storage/file_manager.c/h`) against the current wiki to surface any undocumented baseline facts. See `CLAUDE.md` § "PR Ingest" step 5 for the enhancement workflow.
 
 ### Decision-record candidate
 

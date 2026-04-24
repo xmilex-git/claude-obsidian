@@ -51,42 +51,99 @@ Source of truth for CUBRID: `~/dev/cubrid/` — **never write to the source tree
 
 This rule supersedes "just ingest" behavior: the baseline is authoritative, drift must be reconciled before new content lands, and the baseline only moves forward after reconciliation.
 
-### PR Ingest (merged PRs only, user-specified only)
+### PR Ingest (user-specified only, all states accepted, code analysis required)
 
-PR ingest is **strictly on-demand**. Only run this flow when the user explicitly names a PR (e.g. "ingest PR #NNNN", "파일 PR #NNNN"). **Never** autonomously scan `gh pr list`, poll for recent merges, batch-ingest, or run a background loop over PRs on your own initiative. If you notice an unreferenced merged PR, do not ingest it — ask the user first or stay silent. If the user later sets up a cron/loop themselves via `/loop` or `/schedule`, that is their decision; until then, one PR per explicit request.
+PR ingest is **strictly on-demand**. Only run this flow when the user explicitly names a PR (e.g. "ingest PR #NNNN", "PR #NNNN 분석해줘"). **Never** autonomously scan `gh pr list`, poll for recent merges, batch-ingest, or run a background loop. If you notice an unreferenced PR, do not ingest — ask or stay silent. The user may later wire a `/loop` or `/schedule`; until then, one PR per explicit request.
 
-When the user says "ingest PR #NNNN" (or equivalent), it refers to an upstream `CUBRID/cubrid` pull request. **Only merged PRs are accepted** — open / draft / closed-without-merge PRs are proposed or abandoned changes, not part of the "what the code is" record, and must not land in the wiki.
+Every PR state is ingestable — but behavior differs. Merged PRs can update the wiki and bump baseline; open/draft/approved PRs are documented with a **Reconciliation Plan only** (no component-page edits for PR-induced changes); closed-without-merge PRs are documented as abandoned. In all cases, **deep code analysis of the touched files is required** and **Incidental Knowledge Enhancement** of the wiki is expected (see step 5).
 
-Inferred repo: `git -C ~/dev/cubrid/ config --get remote.origin.url` (currently `https://github.com/CUBRID/cubrid`). Do not hard-code; reinfer on every ingest.
+Inferred repo: `git -C ~/dev/cubrid/ config --get remote.origin.url` (currently `https://github.com/CUBRID/cubrid`). Reinfer every ingest; do not hard-code.
 
 **Protocol:**
 
-1. Fetch PR metadata and diff (all via `gh`; no web scraping, no MCP needed):
+1. **Fetch PR data.** All via `gh` CLI:
    ```
-   gh pr view NNNN --repo CUBRID/cubrid --json number,title,body,author,state,url,baseRefName,headRefName,baseRefOid,headRefOid,mergeCommit,mergedAt,files,commits,reviews,comments > /tmp/pr-NNNN.json
+   gh pr view NNNN --repo CUBRID/cubrid --json number,title,body,author,state,url,baseRefName,headRefName,baseRefOid,headRefOid,mergeCommit,mergedAt,closedAt,isDraft,files,commits,reviews,comments > /tmp/pr-NNNN.json
    gh pr diff NNNN --repo CUBRID/cubrid > /tmp/pr-NNNN.diff
+   gh api repos/CUBRID/cubrid/pulls/NNNN/comments --paginate > /tmp/pr-NNNN.review-comments.json   # inline review threads (line-level)
    ```
-2. **Gate on merged state.** Parse `state` from the JSON. If `state != "MERGED"`, **stop** and report the state to the user. Do not create any wiki page.
-3. **Classify the PR's merge commit relative to the current baseline** (baseline = the hash recorded in this file above):
-   - `merge_commit = mergeCommit.oid`
-   - Case (a) `merge_commit == baseline` — wiki already at this state; ingest as documentation only, no reconciliation, no bump.
-   - Case (b) `git -C ~/dev/cubrid/ merge-base --is-ancestor <merge_commit> <baseline>` exits 0 — the PR was already absorbed into an earlier bump. Ingest as retroactive documentation: create the `wiki/prs/PR-NNNN-<slug>.md` page but skip reconciliation and skip bump. Note `triggered_baseline_bump: false` in frontmatter.
-   - Case (c) `git -C ~/dev/cubrid/ merge-base --is-ancestor <baseline> <merge_commit>` exits 0 — the PR is newer than baseline. Full reconciliation + bump (see step 5).
-   - Case (d) neither ancestor relationship holds — divergent branch / force-push / rebase. **Stop** and ask the user how to proceed.
-4. **Create `wiki/prs/PR-NNNN-<slug>.md`** using `_templates/pr.md` as the skeleton. Slug: kebab-case, derived from PR title, max ~6 words. Fill frontmatter from the JSON: `pr_number`, `pr_url`, `repo`, `author`, `merged_at`, `merge_commit`, `base_ref`, `head_ref`, `base_sha`, `head_sha`, `files_changed`. Populate body sections (Summary, Motivation, Changes, Review discussion highlights) by synthesizing — never paste the raw PR body or raw diff verbatim.
-5. **Reconciliation (Case c only).** For each file in `files_changed`:
-   a. `grep -rn '<filename-basename>' wiki/ --include='*.md'` — find every wiki page that references it.
-   b. Read each hit's context. Determine whether the claim is still accurate post-PR.
-   c. For pages that need updating, edit the relevant section and add a `> [!update]` callout citing `PR #NNNN` and the merge commit short-sha. For removed/renamed items, use `> [!contradiction]` with before/after commit hashes.
-   d. If a changed file has **no** existing wiki reference, note it in the PR page's "Wiki impact" section as "new surface — not yet documented" (candidate for future ingest).
-6. **Baseline bump (Case c only).** After all affected pages are reconciled:
-   a. Update the baseline hash in this file (`CLAUDE.md` § "CUBRID Baseline Commit") — replace the old full hash.
-   b. Update the baseline hash in `wiki/hot.md` § "CUBRID Baseline Commit".
-   c. Append an entry to `wiki/log.md` at the TOP under `## [YYYY-MM-DD] baseline-bump | <old-sha7> → <new-sha7> (PR #NNNN)` with a bulleted list of the reconciled pages.
-   d. Set `triggered_baseline_bump: true`, `baseline_before: <old>`, `baseline_after: <new>` in the PR page frontmatter.
-7. **Optional companion ADR.** If the PR represents a major design choice (new subsystem, API break, behavioral semantics shift), file an accompanying `wiki/decisions/NNNN-<slug>.md` citing the PR page. Judgment call — not every PR earns an ADR.
 
-`gh` auth: the user runs `gh auth status` to confirm; if unauthenticated, prompt them to run `gh auth login` in the terminal (`!gh auth login` in chat). Do not attempt to authenticate on their behalf.
+2. **Classify PR state and (if merged) relation to baseline.** Parse `state` + `isDraft` from the JSON:
+   - `MERGED` → resolve `mergeCommit.oid`, then classify vs current baseline:
+     - Case **(a)** `merge_commit == baseline` → retroactive doc, no PR-reconciliation, no bump.
+     - Case **(b)** `git -C ~/dev/cubrid/ merge-base --is-ancestor <merge_commit> <baseline>` exits 0 → already absorbed; retroactive doc, no PR-reconciliation, no bump.
+     - Case **(c)** `git -C ~/dev/cubrid/ merge-base --is-ancestor <baseline> <merge_commit>` exits 0 → newer than baseline; full PR-reconciliation + baseline bump.
+     - Case **(d)** neither ancestor relationship → divergent / force-push / rebase. **Stop** and ask the user.
+   - `OPEN` (non-draft) → `status: open`. Write Reconciliation Plan; do NOT apply it.
+   - `OPEN` + `isDraft: true` → `status: draft`. Same as open but tagged; plan may be rougher.
+   - `CLOSED` + not merged → `status: closed-unmerged`. Document as abandoned; no reconciliation plan (nothing to apply — change will never land).
+
+   Note: "PR-reconciliation" ≠ "Incidental Knowledge Enhancement". See step 5.
+
+3. **Deep code analysis.** Not just `gh pr diff`. For every file in `files_changed`:
+   a. Read the **baseline** file at `~/dev/cubrid/<path>` (current on-disk state reflects the current baseline for this vault). For merged-case-(c) ingests, also read the **post-merge** state by spot-checking `git -C ~/dev/cubrid/ show <merge_commit>:<path>` where the diff is non-trivial.
+   b. Read surrounding context: callers of the modified functions, headers of touched types, related files in the same directory. Use `grep -rn '<symbol>' ~/dev/cubrid/src/` liberally.
+   c. For every meaningful edit in the diff, understand **why** — what invariant does this preserve, what regression does this guard, what API contract changes.
+   d. Record structural observations: new/removed/renamed functions/types/macros; changed signatures; changed defaults; new invariants or ordering requirements; performance characteristics (big-O, contention behavior, locking).
+   e. Extract `[!contradiction]` signals: code that conflicts with an existing wiki claim → note for follow-up.
+
+4. **Create the PR page.** `wiki/prs/PR-NNNN-<slug>.md` from `_templates/pr.md`. Slug: kebab-case, ≤6 words, derived from PR title. Fill frontmatter per template; set `status` to the PR state value from step 2; set `ingest_case` to `a`/`b`/`c`/`d`/`open`/`draft`/`closed-unmerged`. Populate body sections:
+   - Summary, Motivation, Changes (Structural / Behavioral / Per-file notes) — synthesize, don't paste raw diff/body
+   - Review discussion highlights — only authoritative rationale; skip nits and bot comments
+   - **Reconciliation Plan** (REQUIRED for `open`/`draft`; "n/a" for merged-cases-(a)/(b) and closed-unmerged; "Applied during this ingest — see below" for merged-case-(c))
+   - **Pages Reconciled** (merged-case-(c) only)
+   - **Incidental wiki enhancements** (always — may be "none")
+   - Baseline impact, Related
+
+5. **Incidental Knowledge Enhancement (applies to every PR state).** While doing step 3's analysis, whenever you find a fact about the **baseline** code that is missing, incorrect, or incomplete in the existing wiki — **apply the enhancement now**, regardless of PR state.
+   - Target page selection: the most specific owning page first (component/*), then source/*, then hub pages if truly cross-cutting.
+   - Edit discipline: add a prose paragraph or bullet; do not restructure the page. Cite briefly ("noted while analyzing PR #NNNN") only when the PR is the obvious prompt; otherwise present as baseline truth without PR attribution.
+   - Use `[!contradiction]` when code conflicts with a wiki claim; use `[!gap]` when the wiki had a known hole now being filled.
+   - List every page edited under the PR page's "Incidental wiki enhancements" section with a one-line summary per page.
+   - **This step is orthogonal to PR-reconciliation.** An open PR contributes no PR-reconciliation edits, but its analysis can still enrich the wiki with baseline-truths the author's reading happened to surface.
+
+6. **PR-Reconciliation (merged-case-(c) only).** For each file in `files_changed`:
+   a. `grep -rn '<filename-basename>' wiki/ --include='*.md'` + `grep -rn '<key-symbol>' wiki/`.
+   b. For each hit, determine whether the existing claim is still accurate post-PR.
+   c. Edit stale sections, adding a `> [!update]` callout citing `PR #NNNN` and the merge-commit short-sha. Removed/renamed items get `> [!contradiction]` with before/after commit hashes.
+   d. Files with zero wiki references → flag in the PR page's "Changes / new surface" subsection (candidate for future dedicated ingest).
+
+7. **Reconciliation Plan generation (open/draft only).** Do NOT edit component pages. Instead, inside the PR page body write a "## Reconciliation Plan" section containing, per affected wiki page:
+   - Page link (wikilink) + section anchor that would change
+   - Concrete before/after excerpts (quote the existing claim, show the proposed replacement)
+   - Rationale (which diff hunk or review thread justifies the edit)
+   - Suggested callout type (`[!update]` / `[!contradiction]` / `[!gap]`)
+
+   Also list "new surface — no existing wiki reference" entries here.
+
+   The plan must be executable later without re-reading the PR — it is the single source of truth for a deferred reconciliation.
+
+8. **Baseline bump (merged-case-(c) only).**
+   a. Rewrite the full hash in this file (`CLAUDE.md` § "CUBRID Baseline Commit").
+   b. Rewrite the full hash in `wiki/hot.md` § "CUBRID Baseline Commit".
+   c. Prepend a log entry to `wiki/log.md`: `## [YYYY-MM-DD] baseline-bump | <old-sha7> → <new-sha7> (PR #NNNN)` with a bullet list of reconciled pages.
+   d. Set `triggered_baseline_bump: true`, `baseline_before: <old>`, `baseline_after: <new>` in the PR page frontmatter.
+
+9. **Deferred-plan execution (separate invocation).** When the user later says "apply reconciliation for PR #NNNN" (or "execute plan for PR #NNNN"):
+   - Re-fetch PR state. If now merged, detect case vs current baseline and run the merged flow from step 2 (the existing plan becomes the starting point, but revalidate — the PR may have changed before merge).
+   - If still open/draft, execute the plan against the current baseline anyway (the user is opting in to premature reconciliation). Flag in the commit message that this was a pre-merge reconciliation.
+   - In both cases, after execution set `reconciliation_applied: true`, `reconciliation_applied_at: YYYY-MM-DD` in the PR page frontmatter; promote the "Reconciliation Plan" section content to "Pages Reconciled" (keep it in the page for audit).
+
+10. **Optional companion ADR.** If the PR represents a major design choice (API break, new subsystem, semantic shift, a design convergence worth preserving), file `wiki/decisions/NNNN-<slug>.md` citing the PR page. Judgment call.
+
+`gh` auth: confirm via `gh auth status`; if unauthenticated, prompt the user to run `!gh auth login`. Do not authenticate on their behalf.
+
+**Summary of when each output happens**
+
+| PR state | PR page | PR-reconciliation | Reconciliation Plan | Incidental enhancements | Baseline bump |
+|---|---|---|---|---|---|
+| merged, case (a) equal | yes | no | n/a | yes | no |
+| merged, case (b) absorbed | yes | no | n/a | yes | no |
+| merged, case (c) newer | yes | **yes, now** | promoted to "Pages Reconciled" | yes | **yes** |
+| merged, case (d) divergent | stop, ask | — | — | — | — |
+| open / approved | yes | no | **yes, written** | yes | no |
+| draft | yes | no | yes, written (may be rougher) | yes | no |
+| closed-unmerged | yes | no | no (nothing to apply) | yes (if any surfaced) | no |
 
 ## Vault Structure
 

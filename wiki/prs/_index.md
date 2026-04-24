@@ -19,16 +19,31 @@ related:
 
 Navigation: [[index]] | [[modules/_index|Modules]] | [[components/_index|Components]] | [[decisions/_index|Decisions]]
 
-Documented merged PRs from the CUBRID upstream (`CUBRID/cubrid`). Each PR page captures:
-- Motivation + summary of the change
-- Files + structural + behavioral impact
+Documented CUBRID upstream PRs (`CUBRID/cubrid`) — **all states accepted**, one page per PR. Each page captures:
+- Motivation + summary of the proposed/landed change
+- Files + structural + behavioral impact from **deep code analysis** (not just diff reading — the source files themselves)
 - Authoritative review discussion (design rationale only)
-- Which wiki pages were reconciled because of it
+- **Reconciliation Plan** for open/draft PRs (what wiki pages would change on merge, with concrete before/after excerpts — executable later without re-reading the PR)
+- **Pages Reconciled** for merged PRs newer than baseline (what was edited, which callouts added)
+- **Incidental wiki enhancements** — baseline-truth facts surfaced during analysis that were missing from the wiki and have been added directly to component/source pages (orthogonal to PR-reconciliation; applies to every PR state)
 - Baseline-bump before/after hashes
 
-**Only merged PRs are ingested, and only when the user explicitly names one.** Claude does not scan, poll, or batch PRs on its own initiative. Open PRs are upcoming-change proposals, not part of the "what the code is" record. See `CLAUDE.md` § "PR Ingest (merged PRs only, user-specified only)" for the full protocol.
+**User-specified only.** Claude does not scan, poll, or batch PRs on its own initiative. See `CLAUDE.md` § "PR Ingest (user-specified only, all states accepted, code analysis required)" for the full protocol and the state-to-behavior matrix.
 
 Filename convention: `PR-NNNN-short-slug.md` where `NNNN` is the upstream PR number.
+
+### State handling at a glance
+
+| PR state | PR page | PR-reconciliation | Reconciliation Plan | Incidental enhancements | Baseline bump |
+|---|---|---|---|---|---|
+| merged, baseline ancestor (case a/b) | yes | no | n/a | yes | no |
+| merged, newer than baseline (case c) | yes | **yes, immediately** | (promoted to Pages Reconciled) | yes | **yes** |
+| merged, divergent (case d) | stop, ask user | — | — | — | — |
+| open / approved | yes | no | **yes, written** | yes | no |
+| draft | yes | no | yes | yes | no |
+| closed-unmerged | yes | no | no | yes (if any) | no |
+
+Deferred plan execution: user later says "apply reconciliation for PR #NNNN" → plan is read, revalidated against current state, executed, and `reconciliation_applied` flag set.
 
 ## Merged PRs
 
