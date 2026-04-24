@@ -36,7 +36,27 @@ Selects join orders, access paths, and physical operators based on cost estimate
 - **Input:** annotated `PT_NODE` tree from [[components/parser]] (after name resolution + semantic check)
 - **Output:** decisions consumed by `xasl_generation.c` to build the `XASL_NODE` plan
 
-## Notes
+## Selectivity defaults
+
+`query_planner.c` defines a set of `DEFAULT_*_SELECTIVITY` constants used whenever no statistics-backed estimate is available. These live in the `.c` as file-private `#define`s:
+
+| Constant | Value | Used for |
+|---|---|---|
+| `DEFAULT_NULL_SELECTIVITY` | 0.01 | `IS NULL` when null stats unavailable |
+| `DEFAULT_EXISTS_SELECTIVITY` | 0.1 | `EXISTS (subq)` |
+| `DEFAULT_SELECTIVITY` | 0.1 | generic fallback |
+| `DEFAULT_EQUAL_SELECTIVITY` | 0.001 | `ATTR = const` |
+| `DEFAULT_EQUIJOIN_SELECTIVITY` | 0.001 | `ATTR = ATTR` across relations |
+| `DEFAULT_COMP_SELECTIVITY` | 0.1 | `ATTR {<,<=,>,>=} const` |
+| `DEFAULT_BETWEEN_SELECTIVITY` | 0.01 | `ATTR BETWEEN a AND b` |
+| `DEFAULT_IN_SELECTIVITY` | 0.01 | `ATTR IN (...)` |
+| `DEFAULT_RANGE_SELECTIVITY` | 0.1 | composite range terms |
+
+`PRM_ID_LIKE_TERM_SELECTIVITY` (system parameter) drives the default for `LIKE` / `LIKE ESCAPE`. These constants are the bedrock cost-model assumptions — they are calibration-sensitive and rarely touched.
+
+`PRED_CLASS { PC_ATTR, PC_CONST, PC_HOST_VAR, PC_SUBQUERY, PC_SET, PC_OTHER, PC_MULTI_ATTR }` and the file-local `qo_classify` helper partition predicate operands for the selectivity dispatch.
+
+## Inputs / outputs, continued
 
 Detail will be added on a deeper ingest of the optimizer source. AGENTS.md only lists this directory at one-line granularity.
 

@@ -26,6 +26,29 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-24] pr-ingest-deep | PR #6753 — Histogram optimizer support (OPEN, 64 files, +5335/−145)
+- Ingested CUBRID upstream [PR #6753](https://github.com/CUBRID/cubrid/pull/6753) "[CBRD-26202] Add Optimizer Histogram Support" by `@sohee-dgist`. State `OPEN` (non-draft, 6 approvals), base `develop@1da6caa7` = wiki baseline, head `CUBRID-HISTOGRAM@9970b72a`.
+- **Scale rule triggered**: 64 files × 5480 LOC total, largest file `histogram_cl.cpp` 1882 LOC. Dispatched 5 parallel subagents in a single message: (A) `src/optimizer/histogram/*` core (~3300 LOC across 6 new files), (B) optimizer integration (`query_planner.c/h`, `query_graph.c/h`, `statistics.h`), (C) parser/lexer/semantic/DDL (8 files), (D) object+catalog layer (23 files including `_db_histogram` install, `make_template is_read_only`, `obj_find_multi_attr` rewrite, ABI-break on `dbt_create_object_internal`), (E) executor/storage/sampling/CMake/misc (23 files including `do_*_histogram`, Poisson RNG, sampling weight formula).
+- **PR page**: [[prs/PR-6753-optimizer-histogram-support]] written with full Reconciliation Plan (20+ target pages) and a "Deep analysis — supplementary findings" section consolidating 47 observations not covered by existing bot/reviewer threads.
+- **Highest-value new findings** (not in any prior review):
+  - `HISTOGRAM` and `BUCKETS` become **fully-reserved words** (no `identifier:` fallback). Any existing CUBRID schema using either as a column or table name fails to parse post-merge. Fix pattern: follow `HEAP`/`FULLSCAN`.
+  - `oid_Histogram_class` cache slot declared and enumerated (`OID_CACHE_HISTOGRAM_CLASS_ID`) but **never populated** by `boot_client_find_and_cache_class_oids`. The new MVCC-snapshot-skip in `btree.c:24783` for the histogram catalog therefore never fires — the intended isolation behavior is disabled.
+  - `update_histogram_for_all_classes` leaks `LIST_MOPS` on every call and can bypass `AU_ENABLE` on the `lmops == NULL` early-return.
+  - **Privilege gap**: all three histogram DDL wrappers (`do_update_histogram`, `do_drop_histogram`, `do_show_histogram`) `AU_DISABLE`-wrap their full body. No ownership check → any user with `SELECT` on a table can `ANALYZE TABLE t DROP HISTOGRAM` on it.
+  - **TRUNCATE does NOT invalidate histograms** → stale buckets reference deleted rows; planner is silently wrong on truncate-and-reload workloads.
+  - **Unload regression**: `_db_histogram` added to `unload_object.c` prohibited_classes; `cubrid unloaddb` silently loses histograms. View TODO still commented-out.
+  - **Default bucket count is 300**, not 30 (early review thread is stale — `default_histogram_bucket_count` sysprm, default=min=300, max=1000).
+  - **Blob format doc contradicts code**: header comment says magic `HST2`, endian `LE`, `f64 cumulative` — actual is `HST1`, big-endian (via `OR_PUT_INT`), `int64_t`.
+  - **ABI break**: `dbt_create_object_internal(DB_OBJECT *)` → `dbt_create_object_internal(DB_OBJECT *, bool is_read_only)`. Out-of-tree consumers of `libcubridcs`/`libcubridsa` won't link. In-tree drivers rebuild fine.
+  - **`PT_SHOW_HISTOGRAM` is mistakenly included** in `do_replicate_statement` — read-only statement should never replicate. Slave's `la_apply_statement_log` correctly ignores on replay, but bandwidth is wasted.
+- **Incidental wiki enhancements applied** (baseline-only facts, not PR-induced):
+  - [[components/optimizer]] — added "Selectivity defaults" section listing the 9 `DEFAULT_*_SELECTIVITY` constants and `PRED_CLASS` enum (previously absent).
+  - [[components/scan-manager]] — added "Sampling Scan" sub-section covering `S_HEAP_SAMPLING_SCAN`, weight formula, `stats_adjust_sampling_weight`.
+  - [[components/heap-file]] — added "Sampling Scan Integration" note about `heap_next_internal` page-stride sampling.
+  - [[components/system-catalog]] — documented the `CNT_CATCLS_OBJECTS` invariant and its role in `schema_class_truncator.cpp`.
+  - [[components/object]] — added "Index-Value Writers" note explaining `mr_index_writeval_oid`'s dual acceptance of `DB_TYPE_OBJECT` and `DB_TYPE_OID`.
+- **Baseline**: NOT bumped (PR is open). Reconciliation Plan in the PR page is executable on merge via `apply reconciliation for PR #6753`.
+
 ## [2026-04-24] pr-ingest-deep | PR #7062 — Deep-read pass with 5 parallel subagents
 - Expanded the initial [[prs/PR-7062-parallel-scan-all-types|PR-7062]] ingest beyond the authoritative external review doc by dispatching 5 parallel sub-agents to read the full 10,396-line diff line-by-line across file clusters: (1) `px_scan.cpp` + `task`, (2) `slot_iterator_index`, (3) input handlers (list/index/heap + ftab_set + slot_iterator_list), (4) `result_handler` + `checker` + `trace_handler`, (5) C-side integration (`scan_manager`, `query_executor`, `plan_generation`, grammar/parser, `btree.c/h`, `system_parameter`).
 - **Key corrections surfaced** (added as "Deep analysis — supplementary findings" section in the PR page):

@@ -99,6 +99,20 @@ struct scan_id_struct {           // SCAN_ID
 | `S_DBLINK_SCAN` | Remote CUBRID node query via CCI |
 | `S_HEAP_SAMPLING_SCAN` | Statistical sampling scan |
 
+## Sampling Scan (`S_HEAP_SAMPLING_SCAN`)
+
+Triggered by the `/*+ SAMPLING_SCAN */` query hint (`PT_HINT_SAMPLING_SCAN` → `PT_SPEC_FLAG_SAMPLING_SCAN` → `ACCESS_METHOD_SEQUENTIAL_SAMPLING_SCAN` → `S_HEAP_SAMPLING_SCAN`). Used by the (separately tracked) histogram build pipeline and by any query that explicitly opts in.
+
+`scan_open_heap_scan` computes `hsidp->sampling.weight` from `total_pages` and the compile-time constant `NUMBER_OF_SAMPLING_PAGES` (defined in `storage/statistics.h`, value `5000` at baseline):
+
+```c
+hsidp->sampling.weight = MAX ((total_pages / NUMBER_OF_SAMPLING_PAGES), 1);
+```
+
+Inside `heap_next_internal`, when `sampling != NULL`, the scan advances by `sampling->weight` pages per sampled tuple — i.e. uniform-stride sampling. Partitioned tables are excluded from sampling at open time.
+
+`stats_adjust_sampling_weight` in `storage/statistics.h` computes a minimum-NDV correction based on `NUMBER_OF_SAMPLING_PAGES × EXPECTED_ROWS_PER_PAGE / 100` — at baseline this evaluates to 1000, and it rescales sampled distinct-value counts to approximate full-scan NDV.
+
 ## Index Scan Optimizations
 
 The `INDX_SCAN_ID` embeds three optional optimizations:

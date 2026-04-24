@@ -183,6 +183,12 @@ Query specs in `schema_system_catalog_install_query_spec.cpp` are CI-enforced wi
 
 All `sm_update_class` calls run inside a client-side transaction. Rollback reverts the `SM_CLASS` descriptor and catalog rows. This is coordinated with [[components/transaction]] via the workspace dirty-object mechanism.
 
+## Index-Value Writers: `DB_TYPE_OBJECT` vs `DB_TYPE_OID`
+
+`object_primitive.c` defines per-DB_TYPE primitive handlers (`mr_*`) used by the storage layer to (de)serialize values. For index keys, `mr_index_writeval_oid` at baseline accepts both `DB_TYPE_OID` and `DB_TYPE_OBJECT`: for OBJECT values it falls back to `WS_OID(db_get_object(value))` on the client side to derive the backing OID. This dual acceptance is what lets client-built `MIDXKEY`s containing `DB_TYPE_OBJECT` columns (e.g. `class_of` columns in catalog UNIQUE indexes) flow through the same write path as raw OIDs.
+
+The dual acceptance is gated by `#if !defined(SERVER_MODE)` for the OBJECT branch — server-side calls with `DB_TYPE_OBJECT` are never expected and the code would fail to locate a workspace MOP. Index-writer call sites therefore assume the caller resolves OBJECT→OID before crossing the client/server boundary.
+
 ## Common Bug Locations
 
 | Symptom | File | Entry point |

@@ -85,6 +85,10 @@ Defined by constants in `schema_system_catalog_constants.h`:
 | `CTV_COLLATION_NAME` | `db_collation` | Collations |
 | `CTV_CHARSET_NAME` | `db_charset` | Character sets |
 
+## `CNT_CATCLS_OBJECTS` Invariant
+
+A compile-time constant (`constexpr int CNT_CATCLS_OBJECTS` — 6 at baseline, living inside `schema_class_truncator.cpp`) counts how many catalog classes contain `DB_TYPE_OBJECT` columns that reference other catalog classes. `schema_class_truncator.cpp` uses it to gate truncate-time catalog integrity checks (`cnt_refers = CNT_CATCLS_OBJECTS + 1` drives a `SELECT` against `_db_domain`). Any PR that adds a new catalog class with an OBJECT-typed column must bump this counter in lockstep — a paired QA test asserts the value. The constant is a candidate for relocation into `schema_system_catalog_constants.h` so it lives next to the other catalog-surface constants.
+
 ## Bootstrap Install Flow
 
 At database creation, `schema_system_catalog_install.cpp` is called to:

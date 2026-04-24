@@ -193,6 +193,12 @@ Records too large for a single page are stored as multi-page overflow sequences 
 | `heap_rv_undo_update` / `heap_rv_redo_update` | Update |
 | `heap_rv_update_chain_after_mvcc_op` | Update prev-version LSA chain after MVCC op |
 
+## Sampling Scan Integration
+
+`heap_next_internal` branches on whether the caller supplied a `HEAP_SAMPLING_INFO *sampling` in the scan context. When set, after each yielded record the scan advances by `sampling->weight` pages via `heap_vpid_skip_next` — i.e. uniform-stride page sampling. Weight is computed upstream in `scan_manager.c::scan_open_heap_scan` from `total_pages / NUMBER_OF_SAMPLING_PAGES` (see [[components/scan-manager]]).
+
+The sampling branch is gated on the `S_HEAP_SAMPLING_SCAN` scan type which is produced by the `/*+ SAMPLING_SCAN */` query hint; partitioned tables bypass sampling at scan-open time.
+
 ## Related
 
 - Parent: [[components/storage|storage]]
