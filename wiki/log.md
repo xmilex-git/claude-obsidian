@@ -26,6 +26,26 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-25] source-ingest | `src/optimizer/rewriter/` — per-file ingest of all 8 files
+- Per-file ingest of `~/dev/cubrid/src/optimizer/rewriter/` at baseline `175442fc`. 8 files, 10,212 LOC total. Two files crossed the Scale rule threshold (>3000 LOC each): `query_rewrite_select.c` (3795 LOC) and `query_rewrite_term.c` (4294 LOC). Dispatched 2 parallel deep-read subagents in a single message for those two; read the smaller files (orchestrator + header + set + subquery + auto-parameterize + unused-function) directly in the main thread.
+- **New wiki pages** (7): [[components/optimizer-rewriter]] (parent + orchestrator covering `query_rewrite.c/.h`), [[components/optimizer-rewriter-select]], [[components/optimizer-rewriter-term]], [[components/optimizer-rewriter-subquery]], [[components/optimizer-rewriter-set]], [[components/optimizer-rewriter-auto-parameterize]], [[components/optimizer-rewriter-unused-function]] (dead code, gated `#if defined(ENABLE_UNUSED_FUNCTION)`).
+- **Components index updated**: added a new `## Optimizer (src/optimizer/)` section between Parser and Threading, listing `[[components/optimizer]]` plus the 7 new rewriter pages.
+- **Key facts surfaced**:
+  - 3-phase orchestrator pipeline in `mq_rewrite`: pre-rewrite (statement-shape-specific) → optimization (CNF + reduce_equality + 6-stage `qo_rewrite_terms` + `qo_rewrite_select_queries`) → auto-parameterize (constant → host-var marker for XASL-cache reuse, gated by 5 conditions including `!hostvar_late_binding` and `xasl_cache_max_entries > 0`).
+  - `qo_rewrite_terms` 6-stage pipeline: converse-sarg → comp-pair → LIKE-rewrite → range-conversion → range-intersection → IS-NULL-fold. CNF (`->next`) × DNF (`->or_next`) shape assumed throughout.
+  - `PT_BETWEEN_*` 9 sub-ops fully documented (`GE_LE`, `GE_LT`, `GT_LE`, `GT_LT`, `EQ_NA`, `INF_LE`, `INF_LT`, `GE_INF`, `GT_INF`).
+  - `comp_dbvalue_with_optye_result` enum (note typo: `optye` should be `optype`) with `Adj` adjacency semantics critical for `(a > 5) OR (a = 5)` → `(a >= 5)` collapse.
+  - **Outer-join correctness invariant**: `info.expr.location > 0` tags ON-clause terms; orchestrator promotes them to WHERE for unified rewriting, post-walk splices them back to the right spec's `on_cond` based on location match. Mutating a spec's location requires `qo_reset_spec_location`.
+  - `qo_reduce_equality_terms` does derived-table column flattening + transitive-join inference (cloning equality terms into join terms with `PT_EXPR_INFO_TRANSITIVE` flag, consumed downstream by planner cardinality estimation).
+  - **HISTOGRAM/BUCKETS-style breaking-change-class observation NOT present** — the rewriter is a pure transformation layer, doesn't introduce reserved words.
+  - **Multi-fix LIKE rewrite** with collation gate (`lang_get_collation->options.allow_like_rewrite`) and synthetic `PT_LIKE_LOWER_BOUND`/`PT_LIKE_UPPER_BOUND` operators evaluated at scan time for index-scan eligibility.
+  - **FK→PK parent-table elimination** with documented limitation: string-rendered constant comparison via `parser_print_tree(...PT_CONVERT_RANGE)` defeats locale-formatting differences (`1` vs `1.0`).
+  - **32-column composite-key ceiling** baked into `cons_attr_flag = (1 << i) - 1` bitmap — undocumented.
+  - **Right-outer not supported** in `qo_reduce_outer_joined_tbls` — TODO at :1921.
+  - 5+ TODOs in LIKE rewriting (`PT_NOT_LIKE` not optimized, escape-elimination missing, "should check column is indexed" missing).
+  - Header `query_rewrite.h:20` carries the comment "don't include this except files in this folder" — the rewriter exposes only `mq_rewrite` to the outside world.
+- **Cross-file API consumed externally**: `qo_check_nullable_expr` (the only rewriter symbol called outside `optimizer/parser/` directories — by `optimizer/query_planner.c:11037` and `parser/parser_support.c:3773`).
+
 ## [2026-04-24] pr-ingest-deep | PR #6689 — BCB mutex → atomic_latch (MERGED, case-b via sibling PR #6704)
 - Ingested CUBRID upstream [PR #6689](https://github.com/CUBRID/cubrid/pull/6689) "[CBRD-26425] Replace bcb mutex lock into atomic_latch" by `@xmilex-git`. State `MERGED` into feature branch `feature/refactor-pgbuf` on 2025-12-11 at commit `dedd387e6` — NOT an ancestor of baseline. Classified **case (d) by hash, case (b) in substance**: the equivalent changes landed in baseline via sibling re-merge PR #6704 (`58cef8e01`), so the baseline `page_buffer.c` already contains 83 `atomic_latch` references and the `pgbuf_thread_variables_init` prototype at `page_buffer.h:481`. Retroactive doc only — no reconciliation plan, no baseline bump. Rate-limit-delayed ingest (cron-scheduled 2h43m earlier in the day).
 - **Scale rule triggered**: 8 files, +950/−502 LOC, but `page_buffer.c` alone is +932/−497 (>500 threshold). Dispatched 2 parallel subagents in a single message: (A) `page_buffer.c` + `page_buffer.h` core CAS refactor, (B) `thread_entry.hpp/.cpp/_task.cpp` + 3 non-pgbuf callers.

@@ -107,6 +107,19 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 
 ---
 
+## Optimizer (`src/optimizer/`)
+
+- [[components/optimizer|optimizer]] — cost-based query planner hub: `qo_*` namespace, `QO_ENV`/`QO_PLAN`/`QO_NODE`/`QO_TERM`, selectivity defaults
+- [[components/optimizer-rewriter|optimizer-rewriter]] — query-rewrite subsystem orchestrator (`mq_rewrite` → `qo_rewrite_queries`); 3-phase pipeline (pre-rewrite → optimization → auto-parameterize); 8-file directory under `src/optimizer/rewriter/`
+- [[components/optimizer-rewriter-select|optimizer-rewriter-select]] — SELECT-shape mutations: outer→inner, inner-flatten, OID-equality, FK-PK table elimination, ORDER BY pruning, USING-INDEX hint normalization
+- [[components/optimizer-rewriter-term|optimizer-rewriter-term]] — predicate-term rewrites on CNF: equality propagation, transitive-join inference, sargable-form, BETWEEN/range/IN merging, LIKE simplification, IS NULL folding
+- [[components/optimizer-rewriter-subquery|optimizer-rewriter-subquery]] — uncorrelated subquery → join with derived table; hidden-column subquery isolation; LIMIT 1 on EXISTS
+- [[components/optimizer-rewriter-set|optimizer-rewriter-set]] — UNION/INTERSECTION/DIFFERENCE helpers: LIMIT pushdown, DISTINCT detection, hint inheritance
+- [[components/optimizer-rewriter-auto-parameterize|optimizer-rewriter-auto-parameterize]] — constant → host-var input marker for XASL-cache reuse; WHERE/LIMIT/KEYLIMIT slots
+- [[components/optimizer-rewriter-unused-function|optimizer-rewriter-unused-function]] — `ENABLE_UNUSED_FUNCTION`-gated legacy path-as-join helpers (dead code, retained as historical reference)
+
+---
+
 ## Threading Layer (`src/thread/`)
 
 - [[components/thread|thread]] — hub: `cubthread` namespace, manager, worker pools, daemons, THREAD_ENTRY
