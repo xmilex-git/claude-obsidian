@@ -85,6 +85,57 @@ Defined by constants in `schema_system_catalog_constants.h`:
 | `CTV_COLLATION_NAME` | `db_collation` | Collations |
 | `CTV_CHARSET_NAME` | `db_charset` | Character sets |
 
+## Naming Convention
+
+Since the Information Schema work (CBRD-25862), CUBRID follows a strict naming convention for the system catalog surface:
+
+- **Physical catalog class** carries the `_db_*` prefix (e.g. `_db_class`, `_db_index`, `_db_serial`, `_db_partition`, `_db_stored_procedure`).
+- **User-facing view** over the physical class carries the `db_*` prefix (e.g. `db_class`, `db_index`, `db_serial`, `db_partition`, `db_stored_procedure`).
+
+A few historical name swaps consequence: `db_serial`, `db_trigger`, `db_ha_apply_info` were physical classes pre-CBRD-25862; they were renamed to `_db_serial`, `_db_trigger`, `_db_ha_apply_info` and the freed-up names became views.
+
+**Authorization classes are exempted**: `db_user`, `db_root`, `db_password`, `db_authorization` keep the `db_*` prefix despite being physical classes. The auth subsystem's pervasive use of the literal name `db_user` makes a rename impractical without coordinated migration.
+
+The legacy methods-only class `db_authorizations` (a partial alias of `db_root` left over from an earlier migration) was removed in CBRD-25974. No replacement view exists; its data was already in `db_user.[groups]` and `db_auth`.
+
+## Catalog Row Provenance
+
+All system catalog tables (with the exception of `_db_attribute`, `_db_domain`, and a few small ones) carry per-row `created_time`, `updated_time` columns; `_db_class` additionally carries `checked_time` (last statistics refresh) and `statistics_strategy` (0=sampling, 1=fullscan). All are `DB_TYPE_DATETIME`.
+
+Population:
+- `created_time` and `updated_time` are set on insert via `catcls_set_or_value_timestamps` (`storage/catalog_class.c:4063`).
+- `updated_time` is refreshed on every catalog row UPDATE via `catcls_update_or_value_updated_time` (`catalog_class.c:4125`) — note this fires even for unchanged rows that go through the update path.
+- `created_time` is preserved across updates via `catcls_copy_or_value_times_and_statistics` (`catalog_class.c:4089`).
+- `checked_time` and `statistics_strategy` are set ONLY by `catcls_update_or_value_class_stats_fields` (`catalog_class.c:4133`) when `xstats_update_statistics` runs (`storage/statistics_sr.c:316, 1388`).
+
+Indexes into the row are bound at boot by `catcls_cache_fixed_attr_indexes` (`catalog_class.c:4646-4729`), populating module-static globals `_gv_ct_Class_*_idx` / `_gv_ct_Index_*_idx` by name-walking `ct_Class.atts` / `ct_Index.atts`. Hard `assert(_gv_… != -1)` calls at the end mean **a server boot against an old database lacking these columns will SIGABRT**.
+
+The `_db_class` row also carries a `flags` column split from `is_system_class`: bit 0 stays in `is_system_class` for back-compat, bits 1+ (`SM_CLASSFLAG_WITHCHECKOPTION`, `LOCALCHECKOPTION`, `REUSE_OID`, `SUPPLEMENTAL_LOG`) move to the new `flags` column. The split happens at `catalog_class.c:1055-1060`. The on-disk heap-class record's single `flags` int is unchanged — only the catalog-row layer is split.
+
+## Position-Index Enums
+
+`src/object/transform.h:91-147` defines two public enums for indexing into the catalog row's `OR_VALUE` array:
+
+- `CT_ATTR_CLASS_INDEX` — 30 ordinals into `ct_class_atts` (e.g. `CT_CLASS_CLASS_OF_INDEX = 0`, `CT_CLASS_IS_SYSTEM_CLASS_INDEX = 6`, `CT_CLASS_FLAGS_INDEX = 12`, `CT_CLASS_CHECKED_TIME_INDEX = 15`).
+- `CT_ATTR_INDEX_INDEX` — 20 ordinals into `ct_index_atts`.
+
+A TODO at `transform.h:149` notes the same treatment is wanted for the other CT_CLASSes.
+
+## Catalog Performance Indexes
+
+Three indexes are installed declaratively in `schema_system_catalog_install.cpp` to support hot join paths in the `db_*` views:
+
+| Catalog | Constraint | Type | Site |
+|---|---|---|---|
+| `_db_class` | `INDEX (class_of)` | non-unique B-tree | `:478` |
+| `_db_data_type` | `PRIMARY KEY (type_id, type_name)` | composite PK | `:872-878` |
+| `_db_collation` | `PRIMARY KEY (coll_id)` | single-col PK | `:1112-1114` |
+
+> [!warning] `_db_class.class_of` cannot be UNIQUE
+> The 20-line comment block at `schema_system_catalog_install.cpp:455-475` documents an `assert(false)` in `btree_key_insert_new_key` that fires under `RENAME CLASS` if a unique constraint exists on this column. The PR uses `DB_CONSTRAINT_INDEX` (general index) instead — gives the auth-subquery a B-tree without violating the rename invariant. The fix is documented as deferred.
+
+`_db_charset.charset_id` is **NOT** indexed despite being the join target for `db_collation` and `db_charset` views — inconsistent gap.
+
 ## `CNT_CATCLS_OBJECTS` Invariant
 
 A compile-time constant (`constexpr int CNT_CATCLS_OBJECTS` — 6 at baseline, living inside `schema_class_truncator.cpp`) counts how many catalog classes contain `DB_TYPE_OBJECT` columns that reference other catalog classes. `schema_class_truncator.cpp` uses it to gate truncate-time catalog integrity checks (`cnt_refers = CNT_CATCLS_OBJECTS + 1` drives a `SELECT` against `_db_domain`). Any PR that adds a new catalog class with an OBJECT-typed column must bump this counter in lockstep — a paired QA test asserts the value. The constant is a candidate for relocation into `schema_system_catalog_constants.h` so it lives next to the other catalog-surface constants.
