@@ -26,6 +26,38 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-26] pr-ingest-deep | PR #7011 — Support parallel index build (OPEN, 9 files)
+- Ingested CUBRID upstream [PR #7011](https://github.com/CUBRID/cubrid/pull/7011) "[CBRD-26678] Support parallel index build" by `@xmilex-git` (the user themselves). State `OPEN` (non-draft, 5 approvals). Base `develop@66e9279003`, head `parallel_index_build@44d92db64`. 9 files, +1058/−99 (1157 LOC). Largest: btree_load.c (+468/−46), external_sort.c (+425/−46). 1 file > 500 LOC.
+- **Scale rule triggered** (1 file > 500 changed lines). Dispatched 2 parallel deep-read subagents — (A) btree_load.c/.h covering `SORT_ARGS` migration + per-thread getters + sysop layout, (B) external_sort.c/.h covering `SORT_INDEX_LEAF` wiring + `sort_merge_run_for_parallel_index_leaf_build` + tree-merge fan-in.
+- **PR page**: [[prs/PR-7011-parallel-index-build]] with full Reconciliation Plan for 7 component pages + 1 candidate ADR. Most greptile P0/P1 alerts addressed at PR head.
+- **Goal**: parallelize CREATE INDEX heap-scan + sort phase by reusing existing parallel-sort infrastructure. Adds wiring for the previously-declared-but-unused `SORT_INDEX_LEAF` enum value.
+- **Highest-value findings**:
+  - **Resolves a previously-flagged baseline gap**: `sort_copy_sort_param` implementation now provided at `external_sort.c:4344-4471` (the wiki's [[hot|hot cache]] noted this declaration was dangling; updated to point at PR #7011 + correct location).
+  - **Class `parallel_heap_scan::ftab_set` generalized to `parallel_query::ftab_set`**: file moved from `src/query/parallel/px_heap_scan/px_heap_scan_ftab_set.hpp` → `src/query/parallel/px_ftab_set.hpp`. Old namespace preserved as `using` alias. Class gains move/copy semantics, `append()`, `move_from()`, `size()`.
+  - **`SORT_ARGS` promoted from `static` (in btree_load.c) to public** (in btree_load.h). New fields: `filter_index_info`, `ftab_sets`, `curr_sec`, `curr_pgoffset`. New public type `FILTER_INDEX_INFO`. 5 functions promoted from `static` to `extern` (`bt_load_heap_scancache_*`, `bt_load_clear_pred_and_unpack`, `btree_load_filter_pred_function_info`, `btree_sort_get_next_parallel`).
+  - **Per-thread XASL filter/func-index re-deserialization** required because `PRED_EXPR_WITH_CONTEXT::cache_pred` is mutated during evaluation; sharing one unpacked predicate across N workers would race the cache.
+  - **Sysop ownership delegation**: SERVER_MODE delegates `log_sysop_start` + `btree_create_file` + `vacuum_log_add_dropped_file` to the sort layer (parallel: inside `sort_merge_run_for_parallel_index_leaf_build` AFTER merge fan-in completes; single-process: inside `sort_listfile` before `sort_listfile_internal`). SA_MODE retains existing serial flow with btree_load.c-side setup. Caller `xbtree_load_index` sets `is_sysop_started=true` under `#if defined(SERVER_MODE)` guard so it can abort/commit later.
+  - **`btree_create_file` hoisted to merge phase** for SERVER_MODE parallel — shortens sysop life and means worker-fail never produces a partial btree file.
+  - **Tree-merge fan-in**: `SORT_PX_MERGE_FILES = 4`, depth = `ceil(log₄ parallel_num)`. Empty (0-page) workers skipped during merge input-gathering.
+- **Latent bugs the author fixed during review** (all addressed at PR head):
+  - `pgbuf_ordered_unfix` missing on early-exit paths in `get_next_vpid` (commit `ab8ca3a`) — real page-pin leak.
+  - `is_sysop_started` set twice in SERVER_MODE / missing in SA_MODE (commit `42b92007`).
+  - `new`-allocated `ftab_sets` freed via `free_and_init` (UB): now `malloc + placement_new` paired with explicit `~vector() + free_and_init`.
+  - SORT_ARGS double-free hazard on partial malloc loop: pre-NULL fix.
+  - `sort_listfile_execute` cleanup missing for SORT_INDEX_LEAF: scancache cleanup added at line 1517.
+  - Get_fn placement hoisted into one-shot setup loop (commit `e71b21b`).
+  - `sort_put_result_for_parallel` dead-code reverted (commit `e71b21b`).
+- **Silent fixes the PR drops in** (not in body): `external_sort.c:1491` `if (sort_param == NULL)` → `if (px_sort_param == NULL)` (was always-true on wrong pointer); `external_sort.c:1102` `malloc` → `calloc` for `file_contents[j].num_pages` (avoids uninit read on empty-worker runs).
+- **Residual smells** beyond bot review (not bugs at head):
+  - SA_MODE / SERVER_MODE single-process asymmetry — different ownership of scancache + sysop + btree_create_file.
+  - `btree_sort_get_next_parallel` declared in `external_sort.h` instead of `btree_load.h` (cross-module).
+  - `sort_merge_run_for_parallel_index_leaf_build` lacks `static` despite static forward decl.
+  - `pow()` for integer index math — author defended ("원래 코드가 그래", safe in practice).
+  - `std::vector` in btree_load.h public header — wrapped in `*INDENT-OFF*` comments suggesting awareness, but if any C TU pulls the header it fails. Verify all includers are C++.
+  - Multi-class parallelism gated to `n_classes == 1` — plumbing supports it, but `sort_check_parallelism` short-circuits.
+- **Incidental wiki enhancement**: [[hot]] cache entry annotated to mark `sort_copy_sort_param` baseline gap as resolved by PR #7011.
+- **Baseline**: NOT bumped (PR is open).
+
 ## [2026-04-26] pr-ingest-deep | PR #6443 — System Catalog refactor for Information Schema (MERGED, case-b, 86 files)
 - Ingested CUBRID upstream [PR #6443](https://github.com/CUBRID/cubrid/pull/6443) "[CBRD-25862] Improve and refactor System Catalog for Information Schema" by `@kangmin5505`. Merged 2025-12-12 (`1f12632170…`); ancestor of baseline `175442fc858b…` → **case (b) absorbed**, retroactive doc only, no bump.
 - **Scale rule triggered on multiple axes**: 86 files, +2755/−1527 (4282 LOC); largest files `catalog_class.c` (+488/−114), `schema_system_catalog_install.cpp` (+468/−408), `class_object.c` (+167/−111), `schema_system_catalog_install_query_spec.cpp` (+165/−53). Dispatched 5 parallel deep-read subagents covering: (A) catalog disk format + storage, (B) install + view query-spec, (C) in-memory + schema + trigger refactor, (D) auth + user catalog (db_authorizations removal), (E) SP/PL/serial/index/executor/boot.

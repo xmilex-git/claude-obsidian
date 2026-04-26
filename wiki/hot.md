@@ -101,7 +101,7 @@ status: active
   - LOB write path: `lob_locator_add` → `es_create_file` → commit/rollback cleanup
   - End-to-end `NET_SERVER_QM_QUERY_EXECUTE` (client pack → CSS → server dispatch → executor → reply)
 - **Source-code defects surfaced during round 5**:
-  - `sort_copy_sort_param` declared in `px_sort.h` but implementation missing in `px_sort.c`
+  - `sort_copy_sort_param` declared in `px_sort.h` but implementation missing in `px_sort.c` — **resolved** by [[prs/PR-7011-parallel-index-build|PR #7011]] (OPEN); implementation lives at `external_sort.c:4344-4471` (next to consumer, not in `px_sort.c`)
   - `TASK_QUEUE_SIZE_PER_CORE = 2` constant defined but `thread_create_worker_pool` passes `1`
   - `reset_queue` epoch-bump invariant unclear — fires only when `pos % capacity == 0 && pos != 0`
 - **Component pages**: `slotted_page`, `xasl_cache`, `query_opfunc`, `vacuum.c` deeper dive, `trigger_manager`, `work_space` (MOP cache), `transform.c`
