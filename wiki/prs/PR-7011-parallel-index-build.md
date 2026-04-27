@@ -243,7 +243,10 @@ Reads `*n_sectors_out = fhead->n_sector_full + fhead->n_sector_partial;` — dir
 
 ## Reconciliation Plan
 
-Executable post-merge (or via `apply reconciliation for PR #7011`). Per affected page:
+> [!update] Applied 2026-04-27 against baseline `65d69154` → `cc563c7f`
+> All 7 component-page edits below have been applied. Plan retained verbatim for audit. See "Pages Reconciled" section for the applied summary.
+
+Per affected page:
 
 ### [[components/btree]] — index-build subsystem
 
