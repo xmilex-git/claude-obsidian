@@ -30,7 +30,7 @@ updated: 2026-04-23
 |------------|-----------|-----------|-------------|
 | `MERGEABLE_LIST` | `OUTPTR_LIST` | `QFILE_LIST_ID` | Each worker builds its own list file; main merges |
 | `XASL_SNAPSHOT` | `VAL_LIST` | `VAL_LIST` | Row-by-row handoff via `list_id_header` descriptors |
-| `COUNT_DISTINCT` | `AGGREGATE_TYPE` | `AGGREGATE_TYPE` | Per-worker aggregate accumulation (UPDATE STATISTICS) |
+| `BUILDVALUE_OPT` | `AGGREGATE_TYPE` | `AGGREGATE_TYPE` | Per-worker partial aggregate (COUNT/MIN/MAX/SUM/AVG/STDDEV*/VAR*); main thread merges via `qdata_aggregate_accumulator_to_accumulator`. Renamed from `COUNT_DISTINCT` and broadened in [[prs/PR-7049-parallel-buildvalue-heap|PR #7049]] (`65d6915`, 2026-04-27). |
 
 ## Class / Function Inventory
 
