@@ -97,7 +97,7 @@ CREATE SERVER <name>
   [COMMENT '<text>']
 ```
 - Backed by `_db_server` catalog table.
-- DBLink password crypto = **time-seeded XOR obfuscation** (NOT a real cipher) per [[hot.md]] note.
+- DBLink password crypto = **time-seeded XOR obfuscation** (NOT a real cipher) per [[hot]] note.
 
 ### CREATE PROCEDURE/FUNCTION
 - See [[sources/cubrid-manual-pl]] / [[sources/cubrid-manual-plcsql]] for the language semantics.

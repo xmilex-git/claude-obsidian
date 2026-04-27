@@ -107,7 +107,7 @@ related:
 - `SET @x = 5;` and `@x := 5` operator.
 - **20-variable cap** per session — exceed = must DROP existing first.
 - Type coercion: all stored as VARCHAR.
-- **NOT rolled back on transaction abort** (per [[hot.md]]).
+- **NOT rolled back on transaction abort** (per [[hot]]).
 - Lifetime tied to `session_state_timeout` (default 21600 s = 6 hours).
 
 ### PREPARE

@@ -33,7 +33,7 @@ related:
 
 ### Operators (logical_op, comparison_op, arithmetic_op, set_op, stmt_set_op, containment_op, condition_op)
 
-**Logical** (`logical_op.rst`): AND, OR, XOR, NOT. Integer-as-boolean. **Three-valued truth table** (TRUE/FALSE/NULL). AND short-circuits on V_FALSE, NOT V_UNKNOWN (per [[hot.md]] 3VL-correct note).
+**Logical** (`logical_op.rst`): AND, OR, XOR, NOT. Integer-as-boolean. **Three-valued truth table** (TRUE/FALSE/NULL). AND short-circuits on V_FALSE, NOT V_UNKNOWN (per [[hot]] 3VL-correct note).
 
 **Comparison** (`comparison_op.rst`): `=`, `<=>` (NULL-safe equals), `<>`/`!=`, `>`, `<`, `>=`, `<=`, `IS [NOT] {boolean | NULL}`.
 
@@ -150,7 +150,7 @@ related:
 - AES_ENCRYPT / AES_DECRYPT
 
 ### Other (other_fn.rst, 45 lines)
-- **SLEEP(seconds)** — implemented as server-thread `usleep` (per [[hot.md]] note about `arithmetic.c`)
+- **SLEEP(seconds)** — implemented as server-thread `usleep` (per [[hot]] note about `arithmetic.c`)
 - SYS_GUID() — 32-char hex random
 
 ## Notable Function Behavior
@@ -174,7 +174,7 @@ related:
 - `RE2` (default since 11.2) or `<regex>` (C++ standard).
 - Spencer engine removed 11.0.
 
-## Adding a New SQL Function (per [[hot.md]])
+## Adding a New SQL Function (per [[hot]])
 
 Registration goes through `qdata_evaluate_function` switch in `query_opfunc.c`. The `qdata_evaluate_generic_function` is a dead stub.
 
