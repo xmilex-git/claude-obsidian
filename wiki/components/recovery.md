@@ -161,6 +161,16 @@ This table (defined in `recovery.c`) is the dispatch mechanism for all redo/undo
 - `RVBT_MVCC_DELETE_OBJECT` → B-tree MVCC key delete redo/undo
 - `RVPGBUF_DEALLOC` → page deallocation undo
 
+## From the Manual (admin/troubleshoot.rst, release_note 11.4 — added 2026-04-27)
+
+> [!gap] Documented operator behaviors
+> - **Log-recovery emits paired NOTIFICATION codes**: `-1128` (start, with `"log records to be applied: N, log page: A~B"`) and `-1129` (finish). Logged to `$CUBRID/log/server/<db>_<yyyymmdd>_<hhmi>.err`. The redo count + page range is how operators measure recovery time. (`admin/troubleshoot.rst:122-133`).
+> - **`recovery_progress_logging_interval`** controls progress reporting cadence between `-1128`/`-1129`. (`admin/config.rst:2325-2326`).
+> - **NEW 11.4: Parallel REDO recovery** — page-by-page parallel apply where no synchronization required. Most noticeable when REDO dominates recovery time and parallel index is high.
+> - **HA `force_remove_log_archives` MUST be `no`** — else archive logs needed by `applylogdb` may be deleted, causing replication inconsistency.
+
+See [[sources/cubrid-manual-admin]] · [[sources/cubrid-manual-ha]] for the full operator manual context.
+
 ## Related
 
 - Parent: [[components/transaction|transaction]]
@@ -170,3 +180,4 @@ This table (defined in `recovery.c`) is the dispatch mechanism for all redo/undo
 - [[components/page-buffer|page-buffer]] — redo writes go through `pgbuf_fix` + `pgbuf_set_dirty`
 - [[components/vacuum|vacuum]] — vacuum data recovered after redo phase
 - Source: [[sources/cubrid-src-transaction]]
+- Manual: [[sources/cubrid-manual-admin]] · [[sources/cubrid-manual-ha]]
