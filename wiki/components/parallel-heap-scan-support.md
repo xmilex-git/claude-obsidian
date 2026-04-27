@@ -48,6 +48,21 @@ The checker consults:
 - Build mode: SERVER_MODE+SA_MODE only (enforced by parent module guard)
 - `PRM_ID_PARALLELISM` global degree cap
 
+### Internal flags + BUILDVALUE_OPT decision (post PR #7049)
+
+> [!update] PR #7049 (`65d6915`, 2026-04-27)
+> Renamed `count_opt` local + `CANNOT_COUNT_OPT` flag to `buildvalue_opt` / `CANNOT_BUILDVALUE_OPT` (same bit `0x1 << 2`). The check at the BUILDVALUE_PROC arm now calls `is_buildvalue_opt_supported_function(agg_it->function)` instead of the hardcoded `agg_it->function != PT_COUNT_STAR && agg_it->function != PT_COUNT`.
+
+`possible_flags` (file-static enum, 3 bits):
+
+- `CANNOT_PARALLEL_HEAP_SCAN` (`0x1 << 0`)
+- `CANNOT_LIST_MERGE` (`0x1 << 1`)
+- `CANNOT_BUILDVALUE_OPT` (`0x1 << 2`) — was `CANNOT_COUNT_OPT` pre-7049
+
+`is_buildvalue_opt_supported_function` (file-static, `px_heap_scan_checker.cpp`) — returns true for `PT_COUNT_STAR`, `PT_COUNT`, `PT_MIN`, `PT_MAX`, `PT_SUM`, `PT_AVG`, `PT_STDDEV`, `PT_STDDEV_POP`, `PT_STDDEV_SAMP`, `PT_VARIANCE`, `PT_VAR_POP`, `PT_VAR_SAMP`. Anything outside this whitelist (e.g. `PT_GROUP_CONCAT`, `PT_MEDIAN`, `PT_JSON_*`, bit aggregates, user-defined SP) sets `CANNOT_BUILDVALUE_OPT` for the parent BUILDVALUE_PROC arm and falls back to `MERGEABLE_LIST` or `XASL_SNAPSHOT`. See [[prs/PR-7049-parallel-buildvalue-heap]].
+
+If `!CANNOT_BUILDVALUE_OPT` after the full check, the checker calls `ACCESS_SPEC_SET_FLAG(specp, ACCESS_SPEC_FLAG_BUILDVALUE_OPT)` for every spec in the spec list — this flag is then read by `scan_open_parallel_heap_scan` to pick `RESULT_TYPE::BUILDVALUE_OPT`.
+
 ### Lifecycle
 
 ```
