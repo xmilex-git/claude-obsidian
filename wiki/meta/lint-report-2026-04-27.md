@@ -137,20 +137,21 @@ Cross-checked the new manual pages against the "Top-of-mind facts" in `wiki/hot.
 
 ## Health Trend
 
-| Metric | 04-23 | 04-24 | 04-27 | Direction |
+| Metric | 04-23 | 04-24 | 04-27 (post-fix) | Direction |
 |---|---|---|---|---|
-| Pages | 246 | 264 | 285 | ↑ growing |
+| Pages | 246 | 264 | 288 (+3 stubs) | ↑ growing |
 | `type` missing | ? | 3 | 0 | ✅ fixed |
-| `status` missing | ? | 24 | 6 | ✅ improving |
-| `created` missing | ? | 46 (post-fix?) | 70 | ⚠️ regression — need refresh |
+| `status` missing | ? | 24 | 0 | ✅ fixed |
+| `created` missing | ? | 46 | 0 | ✅ fixed |
+| `tags` missing | ? | ? | 0 | ✅ fixed |
 | Dead `[[Wiki Map]]` | many | 0 | 0 | ✅ holding |
 | Orphan pages | unknown | low | 0 | ✅ excellent |
-| Dead links | many | unknown | 19 real | ⚠️ modules/_index needs cleanup |
+| Dead wikilinks | many | unknown | 0 | ✅ clean (after this session's fixes) |
 
-The vault is **in good shape overall**. The biggest issue is the modules/_index.md dead-link backlog (pre-existing, not caused by today's ingest). Today's ingest introduced only 5 new minor issues — all sed-fixable.
+The vault is **in excellent shape** after this session's lint fixes. All required frontmatter fields complete; zero orphans; zero dead wikilinks. Three new stub pages (`modules/cubrid-cci`, `modules/cubrid-jdbc`, `modules/cubridmanager`) provide landing pages for cross-references from hub docs.
 
 ## What's Next
 
-- Run the **Top-5 Fixes** in a follow-up pass — they're all auto-fixable.
-- Consider creating stub pages for the 3 high-value missing modules (`cubrid-cci`, `cubrid-jdbc`, `cubridmanager`) since they're cross-referenced from multiple hub pages and listed in `hot.md` Open follow-ups.
+- ✅ Top-5 fixes applied this session.
+- Consider expanding the 3 new submodule stubs into full source-ingest pages when the submodules are checked out (flagged in `hot.md` Open follow-ups).
 - Next lint after ~10-15 more ingests.
