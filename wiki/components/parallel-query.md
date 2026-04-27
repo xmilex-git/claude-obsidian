@@ -11,6 +11,7 @@ key_files:
   - "px_callable_task.hpp / px_callable_task.cpp (std::function-based task wrapper)"
   - "px_thread_safe_queue.hpp / px_thread_safe_queue.cpp (MPMC slot queue)"
   - "px_interrupt.hpp (interrupt + atomic_instnum + err_messages_with_lock)"
+  - "px_ftab_set.hpp (parallel_query::ftab_set — per-worker sector slice; consumed by both parallel heap-scan and parallel index-build, added in PR #7011)"
   - "px_sort.h / px_sort.c (parallel sort macros and API)"
   - "px_hash_join/ (subdir: build_partitions, execute_partitions)"
   - "px_heap_scan/ (subdir: templated manager + input/result/trace handlers)"
