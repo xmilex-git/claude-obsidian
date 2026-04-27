@@ -46,7 +46,7 @@ updated: 2026-04-23
 | `write(thread_p, src)` | task::loop() per qualified row | Writes row to TLS list; returns false on interrupt |
 | `write_finalize(thread_p)` | task::finalize() | Publishes TLS result to shared collection |
 
-### Full specialisation `result_handler<COUNT_DISTINCT>`
+### Full specialisation `result_handler<BUILDVALUE_OPT>` (renamed from `COUNT_DISTINCT` in PR #7049)
 
 | Method | Caller | Description |
 |--------|--------|-------------|
