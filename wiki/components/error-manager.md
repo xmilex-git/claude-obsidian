@@ -167,6 +167,19 @@ ER_IS_ABORTED_DUE_TO_DEADLOCK(err)
 ER_IS_SERVER_DOWN_ERROR(err)     // network/connection failure codes
 ```
 
+## From the Manual (admin/error_log_*.rst — added 2026-04-27)
+
+> [!gap] Documented error namespaces
+> CUBRID has **multiple distinct error code namespaces**:
+> - **Server**: negative integers below `-9999` — defined as `ER_*` macros in `~/dev/cubrid/src/include/error_code.h`. Examples: `ER_BTREE_UNIQUE_FAILED = -670`, `ER_UNIQUE_VIOLATION_WITHKEY = -886`, `ER_LK_OBJECT_DL_TIMEOUT_* = -966..-968`. Messages live in `$CUBRID/msg/<locale>/cubrid.msg` under `$set 5 MSGCAT_SET_ERROR`.
+> - **CAS**: `-10001..-10200` — in `~/dev/cubrid/src/broker/cas_error.h`. Crosses CCI/JDBC layers preserved.
+> - **CCI driver**: `-20001..-20999` — `cci.rst:642-647`. `-20001 CCI_ER_DBMS` signals "server returned an error"; the actual server `err_code` lives in `T_CCI_ERROR.err_code`.
+> - **JDBC driver**: `-21001..-21999` — `jdbc.rst:1073-1077`. `-21001..-21024` protocol/data-mapping; `-21101..-21141` JDBC API misuse.
+>
+> **`error_log_level`** parameter (default = NOTIFICATION): NOTIFICATION is most verbose. Severity ordering: ERROR < NOTIFICATION < WARNING.
+>
+> Total **792 documented server-side error codes** across 6 catalogue files. See [[sources/cubrid-manual-error-codes]] for the full code-range index.
+
 ## Related
 
 - [[Error Handling Convention]] — project-wide convention this implements
@@ -174,3 +187,4 @@ ER_IS_SERVER_DOWN_ERROR(err)     // network/connection failure codes
 - [[components/system-parameter|system-parameter]] — `PRM_ID_ER_LOG_DEBUG`, `PRM_ID_ER_LOG_LEVEL`
 - [[components/parallel-query|parallel-query]] — cross-thread error propagation via `cuberr::context`
 - Source: [[sources/cubrid-src-base|cubrid-src-base]]
+- Manual: [[sources/cubrid-manual-error-codes]]
