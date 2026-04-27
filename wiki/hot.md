@@ -27,11 +27,12 @@ status: active
 **Prior session (2026-04-23):** CUBRID deep-dive rounds 1–5 finished. 150 component pages, 34 source summaries, 246 total wiki md.
 
 ## Wiki shape
-- `wiki/components/` (111 pages) — one section per CUBRID subsystem
-- `wiki/sources/` (27 pages) — 21 are CUBRID source-tree ingests
-- `wiki/modules/`, `wiki/decisions/`, `wiki/dependencies/`, `wiki/flows/` — Mode B scaffold (decisions/dependencies/flows still mostly empty — opportunity)
+- `wiki/components/` (152 pages) — one section per CUBRID subsystem
+- `wiki/sources/` (55 pages) — 33 source-tree + 22 manual-catalog (since 2026-04-27)
+- `wiki/modules/`, `wiki/decisions/`, `wiki/dependencies/`, `wiki/flows/`, `wiki/prs/` — Mode B scaffold
 - Hub pages: [[Architecture Overview]], [[Tech Stack]], [[Data Flow]], [[Dependency Graph]], [[Key Decisions]]
 - Concept pages: [[Query Processing Pipeline]], [[Build Modes (SERVER SA CS)]], [[Memory Management Conventions]], [[Error Handling Convention]], [[Code Style Conventions]]
+- **CUBRID 11.4 User Manual catalog**: [[sources/cubrid-manual-en-overview]] hub + 21 section pages (see [[sources/_index]])
 
 ## Top-of-mind facts (most-cited across pages)
 
