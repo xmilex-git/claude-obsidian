@@ -77,40 +77,20 @@ related:
 
 ## Frontmatter Gaps
 
-| Field | Pages missing | Delta vs 04-24 |
-|---|---|---|
-| `type` | **0** | -3 (was 3) ✅ |
-| `status` | **6** | -18 (was 24) ✅ |
-| `created` | **70** | +24 (was 46) ⚠️ — regression |
-| `tags` | **16** | +N — new gap |
-| **Any field missing** | **70 unique pages** | (mostly the same ~70 missing `created`) |
+> [!update] Corrected after re-scan with `grep -L` (no `head -30` truncation)
+> The initial scan in this report was buggy — `head -30 | grep -c '^created:'` truncated frontmatter on long pages where `created:` appears past line 30. Re-scan with `grep -L '^created:'` against full file content shows **all required fields present on every page**.
 
-### Worst offenders (15 of 70 with missing `created`)
+| Field | Pages missing |
+|---|---|
+| `type` | **0** ✅ |
+| `status` | **0** ✅ |
+| `created` | **0** ✅ |
+| `tags` | **0** ✅ |
+| `updated` | 56 (not a required field per skill spec) |
 
-- `wiki/modules/contrib.md`
-- `wiki/prs/PR-6911-parallel-heap-scan-io-bottleneck.md`
-- `wiki/prs/PR-7062-parallel-scan-all-types.md`
-- `wiki/prs/PR-6753-optimizer-histogram-support.md`
-- `wiki/prs/PR-6689-bcb-mutex-to-atomic-latch.md`
-- `wiki/prs/PR-6443-system-catalog-information-schema.md`
-- `wiki/prs/PR-7011-parallel-index-build.md`
-- `wiki/components/aggregate-analytic.md`
-- `wiki/components/authenticate.md`
-- `wiki/components/base.md`
-- `wiki/components/broker-impl.md`
-- `wiki/components/btree.md`
-- `wiki/components/cas.md`
-- `wiki/components/cm-common-src.md`
-- `wiki/components/communication.md`
+The 04-24 lint's batch-add of `created` was complete — every page has it.
 
-> [!gap] Why is `created` regression-up?
-> The 04-24 lint added `created: 2026-04-23` to 46 pages. Many component pages still don't have it — the prior fix was incomplete. PR pages added since are a new gap (PR ingest workflow doesn't set `created`).
-
-### `status` gaps (6 pages — sample)
-Need to check individual pages; previous report fixed 24 of 30. Likely `status: stub` would be appropriate for any page < 50 lines without strong content.
-
-### `tags` gaps (16 pages)
-Mostly old hub pages or scaffolding. Less critical than `created` since type-driven discovery still works.
+The only legitimately-missing field is `updated`, present on 227/283 pages. Adding it isn't strictly required (per skill `references/frontmatter.md`); deferred.
 
 ## Empty Sections
 
