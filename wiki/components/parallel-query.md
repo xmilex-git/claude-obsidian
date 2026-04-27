@@ -237,6 +237,7 @@ server stop
 | [[components/parallel-worker-manager-global\|parallel-worker-manager-global]] | `px_worker_manager_global.*` | Singleton pool |
 | [[components/parallel-task-queue\|parallel-task-queue]] | `px_thread_safe_queue.*` + `px_callable_task.*` | Task dispatch primitives |
 | [[components/parallel-interrupt\|parallel-interrupt]] | `px_interrupt.hpp` | Cross-thread interrupt + error propagation |
+| `parallel_query::ftab_set` | `px_ftab_set.hpp` | Per-worker `FILE_PARTIAL_SECTOR` slice with `split`/`append`/`move_from`/`size` (PR #7011, merge `cc563c7f`); consumed by `parallel_heap_scan` (via `using` alias) and by `external_sort.c` for SORT_INDEX_LEAF parallel CREATE INDEX |
 | [[components/parallel-sort\|parallel-sort]] | `px_sort.*` | Macro-based sort parallelism |
 | [[components/parallel-hash-join\|parallel-hash-join]] | `px_hash_join/` | Hash join parallelism (separate ingest) |
 | [[components/parallel-heap-scan\|parallel-heap-scan]] | `px_heap_scan/` | Heap scan parallelism (separate ingest) |
