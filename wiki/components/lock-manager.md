@@ -170,6 +170,19 @@ The deadlock detection daemon runs inside `lock_manager.c` (not the legacy `wait
 
 `lock_reacquire_crash_locks()` re-grants locks held at the time of a crash during HA failover. `lock_unlock_all_shared_get_all_exclusive()` atomically upgrades all shared locks to exclusive during promotion.
 
+## From the Manual (sql/transaction.rst, admin/config.rst — added 2026-04-27)
+
+> [!gap] Documented contracts
+> - **9 lock modes** (full set): NULL, SCH-S, IS, S, IX, **BU** (Bulk Update), SIX, X, SCH-M.
+> - **BU_LOCK** introduced **CUBRID 10.2** — exclusively used by `loaddb` (and `cubrid loaddb`). Compatible **only with itself + SCH_S**. Multiple loaddb processes can load into the same table concurrently with no row locks taken. (`sql/transaction.rst:807-890`).
+> - **`lock_timeout`** parameter: `-1` = infinite wait (default); `0` = no-wait (immediate ER_LK_OBJECT_TIMEOUT). Unit: msec.
+> - **`lock_escalation`** default = **100,000**; `rollback_on_lock_escalation` controls whether escalation forcibly rolls back.
+> - **Full lock compatibility + transformation matrices** documented in `sql/transaction.rst:807-890`. The transformation matrix is the source of "S → IX → SIX" upgrade behavior on demand.
+> - **LOCK_TIMEOUT event log** records both waiter and blocker SQL text + bind values in `<db>_<...>.event` (admin/control.rst:739-772).
+> - **Error code split**: plain lock timeout `-73..-76` (object/class/instance/page); latch timeout `-836/-859`; **deadlock-induced** lock timeout `-966..-968`; **deadlock cycle detected** `-1021`. See [[sources/cubrid-manual-error-codes]].
+
+See [[sources/cubrid-manual-sql-foundation]] §Transaction for the full lock-mode reference.
+
 ## Related
 
 - Parent: [[components/transaction|transaction]]
@@ -179,3 +192,4 @@ The deadlock detection daemon runs inside `lock_manager.c` (not the legacy `wait
 - [[components/btree|btree]] — acquires row locks during index scan; uses `lock_object` with `S_LOCK` / `X_LOCK`
 - [[components/heap-file|heap-file]] — calls `lock_object` for instance locks before heap operations
 - Source: [[sources/cubrid-src-transaction]]
+- Manual: [[sources/cubrid-manual-sql-foundation]] · [[sources/cubrid-manual-error-codes]]
