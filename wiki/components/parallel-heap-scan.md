@@ -73,9 +73,12 @@ enum class RESULT_TYPE {
 
 ## Result Mode Selection (in `scan_open_parallel_heap_scan`)
 
+> [!update] PR #7049 (`65d6915`, 2026-04-27)
+> `COUNT_DISTINCT` enum value renamed to `BUILDVALUE_OPT` (same bit 0x3); `ACCESS_SPEC_FLAG_COUNT_DISTINCT` renamed to `ACCESS_SPEC_FLAG_BUILDVALUE_OPT` (same bit `0x1 << 4`). The mode now gates the full set of order-independent aggregates (COUNT, MIN, MAX, SUM, AVG, STDDEV*, VAR*) instead of just COUNT(*) / COUNT(col). See [[prs/PR-7049-parallel-buildvalue-heap]] for details.
+
 ```
 ACCESS_SPEC_FLAG_MERGEABLE_LIST set?   → MERGEABLE_LIST
-ACCESS_SPEC_FLAG_COUNT_DISTINCT set?   → COUNT_DISTINCT
+ACCESS_SPEC_FLAG_BUILDVALUE_OPT set?   → BUILDVALUE_OPT
 else                                   → XASL_SNAPSHOT
 
 Exceptions that force XASL_SNAPSHOT:
