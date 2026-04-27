@@ -185,6 +185,23 @@ System tables (defined in `sp_constants.hpp`):
 
 Before invoking, `executor::execute()` calls `change_exec_rights(auth_name)`, which sends `METHOD_CALLBACK_CHANGE_RIGHTS` to the CAS client process (via `execution_stack::send_data_to_client()`). This temporarily elevates the session to the SP definer's rights (for `RIGHTS OWNER` SPs). On return or error the rights are restored with `change_exec_rights(NULL)`.
 
+## From the Manual (pl/, added 2026-04-27)
+
+> [!gap] Documented contracts that complement the source-code view
+> - **Auto-commit forced OFF inside any SP** regardless of caller session setting (`pl/plcsql_overview.rst:30-31`).
+> - **Java SP COMMIT/ROLLBACK ignored unless `pl_transaction_control=yes`** (default `no` for backward compat). PL/CSQL always honors COMMIT/ROLLBACK regardless. (`pl/pl_tcl.rst:84-89`).
+> - **AUTHID model**: PL/CSQL **only supports Owner's Rights** (DEFINER/OWNER are synonyms; default; NEW in 11.4). Caller's Rights (CURRENT_USER/CALLER synonyms) is Java SP only. WITH GRANT OPTION not supported on EXECUTE-on-procedure grants. (`pl/pl_auth.rst:97-104`).
+> - **Recursion limit = 16 calls** when recursion goes through a SQL query (e.g. `SELECT my_func(...) INTO k`). Direct recursion within one SP body has no SP-level limit (only data overflow eventually stops it). Same value for PL/CSQL and Java SP. Reconciles with code's `METHOD_MAX_RECURSION_DEPTH = 15` — depth-vs-count off-by-one. (`pl/pl_call.rst:79-143`, `pl/jsp.rst:959`).
+> - **OUT/IN OUT param restriction**: SPs/functions with OUT or IN OUT params **cannot be called from inside SELECT/UPDATE/DELETE** — only via CALL. Error: `Semantic: Stored procedure/function 'X' has OUT or IN OUT arguments`. (`pl/pl_create.rst:215-225`).
+> - **No function overloading**: `CREATE OR REPLACE` silently overwrites by name regardless of param list. (`pl/pl_create.rst:347-379`).
+> - **Default-arg storage**: `_db_stored_procedure_args` stores defaults as **string up to 255 bytes**; only literals + a closed list of system functions allowed (SYS_TIMESTAMP, UNIX_TIMESTAMP, USER, TO_CHAR, ...); user functions forbidden. (`pl/pl_create.rst:236-275`).
+> - **DETERMINISTIC** is FUNCTION-only — enables correlated subquery_cache hits. (`pl/pl_tuning.rst:170-171`).
+> - **`STORED_PROCEDURE_RETURN_NUMERIC_SIZE`** controls precision/scale of NUMERIC return type when no precision specified (default `(38, 15)`). (`pl/plcsql_overview.rst:709-714`).
+> - **DBMS_OUTPUT is the only system package** as of 11.4. ENABLE buffer ≤ 32767 bytes. CSQL `;server-output on` is internally `DBMS_OUTPUT.ENABLE(20000)`. (`pl/pl_package.rst:5-44`).
+> - **JNI escape hatch (NEW 11.4)**: Java SP that calls `System.load()` for native libs must be registered with `loadjava -j` (or `--jni`). Native lib path: `$CUBRID/jni/`. Without `-j`, execution fails with `Library load not allowed`. `-j` flag is sticky and requires PL server restart. (`pl/jsp.rst:756-878`).
+
+See [[sources/cubrid-manual-pl]] and [[sources/cubrid-manual-plcsql]] for the full manual context.
+
 ## Related
 
 - Parent: [[modules/src|src]]
@@ -195,3 +212,4 @@ Before invoking, `executor::execute()` calls `change_exec_rights(auth_name)`, wh
 - [[components/method|method]] — method invocation layer; shares `method_invoke_group` for scan-time SP dispatch
 - [[Build Modes (SERVER SA CS)]]
 - Source: [[sources/cubrid-src-sp|cubrid-src-sp]]
+- Manual: [[sources/cubrid-manual-pl]], [[sources/cubrid-manual-plcsql]]
