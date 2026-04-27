@@ -66,7 +66,21 @@ Sub-indexes:
 
 ## Entities
 
-- [[CUBRID]] — open-source C/C++17 RDBMS with Java PL engine; Apache 2.0; v11.5.x
+- [[CUBRID]] — open-source C/C++17 RDBMS with Java PL engine; Apache 2.0; v11.4.0.1778
+
+---
+
+## CUBRID 11.4 User Manual (English)
+
+End-user reference companion to the source-code wiki. **Hub**: [[sources/cubrid-manual-en-overview]]. 22 source pages catalog the full manual (~88K lines).
+
+- **General**: [[sources/cubrid-manual-intro]] · [[sources/cubrid-manual-install]] · [[sources/cubrid-manual-csql]]
+- **HA / Sharding / Security**: [[sources/cubrid-manual-ha]] · [[sources/cubrid-manual-shard]] · [[sources/cubrid-manual-security]]
+- **Admin**: [[sources/cubrid-manual-admin]] · [[sources/cubrid-manual-config-params]] · [[sources/cubrid-manual-error-codes]]
+- **API drivers**: [[sources/cubrid-manual-api]] · [[sources/cubrid-manual-cci]] · [[sources/cubrid-manual-jdbc]]
+- **Stored procedures**: [[sources/cubrid-manual-pl]] · [[sources/cubrid-manual-plcsql]]
+- **SQL reference**: [[sources/cubrid-manual-sql-foundation]] · [[sources/cubrid-manual-sql-dml]] · [[sources/cubrid-manual-sql-ddl]] · [[sources/cubrid-manual-sql-tuning-parallel]] · [[sources/cubrid-manual-sql-functions]]
+- **Release notes**: [[sources/cubrid-manual-release-notes-114]]
 
 ---
 
