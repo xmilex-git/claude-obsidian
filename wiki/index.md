@@ -29,7 +29,7 @@ related:
 
 # Wiki Index
 
-Last updated: 2026-04-24 | Mode: B (CUBRID codebase)
+Last updated: 2026-04-27 | Mode: B (CUBRID codebase) | Baseline: `65d69154`
 
 Navigation: [[overview]] | [[log]] | [[hot]] | [[dashboard]] | [[Wiki Map.canvas|Wiki Map]]
 
