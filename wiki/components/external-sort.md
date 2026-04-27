@@ -104,6 +104,22 @@ Top-level context:
 | `SORT_ANALYTIC` | Window functions |
 | `SORT_INDEX_LEAF` | B-tree leaf sort during index load (fully wired in `cc563c7` / PR #7011 — see "Index-leaf parallel build" below) |
 
+## Index-leaf parallel build (`SORT_INDEX_LEAF`)
+
+> [!update] PR #7011 (merge `cc563c7f`) — `SORT_INDEX_LEAF` fully wired
+> The enum value existed (declared since PR #5694) but was never dispatched. PR #7011 adds `SORT_INDEX_LEAF` arms to `sort_listfile`, `sort_listfile_execute`, `sort_return_used_resources`, `sort_check_parallelism`, `sort_start_parallelism`, and `sort_end_parallelism`, plus the parallel tree-merge `sort_merge_run_for_parallel_index_leaf_build`.
+
+`sort_merge_run_for_parallel_index_leaf_build` (defined at `external_sort.c:4733`) implements a **log₄ tree-merge** over per-worker temp files: `SORT_PX_MERGE_FILES = 4` is the fan-in degree; depth = `ceil(log₄ parallel_num)` (e.g. 8 → 2 levels, 64 → 3 levels). Empty (0-page) workers are skipped during input gathering — only non-empty runs are passed into a merge slot. If `valid_j ≤ 1` for a slot, no merge is dispatched (the lone non-empty run propagates directly). After all merges complete, parent `SORT_ARGS` accumulates `n_oids` and `n_nulls` from per-worker copies. The function also performs the final `btree_create_file` + `vacuum_log_add_dropped_file` + `log_sysop_start` for the SERVER_MODE parallel path (lines 4848-4858), then `sort_put_result_from_tmpfile` to deliver the sorted output.
+
+`sort_listfile` SERVER_MODE single-process arm wraps scancache (`bt_load_heap_scancache_start_for_attrinfo`) + `btree_create_file` + `log_sysop_start` around `sort_listfile_internal`, and `bt_load_heap_scancache_end_for_attrinfo` after it returns (`external_sort.c:1517`).
+
+> [!info] SA_MODE / SERVER_MODE single-process asymmetry
+> `sort_listfile`'s SA_MODE branch (`external_sort.c:1559-1561`) skips the scancache + sysop + `btree_create_file` setup that the SERVER_MODE single-process branch performs — `btree_load.c::xbtree_load_index` keeps its own setup under `#if !defined(SERVER_MODE)` (`btree_load.c:1078-1085`). Ownership of scancache lifecycle differs by mode: a future SA_MODE consumer of `sort_listfile(..., SORT_INDEX_LEAF)` outside `xbtree_load_index` would silently miss the setup.
+
+PR #7011 also lands two silent fixes the body did not mention:
+- `external_sort.c:1491` — `if (sort_param == NULL)` → `if (px_sort_param == NULL)` after the worker-array `malloc` (was always-true on the wrong pointer).
+- `external_sort.c:1102` — `malloc(...)` → `calloc(...)` for `file_contents[j].num_pages`. Avoids a possible uninit read for empty-worker runs in the tree merge.
+
 ## Top-N Optimization
 
 When `limit > 0` (not `NO_SORT_LIMIT`), the sort can use a bounded heap to keep only the top-N records in memory, avoiding a full external merge when the limit is small relative to input size.
