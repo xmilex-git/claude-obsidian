@@ -2,7 +2,7 @@
 created: 2026-04-23
 type: meta
 title: "Hot Cache"
-updated: 2026-04-24
+updated: 2026-04-27
 tags:
   - meta
   - hot
