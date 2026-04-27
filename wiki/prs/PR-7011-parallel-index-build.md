@@ -37,12 +37,12 @@ related_components:
 related_sources:
   - "[[sources/cubrid-src-storage]]"
   - "[[sources/cubrid-src-query-parallel]]"
-ingest_case: open
-triggered_baseline_bump: false
-baseline_before: "175442fc858bd0075165729756745be6f8928036"
-baseline_after: "175442fc858bd0075165729756745be6f8928036"
-reconciliation_applied: false
-reconciliation_applied_at:
+ingest_case: c
+triggered_baseline_bump: true
+baseline_before: "65d6915437eb6217ab0050939c6ad63f0d509735"
+baseline_after: "cc563c7fd90521393781d8440bf5144d2566ff71"
+reconciliation_applied: true
+reconciliation_applied_at: 2026-04-27
 incidental_enhancements_count: 1
 tags:
   - pr
@@ -51,10 +51,10 @@ tags:
   - btree
   - sort
   - index-build
-  - open
+  - merged
 created: 2026-04-26
-updated: 2026-04-26
-status: open
+updated: 2026-04-27
+status: merged
 ---
 
 # PR #7011 — Support parallel index build
