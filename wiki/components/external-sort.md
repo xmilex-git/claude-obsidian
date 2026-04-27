@@ -102,7 +102,7 @@ Top-level context:
 | `SORT_ORDER_WITH_LIMIT` | ORDER BY … LIMIT (allows early termination) |
 | `SORT_GROUP_BY` | GROUP BY |
 | `SORT_ANALYTIC` | Window functions |
-| `SORT_INDEX_LEAF` | B-tree leaf sort during index load |
+| `SORT_INDEX_LEAF` | B-tree leaf sort during index load (fully wired in `cc563c7` / PR #7011 — see "Index-leaf parallel build" below) |
 
 ## Top-N Optimization
 
