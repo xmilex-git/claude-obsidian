@@ -13,6 +13,7 @@ public_api:
   - "file_dealloc(thread_p, vfid, vpid, file_type)"
   - "file_create(thread_p, file_type, size_hint_npages, des, class_oid, vpid_out, is_new_file)"
   - "file_destroy(thread_p, vfid, is_temp)"
+  - "file_get_num_data_sectors(thread_p, vfid, *n_sectors_out) — assignment-style read of n_sector_full + n_sector_partial (added by PR #7011, merge cc563c7f)"
   - "disk_reserve_sectors(thread_p, purpose, volid_hint, n_sectors, reserved_sectors)"
   - "disk_unreserve_ordered_sectors(thread_p, purpose, n_sectors, sectors)"
   - "disk_add_volume_extension(thread_p, purpose, voltype, npages, path, name, ...)"
