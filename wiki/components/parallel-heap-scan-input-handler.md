@@ -2,7 +2,7 @@
 status: developing
 type: component
 parent_module: "[[modules/src|src]]"
-path: "src/query/parallel/px_heap_scan/px_heap_scan_ftab_set.hpp"
+path: "src/query/parallel/px_ftab_set.hpp"
 path_impl: "src/query/parallel/px_heap_scan/px_heap_scan_input_handler_ftabs.hpp"
 path_impl2: "src/query/parallel/px_heap_scan/px_heap_scan_input_handler_ftabs.cpp"
 tags:
