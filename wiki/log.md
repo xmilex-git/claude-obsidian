@@ -26,6 +26,35 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-27] baseline-bump | 175442fc → 65d69154 (PR #7049)
+
+Triggered by [[prs/PR-7049-parallel-buildvalue-heap|PR #7049]] ingest (case c — merge commit `65d6915` is direct child of prior baseline `175442fc` on `develop`). Baseline hash updated in `CLAUDE.md` and `wiki/hot.md`.
+
+Pages reconciled:
+- [[components/parallel-heap-scan]] — RESULT_TYPE table + selection block: `COUNT_DISTINCT` → `BUILDVALUE_OPT`; broadened scope description; `> [!update]` callout.
+- [[components/parallel-heap-scan-result-handler]] — major rewrite: RESULT_TYPE taxonomy table, full specialization section heading + table, "Execution Path" subsection with new write/finalize/read flow; new "Cross-thread DB_VALUE ownership" subsection documenting heap-0 ↔ private-heap dance; `is_buildvalue_opt_supported_function` whitelist documented; MIN/MAX-DISTINCT shortcut documented.
+- [[components/parallel-heap-scan-task]] — `MERGEABLE_LIST / COUNT_DISTINCT` → `MERGEABLE_LIST / BUILDVALUE_OPT` rename throughout; `> [!update]` noting new `er_errid()` propagation after `write_initialize`.
+- [[components/parallel-heap-scan-support]] — checker section: documented `possible_flags` enum (with `CANNOT_BUILDVALUE_OPT` rename), `is_buildvalue_opt_supported_function` 12-aggregate whitelist, `ACCESS_SPEC_FLAG_BUILDVALUE_OPT` setting on success.
+- [[components/aggregate-analytic]] — added "Parallel Heap Scan Fast Path (BUILDVALUE_OPT)" subsection cross-linking to result-handler.
+
+## [2026-04-27] pr-ingest-deep | PR #7049 — Support avg, sum on parallel heap scan (MERGED, 9 files, case c)
+- Ingested CUBRID upstream [PR #7049](https://github.com/CUBRID/cubrid/pull/7049) "[CBRD-26711] Support avg,sum function on parallel heap scan" by `@xmilex-git` (the user themselves). State `MERGED` at 2026-04-27T04:52:40Z. Base `develop@2be90e6dd`, head `parallel_buildvalue_heap@c047445c8`. Merge commit `65d6915437eb6217ab0050939c6ad63f0d509735`. 9 files, +424/−158 (582 LOC). Largest: `px_heap_scan_result_handler.cpp` (443 changed). 13 commits squash-merged. 17 inline review comments (mostly greptile P1/P2 — addressed via 6 "greptile review apply" commits + final review-feedback commit).
+- **Classification: case (c)** — merge commit is direct child of prior baseline `175442fc` on `develop`. Full PR-reconciliation applied immediately + baseline bumped.
+- **Scale rule check**: 9 files, 582 LOC, largest single-file change 443 LOC — under all thresholds (20 / 3000 / 500). Read in main thread without dispatching parallel subagents.
+- **PR page**: [[prs/PR-7049-parallel-buildvalue-heap]] with full structural + behavioral analysis. Pages Reconciled section enumerates 7 component-page edits.
+- **Goal**: extend parallel heap scan's BUILDVALUE_PROC fast path from COUNT-only to the full set of order-independent aggregates (COUNT/MIN/MAX/SUM/AVG/STDDEV*/VAR*). Cosmetic rename `COUNT_DISTINCT` → `BUILDVALUE_OPT` reflects the broadened scope.
+- **Highest-value findings**:
+  - **New file-static helper** `is_buildvalue_opt_supported_function(FUNC_CODE)` in `px_heap_scan_checker.cpp` — returns true for 12 aggregate function codes. Replaces hardcoded 2-function whitelist.
+  - **Two-heap dance** is the key engineering pattern: workers write accumulators to **heap 0** (process-wide, survives worker teardown); main-thread merge happens in heap 0; main-thread `read` then re-clones values into the calling thread's private heap so downstream `qexec_end_buildvalueblock_iterations`'s `pr_clear_value` finds them in the right heap. Without this dance, cleanup would either leak (heap-0 not freed via worker heap) or crash (wrong-heap free).
+  - **`qdata_aggregate_accumulator_to_accumulator`** is the standard CUBRID merge primitive (used by hash GROUP BY and serial aggregation) — reused here for the per-worker partial-aggregate merge. Saves duplicating per-aggregate merge logic.
+  - **MIN/MAX(DISTINCT) shortcut**: DISTINCT is a no-op for MIN/MAX (extrema don't care about duplicates). The DISTINCT path has explicit `agg_node->function != PT_MIN && agg_node->function != PT_MAX` guards in 5 places (write_initialize, write, write_finalize, read).
+  - **STDDEV/VAR uses two accumulator slots**: `value` (sum of x), `value2` (sum of x²). Both incrementally updated per row; final stddev/variance computation deferred to merge-time `qdata_aggregate_accumulator_to_accumulator`.
+  - **Worker `write_initialize` failure propagation**: alloc/qfile_open failures now set `ER_OUT_OF_VIRTUAL_MEMORY` + `ERROR_INTERRUPTED_FROM_WORKER_THREAD` interrupt code via `move_top_error_message_to_this`. New 4-line `er_errid()` check after `write_initialize` in `task.cpp` consumes this.
+  - **`agg_domains_resolved = 0`** forced at top of `write_initialize` so each worker re-resolves domains fresh per scan. Previous state could leak from prior scan.
+  - **First-row vs Nth-row pattern** governed by `acc->curr_cnt < 1` — distinguishes "need to coerce + clone into accumulator domain" from "use `qdata_add_dbval` to incrementally update".
+- **Incidental enhancements** (2): added `qdata_aggregate_accumulator_to_accumulator` documentation to result-handler; cross-link from aggregate-analytic to BUILDVALUE_OPT fast path.
+- **Baseline impact**: triggered bump `175442fc` → `65d69154` (full hash `65d6915437eb6217ab0050939c6ad63f0d509735`). See `[2026-04-27] baseline-bump` entry above.
+
 ## [2026-04-27] manual-ingest | CUBRID 11.4 English User Manual — full catalog ingest
 - Source: `/home/cubrid/cubrid-manual/en/` — Sphinx-RST documentation tree, 119 RST files, ~88,270 lines, ~37 MB. Manual version 11.4.0.1778 (matches baseline `175442fc`).
 - **Strategy**: catalog + enhance (NOT a full per-file ingest — that would create 119 redundant pages). 21 cluster-source pages + 1 overview hub. Each source page is an outline + key facts + cross-refs back to the RST tree.
