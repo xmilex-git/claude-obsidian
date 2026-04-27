@@ -301,7 +301,17 @@ Per affected page:
 
 ## Pages Reconciled
 
-n/a — PR is OPEN. Promote Plan content here on `apply reconciliation for PR #7011`.
+Applied 2026-04-27 (post-merge, ingest_case `c`). Each page received an `[!update]` callout citing PR #7011 + merge sha `cc563c7f`.
+
+| Page | Change |
+|---|---|
+| [[components/btree]] | Added "Parallel index build (`SORT_INDEX_LEAF`)" subsection under Bulk Loading: dispatch chain, new public `SORT_ARGS` fields, newly-extern'd helpers, `FILTER_INDEX_INFO`, `get_next_vpid` page-fix protocol + `ab8ca3a` early-exit unfix, per-worker XASL re-deserialization rationale, sysop ownership by mode (SA / SERVER single-process / SERVER parallel), conservative `n_classes == 1` parallelism gate. |
+| [[components/external-sort]] | Added "Index-leaf parallel build (`SORT_INDEX_LEAF`)" section: `sort_merge_run_for_parallel_index_leaf_build` log₄ tree-merge, empty-worker skip, single-process scancache wrap, SA/SERVER asymmetry callout, two silent fixes (always-true wrong-pointer check, `malloc → calloc`). Updated SORT_INDEX_LEAF row in SORT_PARALLEL_TYPE table. |
+| [[components/parallel-sort]] | Annotated `sort_copy_sort_param` row with implementation location (`external_sort.c:4344-4471`, not `px_sort.c`). Added "`SORT_INDEX_LEAF` dispatch (PR #7011)" section covering `sort_check_parallelism`, `sort_start_parallelism`, `sort_end_parallelism`, `sort_return_used_resources` SORT_INDEX_LEAF arms. |
+| [[components/parallel-heap-scan-input-handler]] | Updated `path:` frontmatter to new file location. Added namespace-migration `[!update]` callout. Extended method table with PR #7011 additions (dtor, copy/move ctors+assignment, `append`, `move_from`, `size`). Cross-link to btree parallel-build section. |
+| [[components/parallel-query]] | Added `px_ftab_set.hpp` to `key_files`. Added `parallel_query::ftab_set` row to Sub-Components table noting consumers (parallel_heap_scan via using-alias + external_sort.c directly). |
+| [[components/file-manager]] | Added `file_get_num_data_sectors` to `public_api` frontmatter. Added "Sector-count helper" subsection documenting assignment-style read of `n_sector_full + n_sector_partial` and use in `sort_check_parallelism`. |
+| [[components/storage]] | Added `[!update]` callout under "Parallel Sort Interface" noting `parallel_query::ftab_set` is now consumed by `external_sort.c` and `btree_load.c` (post-#7011). |
 
 ## Incidental wiki enhancements
 
