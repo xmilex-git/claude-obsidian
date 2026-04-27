@@ -3,17 +3,17 @@ type: pr
 pr_number: 7011
 pr_url: "https://github.com/CUBRID/cubrid/pull/7011"
 repo: "CUBRID/cubrid"
-state: OPEN
+state: MERGED
 is_draft: false
 author: "xmilex-git"
 created_at:
-merged_at:
-closed_at:
-merge_commit:
+merged_at: "2026-04-27T05:20:37Z"
+closed_at: "2026-04-27T05:20:37Z"
+merge_commit: "cc563c7fd90521393781d8440bf5144d2566ff71"
 base_ref: "develop"
 head_ref: "parallel_index_build"
-base_sha: "66e9279003e5ea9ffed5dded2bf85523922869ad"
-head_sha: "44d92db64cec8f9b1bc2fd5f9802679b7772baf5"
+base_sha: "175442fc858bd0075165729756745be6f8928036"
+head_sha: "6f5ca7ae2ad2bc2f49962ee86c0e28470e77eb0a"
 jira: "CBRD-26678"
 files_changed:
   - "cubrid/CMakeLists.txt"
