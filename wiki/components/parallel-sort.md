@@ -296,6 +296,18 @@ external_sort.c
 
 ---
 
+## `SORT_INDEX_LEAF` dispatch (PR #7011)
+
+> [!update] PR #7011 (merge `cc563c7f`) — parallel CREATE INDEX wired through this layer
+> `sort_check_parallelism`, `sort_start_parallelism`, `sort_end_parallelism`, and `sort_return_used_resources` all gain `SORT_INDEX_LEAF` arms.
+
+- `sort_check_parallelism` for `SORT_INDEX_LEAF`: returns `1` (single-process) if `n_classes > 1`; otherwise calls `file_get_num_data_sectors(thread_p, &hfid->vfid, ...)` and decides parallelism based on sector count vs threshold.
+- `sort_start_parallelism` for `SORT_INDEX_LEAF` (`external_sort.c:5248-5310`): per-worker `malloc(SORT_ARGS)` + `memcpy(sort_param->get_arg)`, override `get_fn = &btree_sort_get_next_parallel`, NULL the inherited filter pointers, then `file_get_all_data_sectors` + `ftab_set::split(parallel_num)` populates per-worker `ftab_sets` (one entry per `n_classes`, possibly empty).
+- `sort_end_parallelism` for `SORT_INDEX_LEAF`: dispatches `sort_merge_run_for_parallel_index_leaf_build` (the index-leaf log₄ tree-merge) instead of the ORDER_BY merge.
+- `sort_return_used_resources` checks `if (sort_param->get_arg != NULL)` before freeing per-worker `SORT_ARGS`, and uses explicit `~vector()` + `free_and_init` for `ftab_sets` (allocated via `malloc` + placement-`new`).
+
+See [[components/external-sort#index-leaf-parallel-build-sort_index_leaf]] and [[components/btree#parallel-index-build-sort_index_leaf]] for the call-site details.
+
 ## Constraints
 
 - `SORT_WAIT_PARALLEL` requires a local `int error` in scope — it assigns `error = ER_FAILED` directly.
