@@ -27,17 +27,28 @@ Two classes manage how heap pages are divided and delivered to parallel worker t
 
 ## Class / Function Inventory
 
-### `ftab_set` (header-only, `px_heap_scan_ftab_set.hpp`)
+### `ftab_set` (header-only, `px_ftab_set.hpp`)
+
+> [!update] PR #7011 (merge `cc563c7f`) — file moved + namespace migrated
+> Header relocated from `src/query/parallel/px_heap_scan/px_heap_scan_ftab_set.hpp` to `src/query/parallel/px_ftab_set.hpp`. Class moved from `parallel_heap_scan` to `parallel_query` namespace so both heap-scan and parallel index-build (`external_sort.c::sort_start_parallelism` for `SORT_INDEX_LEAF`) can share it. `parallel_heap_scan::ftab_set` is preserved as a `using`-alias inside `px_heap_scan_input_handler_ftabs.hpp` to keep existing heap-scan call-sites compiling unchanged. CMakeLists moves the header from `PARALLEL_HEAP_SCAN_HEADERS` to `PARALLEL_QUERY_HEADERS`.
 
 | Method | Description |
 |--------|-------------|
 | `ftab_set()` | Default ctor; empty vector, iterator = 0 |
+| `~ftab_set()` | Dtor; clears `m_ftab_set` (added by PR #7011) |
+| `ftab_set(const ftab_set&)` / `operator=(const ftab_set&)` | Copy ctor + copy assignment (added by PR #7011) |
+| `ftab_set(ftab_set&&)` / `operator=(ftab_set&&)` | Move ctor + move assignment (added by PR #7011) |
 | `convert(FILE_FTAB_COLLECTOR*)` | Copies `partsect_ftab[0..nsects]` into `m_ftab_set` |
 | `split(int n_sets) -> vector<ftab_set>` | Divides sectors among `n_sets` slices; remainder sectors go to first slices |
+| `append(const ftab_set &other)` | Concatenates `m_ftab_set` lists (added by PR #7011) |
+| `move_from(ftab_set &other)` | `std::move` content + reset other's iterator (added by PR #7011) |
+| `size() const -> size_t` | Exposes underlying vector size (added by PR #7011) |
 | `get_next() -> FILE_PARTIAL_SECTOR` | Returns next sector and advances iterator; returns `FILE_PARTIAL_SECTOR_INITIALIZER` at end |
 | `clear()` | Clears vector and resets iterator |
 
 **Fields**: `m_ftab_set` (`vector<FILE_PARTIAL_SECTOR>`), `iterator` (`size_t`).
+
+The new copy/move semantics + `append`/`move_from`/`size` support the "split into per-worker `ftab_set`s and pass by value/move into per-worker `SORT_ARGS`" pattern used by parallel CREATE INDEX (see [[components/btree#parallel-index-build-sort_index_leaf]]).
 
 ### `input_handler_ftabs` (`px_heap_scan_input_handler_ftabs.hpp/.cpp`)
 
