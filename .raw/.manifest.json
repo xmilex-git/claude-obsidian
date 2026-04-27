@@ -1,4 +1,7 @@
 {
+  "version": 1,
+  "created": "2026-04-23",
+  "description": "Ingest delta tracker and address map for the claude-obsidian vault. Do not hand-edit; wiki-ingest maintains this.",
   "sources": {
     ".raw/cubrid/AGENTS.md": {
       "hash": "946ec2715e851332b3d414853aebe1d4",
@@ -110,5 +113,8 @@
       ],
       "deferred_enhancements": "Each cubrid-manual-* page lists ~3-15 incidental enhancement opportunities in its 'Incidental Wiki Enhancements' section. Top-7 highest-impact applied this session (cub-master, sp, lock-manager, btree, optimizer, error-manager, recovery). The remaining ~40+ are documented in the source pages but not yet applied to component pages — pending future passes."
     }
+  },
+  "address_map": {
+    "wiki/_legacy/concepts/DragonScale Memory.md": "c-000001"
   }
 }
