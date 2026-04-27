@@ -60,13 +60,14 @@ status: merged
 # PR #7011 — Support parallel index build
 
 > [!info] PR metadata
-> **Repo:** `CUBRID/cubrid` · **State:** `OPEN` · **Author:** `@xmilex-git` · **Jira:** [CBRD-26678](https://jira.cubrid.org/browse/CBRD-26678)
-> **Base → Head:** `develop` (`66e9279003`) → `parallel_index_build` (`44d92db64`)
-> **Scale:** 9 files, +1058/−99 (1157 LOC). Largest: `btree_load.c` (+468/−46 = 514 changed), `external_sort.c` (+425/−46 = 471 changed). 1 file > 500 LOC. Analyzed via 2 parallel deep-read subagents.
-> **Approvals at snapshot:** @hornetmj (2026-04-20), @shparkcubrid (2026-04-23), @youngjinj (2026-04-23), @sohee-dgist (2026-04-24), @Hamkua (2026-04-24).
+> **Repo:** `CUBRID/cubrid` · **State:** `MERGED` · **Author:** `@xmilex-git` · **Jira:** [CBRD-26678](https://jira.cubrid.org/browse/CBRD-26678)
+> **Merged:** 2026-04-27T05:20:37Z · **Merge commit:** `cc563c7fd90521393781d8440bf5144d2566ff71`
+> **Base → Head:** `develop` (`175442fc8`) → `parallel_index_build` (`6f5ca7ae2` final, was `44d92db64` at first ingest)
+> **Scale:** 9 files, +1058/−99 (1157 LOC). Largest: `btree_load.c` (+468/−46 = 514 changed), `external_sort.c` (+425/−46 = 471 changed). 1 file > 500 LOC. Original analysis via 2 parallel deep-read subagents (2026-04-26 OPEN ingest).
+> **Approvals at merge:** @hornetmj (2026-04-20), @shparkcubrid (2026-04-23), @youngjinj (2026-04-23), @sohee-dgist (2026-04-24), @Hamkua (2026-04-24). All 5 carried through to merge unchanged.
 
-> [!note] Ingest classification: `open`
-> Reconciliation Plan written below; component pages NOT edited for PR-induced changes. Previously-flagged baseline gap **`sort_copy_sort_param` missing implementation** ([[hot|hot cache]] note) is **resolved by this PR** — implementation lives at `external_sort.c:4344-4471` (post-merge). Incidental enhancement applied to one component page based on baseline-truth observations.
+> [!note] Ingest classification: `c` (newer than baseline)
+> Reconciled on 2026-04-27. Originally ingested OPEN on 2026-04-26 against baseline `175442fc`; baseline subsequently bumped to `65d69154` via [[prs/PR-7049-parallel-buildvalue-heap|PR #7049]]. PR #7011 merged as commit `cc563c7f` (direct child of `65d69154`) on 2026-04-27 at 05:20Z. Reconciliation Plan promoted to "Pages Reconciled". Baseline bumped `65d6915` → `cc563c7`. Between snapshot head `44d92db` and final head `6f5ca7a` only one new commit landed: `6f5ca7a` (`Merge branch 'CUBRID:develop' into parallel_index_build`) — no logic changes to PR-touched files (verified via `git diff` on the 9 touched files). Original code analysis remains accurate.
 
 ## Summary
 
