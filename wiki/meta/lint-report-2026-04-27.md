@@ -22,9 +22,9 @@ related:
 - **Pages scanned**: 283 markdown + 1 canvas + 1 base = 285 vault files
 - **Page-count delta vs 04-24**: ~+22 (21 new `cubrid-manual-*` source pages + this report)
 - **Major change today**: full CUBRID 11.4 manual ingest landed — see [[log]] entry `[2026-04-27] manual-ingest`
-- **New issues introduced**: 5 (all minor — `[[hot.md]]` typos in my new manual pages)
-- **Pre-existing issues remaining**: 3 categories — modules/_index dead links (14), missing `created` frontmatter (70), missing `tags` (16)
-- **Auto-fixable**: yes for all 5 new + the modules/_index dead links (after deciding policy)
+- **Issues found**: 19 dead wikilinks (5 introduced today + 14 pre-existing in `modules/_index.md`)
+- **Frontmatter**: clean (initial report had a buggy scan; corrected via `grep -L`)
+- **Status**: all top-5 fixes applied this session — see [[log]] entry `[2026-04-27] lint-fixes`
 
 ## Page Distribution
 
