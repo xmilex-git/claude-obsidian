@@ -12,9 +12,10 @@ status: active
 # Recent Context
 
 ## CUBRID Baseline Commit
-**`65d6915437eb6217ab0050939c6ad63f0d509735`** — all wiki claims, file paths, line numbers reflect this commit of `~/dev/cubrid/`. Before any new ingest, check repo HEAD; if newer, compute `git log <baseline>..HEAD -- <path>` and reconcile affected wiki pages before writing. Protocol: `CLAUDE.md` § "CUBRID Baseline Commit".
+**`cc563c7fd90521393781d8440bf5144d2566ff71`** — all wiki claims, file paths, line numbers reflect this commit of `~/dev/cubrid/`. Before any new ingest, check repo HEAD; if newer, compute `git log <baseline>..HEAD -- <path>` and reconcile affected wiki pages before writing. Protocol: `CLAUDE.md` § "CUBRID Baseline Commit".
 
-> [!update] Bumped 2026-04-27 from `175442fc` → `65d69154` via [[prs/PR-7049-parallel-buildvalue-heap|PR #7049]]. Direct child of prior baseline on `develop` (case c).
+> [!update] Bumped 2026-04-27 (later) from `65d69154` → `cc563c7f` via [[prs/PR-7011-parallel-index-build|PR #7011]] reconciliation. Direct child of prior baseline on `develop` (case c). Original PR #7011 ingest was 2026-04-26 OPEN against `175442fc`; reconciled here after merge.
+> Earlier this day: `175442fc` → `65d69154` via [[prs/PR-7049-parallel-buildvalue-heap|PR #7049]] (also case c).
 
 ## PR Ingest
 **On-demand only, user-specified only.** Do not autonomously scan, poll, or batch. All PR states are ingestable — behavior differs: merged-case-c → reconcile + bump now; merged-case-a/b → retroactive doc only; open/draft → write Reconciliation Plan (do NOT edit component pages for PR-induced changes); closed-unmerged → doc as abandoned. **Deep code analysis required** every time (read baseline source files, not just the diff). **Incidental Knowledge Enhancement expected** every time: facts about baseline code that are missing/wrong/incomplete in the wiki get added to component/source pages immediately, regardless of PR state. Deferred plan execution via "apply reconciliation for PR #NNNN". Template: `_templates/pr.md`; index: [[prs/_index|PRs]]; protocol: `CLAUDE.md` § "PR Ingest (user-specified only, all states accepted, code analysis required)".
