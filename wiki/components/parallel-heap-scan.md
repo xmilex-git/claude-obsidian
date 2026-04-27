@@ -64,7 +64,7 @@ enum class RESULT_TYPE {
     NONE           = 0x0,
     MERGEABLE_LIST = 0x1,  // (fast)  per-thread list file, main merges — set-independent SELECT
     XASL_SNAPSHOT  = 0x2,  // (slow)  row-by-row handoff via shared list_id_headers — set-dependent
-    COUNT_DISTINCT = 0x3,  // (fast)  for UPDATE STATISTICS — aggregate-only
+    BUILDVALUE_OPT = 0x3,  // (fast)  BUILDVALUE_PROC fast path: per-worker partial aggregate (PR #7049)
 };
 ```
 
