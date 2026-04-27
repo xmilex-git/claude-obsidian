@@ -186,6 +186,9 @@ Pages can be encrypted at the I/O layer. `FILEIO_PAGE_FLAG_ENCRYPTED_AES` and `_
 
 `external_sort.c` exposes `sort_listfile()`, which is consumed by [[components/parallel-sort|parallel-sort]] through macros `SORT_EXECUTE_PARALLEL` / `SORT_WAIT_PARALLEL`. The external sort subsystem is also called directly by the non-parallel query executor.
 
+> [!update] PR #7011 (merge `cc563c7f`) — `external_sort.c` and `btree_load.c` now consume `parallel_query::ftab_set`
+> The `ftab_set` value type (per-worker `FILE_PARTIAL_SECTOR` slice) was promoted from `parallel_heap_scan` to the umbrella `parallel_query` namespace and its header relocated to `src/query/parallel/px_ftab_set.hpp`. `external_sort.c::sort_start_parallelism` (SORT_INDEX_LEAF arm) and `btree_load.c::btree_sort_get_next_parallel` consume it directly to drive the per-worker heap-sector iteration during parallel CREATE INDEX. See [[components/parallel-heap-scan-input-handler#ftab-set-header-only-px-ftab-set-hpp|ftab_set details]].
+
 ## Common Bug Locations
 
 | Symptom | File | Entry point |
