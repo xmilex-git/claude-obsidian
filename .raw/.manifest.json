@@ -30,6 +30,40 @@
         "wiki/hot.md"
       ]
     },
+    "github://CUBRID/cubrid/pull/7049": {
+      "hash": "65d6915437eb6217ab0050939c6ad63f0d509735",
+      "hash_method": "PR merge_commit oid",
+      "ingested_at": "2026-04-27",
+      "ingest_type": "pr-deep",
+      "pr_number": 7049,
+      "pr_state": "MERGED",
+      "ingest_case": "c",
+      "title": "[CBRD-26711] Support avg,sum function on parallel heap scan",
+      "author": "xmilex-git",
+      "merge_commit": "65d6915437eb6217ab0050939c6ad63f0d509735",
+      "files_count": 9,
+      "additions": 424,
+      "deletions": 158,
+      "baseline_before": "175442fc858bd0075165729756745be6f8928036",
+      "baseline_after": "65d6915437eb6217ab0050939c6ad63f0d509735",
+      "triggered_baseline_bump": true,
+      "pages_created": [
+        "wiki/prs/PR-7049-parallel-buildvalue-heap.md"
+      ],
+      "pages_updated": [
+        "wiki/components/parallel-heap-scan.md",
+        "wiki/components/parallel-heap-scan-result-handler.md",
+        "wiki/components/parallel-heap-scan-task.md",
+        "wiki/components/parallel-heap-scan-support.md",
+        "wiki/components/aggregate-analytic.md",
+        "wiki/prs/_index.md",
+        "wiki/index.md",
+        "wiki/hot.md",
+        "wiki/log.md",
+        "CLAUDE.md"
+      ],
+      "key_insight": "Extends parallel heap scan BUILDVALUE_PROC fast path from 2 aggregates (COUNT*/COUNT) to 12 (COUNT*/COUNT/MIN/MAX/SUM/AVG/STDDEV*/VAR*); cosmetic enum rename COUNT_DISTINCT → BUILDVALUE_OPT; key engineering = two-heap dance (workers write in heap 0, main re-clones into private heap before pr_clear_value cleanup) + qdata_aggregate_accumulator_to_accumulator reused for per-worker partial merge."
+    },
     "/home/cubrid/cubrid-manual/en/": {
       "hash": "85c1ebbc75933acda015a8776506a270",
       "hash_method": "md5sum of concatenated sorted *.rst files (119 files, ~88K lines)",
