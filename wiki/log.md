@@ -26,6 +26,22 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-27] manual-ingest | CUBRID 11.4 English User Manual — full catalog ingest
+- Source: `/home/cubrid/cubrid-manual/en/` — Sphinx-RST documentation tree, 119 RST files, ~88,270 lines, ~37 MB. Manual version 11.4.0.1778 (matches baseline `175442fc`).
+- **Strategy**: catalog + enhance (NOT a full per-file ingest — that would create 119 redundant pages). 21 cluster-source pages + 1 overview hub. Each source page is an outline + key facts + cross-refs back to the RST tree.
+- **Parallel-agent dispatch** for the 4 large clusters (sql/, admin/, api/, pl/) — each agent returned a structured catalog (per-file 1-line summary, cluster strategy recommendation, top-15 enhancement opportunities, top-10 gap pages, 20-30 notable facts).
+- **Pages created (22)**:
+  - Hub: [[sources/cubrid-manual-en-overview]]
+  - Top-level: [[sources/cubrid-manual-intro]], [[sources/cubrid-manual-install]], [[sources/cubrid-manual-csql]], [[sources/cubrid-manual-ha]], [[sources/cubrid-manual-shard]], [[sources/cubrid-manual-security]], [[sources/cubrid-manual-release-notes-114]]
+  - Admin: [[sources/cubrid-manual-admin]], [[sources/cubrid-manual-config-params]], [[sources/cubrid-manual-error-codes]]
+  - API: [[sources/cubrid-manual-api]], [[sources/cubrid-manual-cci]], [[sources/cubrid-manual-jdbc]]
+  - PL: [[sources/cubrid-manual-pl]], [[sources/cubrid-manual-plcsql]]
+  - SQL: [[sources/cubrid-manual-sql-foundation]], [[sources/cubrid-manual-sql-dml]], [[sources/cubrid-manual-sql-ddl]], [[sources/cubrid-manual-sql-tuning-parallel]], [[sources/cubrid-manual-sql-functions]]
+- **Pages updated (incidental enhancements applied)**: [[components/cub-master]] (auto_restart_server NEW 11.4, HA split-brain detection, in-HA `cubrid server start` bypass trap), [[components/sp]] (pl_transaction_control, AUTHID Owner-only-for-PLCSQL, 16-call-via-query recursion limit, OUT-arg restriction, no-overloading, default-arg storage, DBMS_OUTPUT-only-package, JNI loadjava -j NEW 11.4), [[components/lock-manager]] (BU_LOCK introduced 10.2 for loaddb, 9 lock modes, lock_timeout -1/0 semantics, error code split table), [[components/btree]] (online index 3-stage protocol, DEDUPLICATE 0-14, ONLINE PARALLEL ignored in SA), [[components/optimizer]] (28-hint catalog table, plan cache regen rule 6 min + 10× page change, 11.4 stat improvements), [[components/error-manager]] (full namespace partitioning: server / CAS -10K / CCI -20K / JDBC -21K), [[components/recovery]] (-1128/-1129 NOTIFICATIONs, parallel REDO 11.4, HA force_remove_log_archives must be no).
+- **Deferred enhancements**: each `cubrid-manual-*` page lists ~3-15 incidental enhancement opportunities in its "Incidental Wiki Enhancements" section — top-7 highest-impact applied this session, ~40+ remaining documented in source pages but not yet applied to component pages.
+- **Key insight**: the manual ⇄ source split is the natural boundary — end-user contracts on one side, implementation on the other. Anchoring both to the same baseline commit (`175442fc`) lets us reconcile drift mechanically. **CUBRID 11.4 marquee features**: PL/CSQL (Oracle PL/SQL-compatible language), HASH JOIN (USE_HASH hint), LEADING hint, expanded query cache (CTE + uncorrelated), parallel REDO recovery, `cubrid memmon`, `auto_restart_server` for non-HA, `loadjava -j` for JNI Java SP, `restore_to_newdb.sh`. **Breaking specs**: CHAR max chars 268M → 2048, LOB locator path absolute → relative, AUTO_INCREMENT+DEFAULT illegal, `db_serial.att_name → attr_name`, view creation type checks deferred.
+- **Manifest**: `.raw/.manifest.json` updated with tree-hash `85c1ebbc75933acda015a8776506a270` over the concatenated sorted .rst files.
+
 ## [2026-04-26] pr-ingest-deep | PR #7011 — Support parallel index build (OPEN, 9 files)
 - Ingested CUBRID upstream [PR #7011](https://github.com/CUBRID/cubrid/pull/7011) "[CBRD-26678] Support parallel index build" by `@xmilex-git` (the user themselves). State `OPEN` (non-draft, 5 approvals). Base `develop@66e9279003`, head `parallel_index_build@44d92db64`. 9 files, +1058/−99 (1157 LOC). Largest: btree_load.c (+468/−46), external_sort.c (+425/−46). 1 file > 500 LOC.
 - **Scale rule triggered** (1 file > 500 changed lines). Dispatched 2 parallel deep-read subagents — (A) btree_load.c/.h covering `SORT_ARGS` migration + per-thread getters + sysop layout, (B) external_sort.c/.h covering `SORT_INDEX_LEAF` wiring + `sort_merge_run_for_parallel_index_leaf_build` + tree-merge fan-in.
