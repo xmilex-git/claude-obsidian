@@ -147,9 +147,20 @@ Window functions require two passes over a partition:
 
 `qdata_evaluate_aggregate_hierarchy` handles aggregating MIN/MAX across a class hierarchy (superclass + subclasses each with their own B-tree). `HIERARCHY_AGGREGATE_HELPER` carries the array of `BTID`s and `HFID`s for each class in the hierarchy.
 
+## Parallel Heap Scan Fast Path (BUILDVALUE_OPT)
+
+> [!update] PR #7049 (`65d6915`, 2026-04-27)
+> Parallel heap scan now supports a partial-aggregate fast path for **12 aggregate functions** in BUILDVALUE_PROC (single-tuple, no GROUP BY) queries: `COUNT_STAR`, `COUNT`, `MIN`, `MAX`, `SUM`, `AVG`, `STDDEV`, `STDDEV_POP`, `STDDEV_SAMP`, `VARIANCE`, `VAR_POP`, `VAR_SAMP`. Pre-7049 only `COUNT(*)` and `COUNT(col)` were supported (mode was named `COUNT_DISTINCT` then).
+
+Each worker computes a partial accumulator independently; the main thread merges all partials via **`qdata_aggregate_accumulator_to_accumulator`** (the same merge primitive used by hash GROUP BY and serial aggregation — reused here to avoid per-aggregate logic duplication). MIN/MAX(DISTINCT) shortcuts to MIN/MAX (no-op DISTINCT). Other aggregates (`GROUP_CONCAT`, `MEDIAN`, `JSON_*`, bit aggregates, user SP) fall back to MERGEABLE_LIST or XASL_SNAPSHOT.
+
+See [[components/parallel-heap-scan-result-handler]] for the worker-side accumulation switch and the heap-0 ↔ private-heap dance, and [[prs/PR-7049-parallel-buildvalue-heap]] for the full diff walkthrough.
+
 ## Related
 
 - Parent: [[components/query|query]]
 - [[components/query-executor|query-executor]] — calls `qdata_evaluate_aggregate_list` in GROUP BY loops; calls analytic functions after sort
 - [[components/list-file|list-file]] — sort and spill storage for both aggregate and analytic paths
 - [[components/partition-pruning|partition-pruning]] — provides `HIERARCHY_AGGREGATE_HELPER` for partitioned aggregate optimization
+- [[components/parallel-heap-scan-result-handler]] — BUILDVALUE_OPT fast path: per-worker partial aggregation + accumulator merge
+- [[prs/PR-7049-parallel-buildvalue-heap]] — PR that broadened the fast path
