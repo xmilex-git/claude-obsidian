@@ -103,6 +103,8 @@ status: active
 - `src/heaplayers/` = unmodified Emery Berger Heap Layers (Apache 2.0). `lea_heap.c` ≈ 181 KB Doug Lea dlmalloc. Engine surface = `HL_HEAPID` opaque handle only.
 
 ## Open follow-ups (from agent reports)
+- **Parallel heap scan (post PR #7049)**: BUILDVALUE_OPT fast path now covers 12 aggregates (was 2). Pattern to remember: per-worker partial accumulator in heap 0 → main-thread `qdata_aggregate_accumulator_to_accumulator` merge in heap 0 → main-thread `read` re-clones into private heap. STDDEV/VAR uses `value` (sum x) + `value2` (sum x²) two-slot accumulator. MIN/MAX(DISTINCT) bypasses the per-thread DISTINCT list entirely. Eligibility checked by `is_buildvalue_opt_supported_function` whitelist in `px_heap_scan_checker.cpp`.
+
 - **Flow pages worth filing**:
   - `pgbuf_fix → dwb_add_page → fileio_write` (page write lifecycle + WAL ordering)
   - B-tree insert with MVCC
