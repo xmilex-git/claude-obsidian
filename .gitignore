@@ -104,3 +104,8 @@ website/node_modules/
 website/public/
 website/.quartz-cache/
 website/content
+
+# Claude Code per-project settings (personal: scopes claude-obsidian plugin to this folder)
+.claude/settings.json
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
