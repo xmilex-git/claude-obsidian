@@ -352,10 +352,11 @@ Synthesized from 2 subagent reports. Most greptile P0/P1 findings have been addr
 
 ## Baseline impact
 
-- Before: `175442fc858bd0075165729756745be6f8928036`
-- After: `175442fc858bd0075165729756745be6f8928036` (unchanged — PR is open)
-- Bump triggered: `false`
-- Logged: see [[log]] entry `[2026-04-26] pr-ingest PR #7011`.
+- Before: `65d6915437eb6217ab0050939c6ad63f0d509735` (post-PR-#7049 baseline at reconciliation time)
+- After: `cc563c7fd90521393781d8440bf5144d2566ff71` (merge commit of this PR; direct child of prior baseline on `develop`)
+- Bump triggered: `true` (case `c`)
+- Original ingest baseline (2026-04-26): `175442fc858bd0075165729756745be6f8928036` (PR was OPEN; no bump at that time)
+- Logged: see [[log]] entries `[2026-04-26] pr-ingest PR #7011` (initial OPEN ingest) and `[2026-04-27] baseline-bump | 65d69154 → cc563c7 (PR #7011)` (this reconciliation).
 
 ## Related
 
