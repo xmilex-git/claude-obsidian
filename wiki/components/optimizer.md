@@ -60,8 +60,22 @@ Selects join orders, access paths, and physical operators based on cost estimate
 
 Detail will be added on a deeper ingest of the optimizer source. AGENTS.md only lists this directory at one-line granularity.
 
+## From the Manual (sql/tuning.rst, sql/parallel.rst — added 2026-04-27)
+
+> [!gap] Documented contracts
+> - **Full SQL HINT catalogue (28 hints)** is documented in `sql/tuning.rst`. See [[sources/cubrid-manual-sql-tuning-parallel]] for the table. Notable additions in 11.4: `USE_HASH`/`NO_USE_HASH` (HASH JOIN opt-in), `LEADING(t1 t2)` (finer than ORDERED).
+> - **`SET OPTIMIZATION LEVEL n`** valid values: 1 (full, default), 2 (heuristic only), +256 (emit plan trace), +512 (emit join enumeration trace). So 1, 2, 257, 258, 513, 514.
+> - **Plan cache regeneration** triggered ONLY when **BOTH**: (a) ≥6 minutes elapsed since last check, AND (b) `UPDATE STATISTICS` changed page count by ≥10× since plan was cached. (`sql/tuning.rst:14-20`).
+> - **NEW 11.4 stat improvements**: sampling pages 1000 → **5000**; NDV (number of distinct values) collection improved; NOT LIKE selectivity added; function-based-index selectivity added; NDV duplicate weighting (>1% sample dup → reweight); `SSCAN_DEFAULT_CARD` to prevent inefficient NL JOIN on tiny cardinality estimates; LIMIT cost/cardinality reflected in plans.
+> - **Index Skip Scan auto-selected in 11.4** — no `INDEX_SS` hint needed.
+> - **Optimizer prefers cheaper index over PK** when applicable (NEW 11.4).
+> - **Stored Procedure execution plans** now use index scans, eliminate unnecessary joins, and support result caching in correlated subqueries.
+
+See [[sources/cubrid-manual-sql-tuning-parallel]] for the full hint catalogue and 11.4 optimizer changes.
+
 ## Related
 
 - Parent: [[modules/src|src]]
 - [[Query Processing Pipeline]]
 - Source: [[cubrid-AGENTS]]
+- Manual: [[sources/cubrid-manual-sql-tuning-parallel]]
