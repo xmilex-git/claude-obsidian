@@ -40,6 +40,14 @@ jobs:
         working-directory: website
         run: npm ci
 
+      - name: Cache Quartz font downloads (Google Fonts)
+        uses: actions/cache@v4
+        with:
+          path: website/quartz/.quartz-cache/fonts
+          key: quartz-fonts-${{ runner.os }}-${{ hashFiles('website/quartz.config.ts') }}
+          restore-keys: |
+            quartz-fonts-${{ runner.os }}-
+
       - name: Build Quartz (source = ../wiki)
         working-directory: website
         run: |
