@@ -179,6 +179,47 @@ Bulk index creation (e.g. `CREATE INDEX`) uses a sorted-insert path optimized fo
 - `btree_insert_list` struct (in `btree.h`) batches key-OID pairs and can use `m_use_sorted_bulk_insert` for page-boundary-aware insertion.
 - `page_key_boundary` tracks the min/max key of each page to decide when to release the current page latch.
 
+### Parallel index build (`SORT_INDEX_LEAF`)
+
+> [!update] PR #7011 (merge `cc563c7f`) — parallelizes `xbtree_load_index` heap-scan + sort phase
+> SERVER_MODE-only. SA_MODE retains the existing serial path with `btree_load.c`-side setup.
+
+Dispatch chain: `xbtree_load_index → btree_index_sort → sort_listfile → SORT_EXECUTE_PARALLEL` (when `sort_check_parallelism > 1`). The `SORT_INDEX_LEAF` value of `SORT_PARALLEL_TYPE` was previously declared but unused; PR #7011 wires it up.
+
+`SORT_ARGS` is now public in `btree_load.h` (was file-static). New fields:
+
+| Field | Type | Role |
+|---|---|---|
+| `filter_index_info` | `FILTER_INDEX_INFO *` | Carries raw `pred_stream` so each parallel worker re-deserializes the XASL filter predicate (XASL trees are not thread-safe) |
+| `ftab_sets` | `std::vector<parallel_query::ftab_set> *` | Per-thread sector partition; `[cur_class]` returns this worker's `ftab_set` |
+| `curr_sec` | `FILE_PARTIAL_SECTOR` | Iteration cursor: current partial sector |
+| `curr_pgoffset` | `int` | Iteration cursor: page offset in `curr_sec` (0..`DISK_SECTOR_NPAGES-1`) |
+
+Newly extern'd helpers (promoted from `static`): `bt_load_heap_scancache_start_for_attrinfo` / `..._end_for_attrinfo`, `bt_load_clear_pred_and_unpack`. New extern helpers: `btree_load_filter_pred_function_info` (per-worker XASL re-unpack) and `btree_sort_get_next_parallel` (used by `external_sort.c::sort_start_parallelism` as the parallel `get_fn`).
+
+New public type:
+
+```c
+typedef struct filter_index_info FILTER_INDEX_INFO;
+struct filter_index_info {
+  char *pred_stream;
+  int   pred_stream_size;
+};
+```
+
+`get_next_vpid` (per-worker sector iterator) walks pages via `pgbuf_ordered_fix` + `pgbuf_replace_watcher`, and on `ER_PB_BAD_PAGEID` it `er_clear()` + `continue` (benign race when concurrent vacuum/DROP deallocs a page between sector-bitmap snapshot and worker access). Both early-return paths (sector exhausted → `S_END`, fix error → `S_ERROR`) call `pgbuf_ordered_unfix(old_pgwatcher)` if its `pgptr != NULL` to avoid leaking the previous-page pin (fix `ab8ca3a`).
+
+Per-worker XASL re-deserialization: each worker takes a stack-local `FILTER_INDEX_INFO` snapshot of the parent's `pred_stream` pointers, NULLs its own `sort_args_p->filter` and `func_index_info`, then calls `btree_load_filter_pred_function_info` to re-unpack via `stx_map_stream_to_filter_pred` and `stx_map_stream_to_func_pred`, and recomputes `eval_fnc`. Cleanup is `bt_load_clear_pred_and_unpack`. Rationale: `PRED_EXPR_WITH_CONTEXT::cache_pred` (a `HEAP_CACHE_ATTRINFO`) is mutated during evaluation; sharing one unpacked predicate across N workers would race.
+
+Sysop & `btree_create_file` ownership differs by mode (corrected by commit `42b92007`):
+- **SA_MODE**: `log_sysop_start` + `btree_create_file` at top of `xbtree_load_index` (`btree_load.c:906`).
+- **SERVER_MODE single-process**: in `sort_listfile` at `external_sort.c:1500-1501`, just before `sort_listfile_internal`.
+- **SERVER_MODE parallel**: in `sort_merge_run_for_parallel_index_leaf_build` at `external_sort.c:4848-4858`, **after** per-thread sorts complete and the merge fan-in has consolidated runs.
+
+In all SERVER_MODE paths the sysop is **left open on success** for `xbtree_load_index` to close — caller sets `is_sysop_started = true` under SERVER_MODE guard at `btree_load.c:1085`. On failure the sort layer always calls `log_sysop_abort` before returning `ER_FAILED`.
+
+Multi-class indexes are not parallelized: `sort_check_parallelism` returns 1 when `n_classes > 1`. The plumbing is class-aware (`ftab_sets` vector indexed by `cur_class` with empty entries for skipped classes), but the gate is conservative.
+
 ## Latch Ordering
 
 > [!warning] Parent-before-child latch order
