@@ -108,6 +108,14 @@ File descriptors store type-specific metadata alongside the VFID:
 
 The `FILE_FULL_PAGE_BITMAP` macros in `file_manager.h` encode the per-sector 64-page presence vector as a `uint64_t`.
 
+### Sector-count helper (`file_get_num_data_sectors`)
+
+> [!update] PR #7011 (merge `cc563c7f`) — new helper
+> ```c
+> int file_get_num_data_sectors (THREAD_ENTRY *thread_p, const VFID *vfid, int *n_sectors_out);
+> ```
+> Reads `*n_sectors_out = fhead->n_sector_full + fhead->n_sector_partial;` — **direct assignment, not accumulation** (callers do not need to zero `*n_sectors_out` first, but a greptile review thread on PR #7011 misread this as accumulation; the assignment semantics are intentional). Used by `external_sort.c::sort_check_parallelism` for `SORT_INDEX_LEAF` to decide whether parallel CREATE INDEX is worthwhile by comparing the heap file's sector count against a threshold.
+
 ## Layer 2: Disk Manager (`disk_manager.c`)
 
 ### Volume Model
