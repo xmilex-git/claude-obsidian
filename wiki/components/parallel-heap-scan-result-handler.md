@@ -132,17 +132,78 @@ read(thread_p, dest_list_id) [called per scan_next iteration]
        return S_SUCCESS per tuple, S_END when all workers done
 ```
 
-## Execution Path — COUNT_DISTINCT
+## Execution Path — BUILDVALUE_OPT (post-PR #7049)
+
+> [!update] PR #7049 (`65d6915`, 2026-04-27)
+> Was `COUNT_DISTINCT`, supported only `COUNT(*)` and `COUNT(col)`. Now supports the full set: `COUNT_STAR`, `COUNT`, `MIN`, `MAX`, `SUM`, `AVG`, `STDDEV`, `STDDEV_POP`, `STDDEV_SAMP`, `VARIANCE`, `VAR_POP`, `VAR_SAMP` (incl. `DISTINCT` variants except for MIN/MAX where `DISTINCT` is a no-op). See [[prs/PR-7049-parallel-buildvalue-heap]] for the full diff walkthrough.
 
 ```
-write_initialize: clone AGGREGATE_TYPE list (TLS tl_agg_p)
-write():          accumulate row into TLS aggregate via qexec_execute_scan_ptr
-write_finalize:   under writer_results_mutex, merge TLS aggregate into shared result
-                  decrement m_result_completed; notify CV
+write_initialize(thread_p, outptr_list, agg_list, vd, xasl):
+  ├─ Force agg_domains_resolved=0 (re-resolve per worker)
+  ├─ For each agg_node:
+  │    PT_COUNT_STAR              → curr_cnt = 0
+  │    Q_DISTINCT (non-MIN/MAX)   → open per-thread QFILE_LIST_ID for operand domain
+  │                                 (NEW: alloc/open failures → move_top_error + interrupt)
+  │    everything else            → curr_cnt = 0  (value/value2 lazy on first row)
 
-read():           CV-wait until m_result_completed == parallelism
-                  swap final merged aggregate into *dest
+write(thread_p)  [per qualified row]:
+  ├─ fetch_peek_dbval (or TYPE_CONSTANT shortcut) for first operand
+  ├─ DB_IS_NULL → continue
+  ├─ Q_DISTINCT (non-MIN/MAX) → write each operand to per-thread list (de-dup at merge)
+  └─ switch on function:
+       PT_COUNT     → curr_cnt++
+       PT_MIN/MAX   → cmpval (collation-aware); if better OR first row:
+                      pr_clear_value, then coerce or pr_clone, curr_cnt++
+       PT_SUM/AVG   → first row: clone (with optional coerce); else: qdata_add_dbval; curr_cnt++
+       STDDEV/VAR   → tp_value_coerce + qdata_multiply_dbval (X²);
+                      first: setval(value, value2); else: add to both halves; curr_cnt++
+
+write_finalize(thread_p)  [under writer_results_mutex]:
+  ├─ NEW interrupt check at top of each iter — if interrupted, free remaining lists+values, break
+  ├─ For each (orig, worker) pair:
+  │    PT_COUNT_STAR → orig.curr_cnt += worker.curr_cnt
+  │    Q_DISTINCT (non-MIN/MAX) → qfile_connect_list (with malloc-failure handling)
+  │    PT_COUNT → orig.curr_cnt += worker.curr_cnt
+  │    everything else (the new fast path):
+  │      ├─ if orig.value_dom NULL but worker has it, copy worker's domain
+  │      ├─ db_change_private_heap(thread_p, 0)
+  │      ├─ qdata_aggregate_accumulator_to_accumulator(orig, &orig_dom, function, domain, &worker)
+  │      └─ restore previous heap
+
+read_initialize(thread_p):
+  └─ For each agg: only PT_COUNT_STAR/PT_COUNT get value_dom=tp_Bigint_domain
+                   (others keep their resolved domain)
+
+read(thread_p, dest):
+  ├─ CV-wait until m_result_completed == m_parallelism
+  └─ For each agg:
+       PT_COUNT_STAR / Q_DISTINCT → no-op
+       PT_COUNT → db_make_bigint(value, curr_cnt)
+       everything else → two-heap dance (see below)
 ```
+
+### Cross-thread DB_VALUE ownership (heap 0 ↔ private heap)
+
+This is the **key engineering pattern** added by PR #7049:
+
+- **Workers write into heap 0** (process-wide allocator) for accumulator `value` / `value2` so the storage survives the worker thread's teardown when its private heap is destroyed.
+- **`write_finalize` merges in heap 0**: `db_change_private_heap(thread_p, 0)` → `qdata_aggregate_accumulator_to_accumulator(...)` → restore. Result still lives in heap 0.
+- **`read` (main thread) re-clones into the calling thread's private heap**:
+  1. `pr_clone_value(acc->value, &tmp)` — clone defaults to current thread's private heap.
+  2. `db_change_private_heap(thread_p, 0)` → `pr_clear_value(acc->value)` — free the heap-0 original.
+  3. Restore previous heap.
+  4. `*acc->value = tmp` — assign clone back.
+  5. Symmetric for `acc->value2` (used by STDDEV/VAR).
+- **Why the dance is mandatory**: downstream `qexec_end_buildvalueblock_iterations` calls `pr_clear_value` on accumulators expecting them to be in the **calling thread's** private heap. Without re-cloning, that cleanup would either leak (heap 0 not freed) or crash (wrong-heap free).
+- `qdata_aggregate_accumulator_to_accumulator` is the standard CUBRID accumulator merge primitive — same one used by hash GROUP BY and serial aggregation. Reused here to avoid duplicating per-aggregate merge logic.
+
+### Aggregate function whitelist (`is_buildvalue_opt_supported_function`)
+
+Defined in `px_heap_scan_checker.cpp`. Returns `true` for: `PT_COUNT_STAR`, `PT_COUNT`, `PT_MIN`, `PT_MAX`, `PT_SUM`, `PT_AVG`, `PT_STDDEV`, `PT_STDDEV_POP`, `PT_STDDEV_SAMP`, `PT_VARIANCE`, `PT_VAR_POP`, `PT_VAR_SAMP`. Anything else (e.g. `PT_GROUP_CONCAT`, `PT_MEDIAN`, `PT_JSON_*`, bit aggregates) falls back to `MERGEABLE_LIST` / `XASL_SNAPSHOT`.
+
+### MIN/MAX-DISTINCT shortcut
+
+`agg_node->option == Q_DISTINCT && agg_node->function != PT_MIN && agg_node->function != PT_MAX` — MIN/MAX with DISTINCT is semantically equivalent to MIN/MAX without it (extrema don't care about duplicates). Excluded from the per-thread DISTINCT-list path to avoid wasted work.
 
 ## `mergeable_list_variables` Fields
 
