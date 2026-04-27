@@ -27,6 +27,10 @@ status: active
 
 **Prior session (2026-04-26):** PR #7011 deep ingest (parallel index build, OPEN, 9 files). [[prs/PR-7011-parallel-index-build]] with full Reconciliation Plan. Resolved baseline gap re: `sort_copy_sort_param` location.
 
+**2026-04-27 (latest).** **PR #7011 reconcile + baseline bump.** PR merged at 05:20Z as `cc563c7`; reconciliation plan promoted to "Pages Reconciled" and applied to all 7 component pages with `[!update]` callouts citing the merge sha. Baseline bumped `65d69154` → `cc563c7f`. No re-analysis required — between original snapshot head `44d92db` and final head `6f5ca7a` only one commit landed (`6f5ca7a` = merge from develop) and `git diff` on the 9 PR files showed no logic changes.
+
+**Common themes across recent PRs (#7049, #7011):** parallel-query subsystem expansion. Both reuse the existing parallel infrastructure (`SORT_EXECUTE_PARALLEL`/`SORT_WAIT_PARALLEL`, parallel-heap-scan worker pool) rather than building new frameworks. Both follow the per-worker XASL re-deserialization pattern (sharing unpacked predicates would race on `cache_pred`). PR #7011 generalized `parallel_heap_scan::ftab_set` → `parallel_query::ftab_set` to support cross-subsystem reuse; PR #7049 generalized result-handler aggregate dispatch beyond COUNT-only.
+
 **Prior session (2026-04-24):** Lint + legacy cleanup. Filed `lint-report-2026-04-24`. 18 pre-CUBRID pages moved into `wiki/_legacy/`. Hub pages rewritten to strip legacy-first-class listings.
 
 **Prior session (2026-04-23):** CUBRID deep-dive rounds 1–5 finished. 150 component pages, 34 source summaries, 246 total wiki md.
