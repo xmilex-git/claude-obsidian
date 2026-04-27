@@ -108,7 +108,7 @@ scan_next_parallel_heap_scan → manager::next()
   ├─ first call: start_tasks() — dispatch task<T> workers
   ├─ read_initialize (first call)
   ├─ result_handler::read(thread_p, dest) — CV-wait on worker output
-  ├─ join_info::apply_join_info (MERGEABLE_LIST / COUNT_DISTINCT)
+  ├─ join_info::apply_join_info (MERGEABLE_LIST / BUILDVALUE_OPT)
   └─ handle interrupt codes
 
 scan_reset_scan_block_parallel_heap_scan → manager::reset()
