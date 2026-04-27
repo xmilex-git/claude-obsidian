@@ -112,7 +112,7 @@ Level 0 (primary heap scan):
   scan_open_heap_scan(&thread_ref, m_scan_id, ..., cls_regu_list_pred, where_pred, ...)
   scan_start_scan(&thread_ref, m_scan_id)
 
-Level 1+ (scan_ptr chain for NL joins — MERGEABLE_LIST / COUNT_DISTINCT only):
+Level 1+ (scan_ptr chain for NL joins — MERGEABLE_LIST / BUILDVALUE_OPT only):
   for each xptr = m_xasl->scan_ptr:
     get scan_info from join_info->get_scan_info(xptr->header.id)
     if TARGET_LIST:
@@ -130,7 +130,10 @@ m_result_handler->write_initialize()
 ```
 
 > [!key-insight] Workers open ALL scans in the scan_ptr chain
-> For MERGEABLE_LIST and COUNT_DISTINCT, `task::initialize` opens not just the primary heap scan but every `scan_ptr` sibling — including index scans and list scans needed for NL join inner sides. XASL_SNAPSHOT workers only open the primary heap scan.
+> For MERGEABLE_LIST and BUILDVALUE_OPT, `task::initialize` opens not just the primary heap scan but every `scan_ptr` sibling — including index scans and list scans needed for NL join inner sides. XASL_SNAPSHOT workers only open the primary heap scan.
+
+> [!update] PR #7049 (`65d6915`, 2026-04-27)
+> Renamed `COUNT_DISTINCT` to `BUILDVALUE_OPT` throughout (same enum value 0x3, same `if constexpr` semantics). Also adds a 4-line `er_errid()` check after `write_initialize`: the new failure modes inside `write_initialize<BUILDVALUE_OPT>` (alloc/qfile_open failures) now propagate as `ER_OUT_OF_VIRTUAL_MEMORY` + interrupt code, and this check turns them into a non-zero return from `initialize`. See [[prs/PR-7049-parallel-buildvalue-heap]].
 
 ### `loop(thread_ref)`
 
@@ -148,7 +151,7 @@ while !stop:
     if m_xasl->if_pred:
       eval_pred(); skip if V_FALSE/V_UNKNOWN
 
-    if MERGEABLE_LIST / COUNT_DISTINCT:
+    if MERGEABLE_LIST / BUILDVALUE_OPT:
       if m_xasl->scan_ptr (NL join inner side):
         scan_reset_scan_block(scan_ptr->curr_spec->s_id)
         while qexec_execute_scan_ptr() == S_SUCCESS:
@@ -165,7 +168,7 @@ while !stop:
 ```
 if on_trace:
   compute elapsed_time from m_start_tick
-  if MERGEABLE_LIST / COUNT_DISTINCT:
+  if MERGEABLE_LIST / BUILDVALUE_OPT:
     m_trace_handler->m_trace_storage_for_sibling_xasl.merge_xasl_tree(m_xasl)
   m_trace_handler->add_trace(fetches, ioreads, fetch_time, read_rows, qualified_rows, elapsed_time)
   perfmon_destroy_parallel_stats(thread_ref)
@@ -174,7 +177,7 @@ m_result_handler->write_finalize()
 m_input_handler->finalize()
 m_slot_iterator.finalize()
 
-if MERGEABLE_LIST / COUNT_DISTINCT:
+if MERGEABLE_LIST / BUILDVALUE_OPT:
   for each xptr in scan_ptr chain:
     join_info->record_join_info(xptr->header.id, xptr)  ← publish scan status
 
