@@ -100,9 +100,21 @@ On the `cub_server` side, `cubconn::master::connector` (namespace `cubconn::mast
 
 `server_support.c` maintains `ha_Server_state` (type `HA_SERVER_STATE`). The function `css_transit_ha_server_state()` enforces the valid state machine. `ha_Log_applier_state[]` (up to 5 entries) tracks the state of connected `applylogdb` processes — checked before allowing the server to report as fully `WORKING`.
 
+## From the Manual (admin/control.rst, config.rst — added 2026-04-27)
+
+> [!gap] Documented operator behaviors
+> - **Auto-restart of cub_server (NEW 11.4)**: when `auto_restart_server=yes` (cubrid.conf), cub_master auto-restarts cub_server after abnormal termination (OOM kill, segfault). Disabled if a second crash occurs **within 120 s** of restart, or if start-failures exceed retry threshold. Does NOT auto-restart on normal `cubrid server stop`. Linux only.
+> - **HA split-brain detection**: cub_master detects via `ha_ping_hosts` and writes `[Diagnosis]/[Success]/[Canceled]` prefixed events to `<host>.cub_master.err`.
+> - **In HA mode, `cubrid server start` BYPASSES heartbeat orchestration** — operators must use `cubrid heartbeat start` instead. Documented in admin/control.rst:508-540.
+> - **PL server (cub_pl) auto-managed**: starts/stops with cub_server when `stored_procedure=yes` (default since 11.4). Manual `cubrid pl start/stop` is rare. admin/control.rst:3185-3216.
+
+See [[sources/cubrid-manual-admin]] for the full operator manual context.
+
 ## Related
 
 - [[components/connection|connection]] — full connection layer hub
 - [[components/heartbeat|heartbeat]] — heartbeat protocol details
 - [[components/tcp-layer|tcp-layer]] — `css_tcp_master_open`, `css_transfer_fd` implementation
 - [[Architecture Overview]] — where cub_master fits in the overall topology
+- [[sources/cubrid-manual-admin]] — admin guide
+- [[sources/cubrid-manual-ha]] — HA reference
