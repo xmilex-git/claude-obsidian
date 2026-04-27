@@ -100,7 +100,7 @@ typedef enum parallel_type PARALLEL_TYPE;
 | Function | Signature | Role |
 |----------|-----------|------|
 | `sort_listfile_execute` | `void(entry&, SORT_PARAM*)` | Entry point for a worker thread — executes one sort partition |
-| `sort_copy_sort_param` | `int(THREAD_ENTRY*, SORT_PARAM* dest, SORT_PARAM* src, int n)` | Deep-copies `n` sort params for parallel workers |
+| `sort_copy_sort_param` | `int(THREAD_ENTRY*, SORT_PARAM* dest, SORT_PARAM* src, int n)` | Deep-copies `n` sort params for parallel workers — **implementation lives at `external_sort.c:4344-4471` (next to its consumer), not in `px_sort.c`**. PR #7011 (`cc563c7`) added the implementation; the symbol's prior presence in `px_sort.h` without a matching definition was a pre-merge hot-cache nit, now resolved. |
 | `sort_copy_sort_info` | `int(THREAD_ENTRY*, SORT_INFO**, SORT_INFO*)` | Deep-copies `SORT_INFO` including nested `QFILE_SORT_SCAN_ID` and `QFILE_LIST_SCAN_ID` |
 | `sort_split_input_temp_file` | `int(THREAD_ENTRY*, SORT_PARAM*, SORT_PARAM*, int)` | Splits the input temp file across `parallel_num` workers |
 | `sort_merge_run_for_parallel` | `int(THREAD_ENTRY*, SORT_PARAM*, SORT_PARAM*, int)` | Merges runs across the parallel sort results |
