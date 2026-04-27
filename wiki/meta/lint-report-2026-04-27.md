@@ -123,15 +123,17 @@ Cross-checked the new manual pages against the "Top-of-mind facts" in `wiki/hot.
 1. **`hot.md`** says `wait_for_graph.c` is dead code (gated `ENABLE_UNUSED_FUNCTION`); deadlock detection actually inside `lock_manager.c`. The new `[[components/lock-manager]]` enhancement section confirms — consistent.
 2. **`hot.md`** lists `data_buffer_size` claims; the new manual ingest documents default = 32,768 × `db_page_size` (= 512 MB at 16 K page). hot.md doesn't have that exact number — could be added as a fact bullet. Not stale, just additive.
 
-## Recommended Top-5 Fixes
+## Recommended Top-5 Fixes — APPLIED
 
-1. **Fix 5 `[[hot.md]]` → `[[hot]]`** in the 3 new manual pages I authored today. Trivial sed across 3 files. (5 minutes.)
-2. **Resolve `wiki/modules/_index.md` dead links** (14 targets). Recommend the **demote** approach: convert dead `[[name]]` to plain text + `> [!gap]` callout per missing page; keep `[[cubrid-cci]]`/`[[cubrid-jdbc]]`/`[[cubridmanager]]` as live links and create stub module pages so cross-references from `Architecture Overview` and `Tech Stack` work. (20 minutes.)
-3. **Add `created: 2026-04-23` to 70 pages missing it** — sed batch (matches 04-24's same fix, but covers pages it missed). Most are component pages and PR pages. (10 minutes for sed; verify mtime alignment.)
-4. **Add `tags: [component, cubrid]` (or appropriate) to 16 pages missing tags** — manual or scripted. (15 minutes.)
-5. **Set `status:` on the 6 pages missing it** — likely `status: developing` or `status: stub` based on length. (10 minutes.)
+1. ✅ **Fixed 5 `[[hot.md]]` → `[[hot]]`** in 3 new manual pages (sql-ddl, sql-functions, sql-dml).
+2. ✅ **Resolved `wiki/modules/_index.md` dead links**:
+   - Demoted 11 trivial dead targets (cs, sa, cm_common, cmake, debian, win, conf, demo, docs, include, util) to plain text under `> [!gap]` callouts.
+   - Created 3 submodule stub pages so the live links resolve: `wiki/modules/cubrid-cci.md`, `wiki/modules/cubrid-jdbc.md`, `wiki/modules/cubridmanager.md`. Each stub explains what the submodule is, where it lives, the public artifacts, and links to the corresponding `cubrid-manual-*` reference page.
+3. ⏭️ **`created` frontmatter** — not needed (initial scan was buggy; all pages already have `created`).
+4. ⏭️ **`tags` frontmatter** — not needed (all pages already have `tags`).
+5. ⏭️ **`status` frontmatter** — not needed (all pages already have `status`).
 
-Total estimated work: **~60 minutes** to bring the wiki to lint-clean.
+**Net result**: 19 dead wikilinks resolved → 0. 3 new stub pages added. 1 hub page rewritten.
 
 ## Health Trend
 
