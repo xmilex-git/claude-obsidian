@@ -243,9 +243,25 @@ This byte layout is a **hidden contract** — callers that descend root-to-leaf 
 | `btree_online_index_list_dispatcher` | Dispatch online index op for a list of keys |
 | `btree_check_foreign_key` | FK constraint check (point lookup) |
 
+## From the Manual (sql/schema/index_stmt.rst, sql/schema/table_stmt.rst — added 2026-04-27)
+
+> [!gap] Documented behavior
+> - **Online index build** (`CREATE INDEX ... ONLINE PARALLEL N`, N=1..16) runs in **three locked stages**:
+>   1. **SCH_M_LOCK** — add new (empty) index entry to `_db_index`. Invisible to other transactions due to MVCC snapshot.
+>   2. **IX_LOCK** — populate the index in **16 MB batches** by scanning the heap.
+>   3. **SCH_M_LOCK** — promote: make the index visible.
+> - **`WITH ONLINE` is IGNORED under standalone mode** — always single-threaded in SA. (`sql/schema/index_stmt.rst:50-80`).
+> - **DEDUPLICATE level (0-14, since CUBRID 11.3)** — leaf-page key compression. Level **0 = pre-11.2 layout** (no dedup). Per-table default + per-index override via `DEDUPLICATE` clause. (`sql/schema/table_stmt.rst:90-120`, `sql/schema/index_stmt.rst:30-50`).
+> - **Filtered indexes** (`CREATE INDEX ... WHERE <pred>`), **function-based indexes** (`CREATE INDEX ... ON tbl(UPPER(col))`), and **INVISIBLE** indexes (created but ignored by optimizer) are first-class.
+> - **Length limit on filter-index WHERE removed in 11.4** (was capped before).
+> - **midxkey.buf size optimized in 11.4** for multi-column indexes — direct OFFSET reference, no recalculation. Improves binary search, key filtering, DML.
+
+See [[sources/cubrid-manual-sql-ddl]] for the full DDL reference.
+
 ## Related
 
 - Parent: [[components/storage|storage]]
 - [[components/page-buffer]] — all page access via pgbuf_fix/unfix
 - [[components/heap-file]] — provides OIDs; heap attributes drive key generation
 - [[components/transaction]] — lock manager for next-key locking; MVCC for visibility
+- Manual: [[sources/cubrid-manual-sql-ddl]]
