@@ -66,6 +66,34 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 
 ---
 
+## CUBRID 11.4 English Manual (catalog ingest, 2026-04-27)
+
+End-user documentation companion to the source-code wiki. **Hub**: [[sources/cubrid-manual-en-overview|cubrid-manual-en-overview]] — overview of all 22 manual source pages with TOC.
+
+- [[sources/cubrid-manual-en-overview|cubrid-manual-en-overview]] — manual hub + section TOC
+- [[sources/cubrid-manual-intro|cubrid-manual-intro]] — `intro.rst`: architecture + features
+- [[sources/cubrid-manual-install|cubrid-manual-install]] — install/upgrade/env/quickstart
+- [[sources/cubrid-manual-csql|cubrid-manual-csql]] — CSQL shell + GUI tools
+- [[sources/cubrid-manual-ha|cubrid-manual-ha]] — high availability (4194 lines)
+- [[sources/cubrid-manual-shard|cubrid-manual-shard]] — database sharding middleware
+- [[sources/cubrid-manual-security|cubrid-manual-security]] — TDE, SSL/TLS, ACL, authorization
+- [[sources/cubrid-manual-admin|cubrid-manual-admin]] — admin guide: utilities, control, scripts, troubleshoot, systemtap
+- [[sources/cubrid-manual-config-params|cubrid-manual-config-params]] — system parameter reference (config.rst)
+- [[sources/cubrid-manual-error-codes|cubrid-manual-error-codes]] — 792-code error catalogue
+- [[sources/cubrid-manual-api|cubrid-manual-api]] — drivers overview (PHP, PDO, ODBC, ADO.NET, Perl, Python, Ruby, Node.js)
+- [[sources/cubrid-manual-cci|cubrid-manual-cci]] — CCI C API (95 functions)
+- [[sources/cubrid-manual-jdbc|cubrid-manual-jdbc]] — JDBC driver reference
+- [[sources/cubrid-manual-pl|cubrid-manual-pl]] — stored procedures (Java SP, methods, cross-cutting)
+- [[sources/cubrid-manual-plcsql|cubrid-manual-plcsql]] — PL/CSQL language reference (NEW 11.4)
+- [[sources/cubrid-manual-sql-foundation|cubrid-manual-sql-foundation]] — types, literals, i18n, transactions, auth, catalog
+- [[sources/cubrid-manual-sql-dml|cubrid-manual-sql-dml]] — queries, DBLink, OODB
+- [[sources/cubrid-manual-sql-ddl|cubrid-manual-sql-ddl]] — schema, trigger, partition
+- [[sources/cubrid-manual-sql-tuning-parallel|cubrid-manual-sql-tuning-parallel]] — optimizer hints, parallel execution
+- [[sources/cubrid-manual-sql-functions|cubrid-manual-sql-functions]] — operators + function library
+- [[sources/cubrid-manual-release-notes-114|cubrid-manual-release-notes-114]] — CUBRID 11.4 release notes
+
+---
+
 ## Articles
 
 <!-- Add article source pages here -->
