@@ -26,6 +26,25 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-27] pr-reconcile + baseline-bump | 65d69154 → cc563c7 (PR #7011)
+
+[[prs/PR-7011-parallel-index-build|PR #7011]] **merged** at 05:20Z as commit `cc563c7fd90521393781d8440bf5144d2566ff71` — direct child of prior baseline `65d69154` on `develop` (case c). PR #7011 was originally ingested OPEN on 2026-04-26 against baseline `175442fc`; reconciliation plan was deferred until merge. This entry promotes the plan and bumps the baseline.
+
+Pages reconciled (all 7 received `[!update]` callouts citing PR #7011 + merge sha `cc563c7f`):
+- [[components/btree]] — added "Parallel index build (`SORT_INDEX_LEAF`)" subsection under Bulk Loading: dispatch chain, public `SORT_ARGS` fields, newly-extern'd helpers (`bt_load_heap_scancache_*`, `bt_load_clear_pred_and_unpack`, `btree_load_filter_pred_function_info`, `btree_sort_get_next_parallel`), `FILTER_INDEX_INFO`, `get_next_vpid` page-fix protocol incl. `ab8ca3a` early-exit unfix, per-worker XASL re-deserialization rationale (`cache_pred` mutation), sysop ownership by mode, conservative `n_classes == 1` gate.
+- [[components/external-sort]] — added "Index-leaf parallel build (`SORT_INDEX_LEAF`)" section: `sort_merge_run_for_parallel_index_leaf_build` log₄ tree-merge, empty-worker skip, scancache wrap on single-process arm, SA/SERVER asymmetry `[!info]`, two silent fixes (`px_sort_param == NULL` always-true, `malloc → calloc` for `file_contents.num_pages`). Updated SORT_PARALLEL_TYPE table row.
+- [[components/parallel-sort]] — annotated `sort_copy_sort_param` row with implementation location (`external_sort.c:4344-4471`, not `px_sort.c`). Added "`SORT_INDEX_LEAF` dispatch (PR #7011)" section.
+- [[components/parallel-heap-scan-input-handler]] — frontmatter `path:` updated to `src/query/parallel/px_ftab_set.hpp`. Namespace migration callout. Method table extended with PR #7011 additions (dtor, copy/move ctors+assignment, `append`, `move_from`, `size`).
+- [[components/parallel-query]] — `px_ftab_set.hpp` added to `key_files`; `parallel_query::ftab_set` row added to Sub-Components table.
+- [[components/file-manager]] — `file_get_num_data_sectors` added to `public_api` frontmatter; "Sector-count helper" subsection added.
+- [[components/storage]] — `[!update]` callout under "Parallel Sort Interface" noting new consumers of `parallel_query::ftab_set`.
+
+PR page updates: [[prs/PR-7011-parallel-index-build]] frontmatter set to `state: MERGED`, `ingest_case: c`, `triggered_baseline_bump: true`, `baseline_before: 65d69154`, `baseline_after: cc563c7`, `reconciliation_applied: true`, `status: merged`, `updated: 2026-04-27`. Reconciliation Plan retained verbatim for audit; "Pages Reconciled" section now contains the applied summary.
+
+Verification: between original snapshot head `44d92db64` and final head `6f5ca7ae2` the only landed commit is `6f5ca7a` (`Merge branch 'CUBRID:develop' into parallel_index_build`). `git diff` on the 9 PR-touched files shows no logic changes — original code analysis (2 parallel deep-read subagents on 2026-04-26) remains accurate. Drift in `cubrid/CMakeLists.txt` and `btree_load.c::online_index_builder` is from the develop-merge pulling in PR #7095 (`thread_manager_impl`), unrelated to PR #7011's contribution.
+
+Baseline hash updated in `CLAUDE.md` and `wiki/hot.md`.
+
 ## [2026-04-27] baseline-bump | 175442fc → 65d69154 (PR #7049)
 
 Triggered by [[prs/PR-7049-parallel-buildvalue-heap|PR #7049]] ingest (case c — merge commit `65d6915` is direct child of prior baseline `175442fc` on `develop`). Baseline hash updated in `CLAUDE.md` and `wiki/hot.md`.
