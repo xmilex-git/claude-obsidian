@@ -2,7 +2,7 @@
 created: 2026-04-23
 type: meta
 title: "Sources Index"
-updated: 2026-04-23
+updated: 2026-04-27
 tags:
   - meta
   - index
@@ -13,6 +13,7 @@ related:
   - "[[log]]"
   - "[[entities/_index]]"
   - "[[CUBRID]]"
+  - "[[sources/cubrid-manual-en-overview]]"
 ---
 
 # Sources Index
