@@ -55,6 +55,9 @@ Key fields: page-count, type list (`QFILE_TUPLE_VALUE_TYPE_LIST`), sort list, tu
 
 A `QFILE_LIST_ID` may reference another via the `dependent_list_id` field (singly-linked). This appears when one intermediate result feeds another — e.g. the inner side of a nested-loop join whose rows are materialised into a secondary list. Consumers iterating the primary list must also iterate every dependent in the chain to produce the full tuple stream; the parallel list scan's input handler walks the chain and aggregates all sectors from base plus dependents into a single `FILE_FTAB_COLLECTOR` before splitting work across workers.
 
+> [!key-insight] Membuf is exclusive to the head of a dependent-list chain
+> `qfile_connect_list` (`list_file.c:3130`) asserts `append_list_id->tfile_vfid->membuf == NULL` — i.e. only the *first* `QFILE_LIST_ID` in the chain can carry a membuf array; every dependent has `membuf == NULL` (and `membuf_last < 0`). This is what lets sector-distribution schemes ([[components/parallel-hash-join-task-manager|parallel hash join]] / [[sources/2026-04-28-tfile-role-analysis|tfile role analysis]]) handle membuf with a single CAS-claim winner that holds the *base* tfile, and let every other worker treat all pages it receives as buffer-pool disk pages.
+
 ### Membuf vs disk backing
 
 `QMGR_TEMP_FILE` has two storage backends that co-exist:
