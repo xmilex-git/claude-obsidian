@@ -53,10 +53,13 @@ Provides five classes that handle the inner execution of parallel hash join work
 
 | Method | Description |
 |--------|-------------|
-| `split_task(task_manager, manager, split_info, shared_info, index)` | Ctor; asserts `fetch_info != nullptr` and `part_mutexes != nullptr` |
-| `execute(thread_ref)` | Main work loop: allocates temp partitions per thread, iterates pages, hashes tuples to partitions |
-| `get_next_page(thread_ref)` | Mutex-protected page cursor walking `HASHJOIN_SHARED_SPLIT_INFO::scan_position` state machine |
+| `split_task(task_manager, manager, split_info, shared_info, index)` | Ctor; asserts `fetch_info != nullptr` and `part_mutexes != nullptr`. Per-thread iteration state initialised: `m_membuf_index = -1`, `m_sector_index = -1`, `m_current_bitmap = 0`, `m_current_vsid = VSID_INITIALIZER`, `m_current_tfile = nullptr`. |
+| `execute(thread_ref)` | Main work loop: allocates temp partitions per thread, iterates pages via `get_next_page`, hashes tuples to partitions. All page-release calls and overflow-chain page fetches use the recorded `m_current_tfile`, never `list_id->tfile_vfid`. |
+| `get_next_page(thread_ref)` | **Lock-free** two-phase distribution: Phase 1 = membuf CAS-claim (one owner walks all membuf pages); Phase 2 = atomic sector counter (`next_sector_index.fetch_add(1)`) + per-thread `__builtin_ctzll` bitmap walk. Records `m_current_tfile` for use by `execute()`. |
 | `retire()` | Calls `task_manager.end_task()`, then `delete this` |
+
+> [!update] PR #6981 (merge `0be6cdf6`) — `split_task` page distribution rewritten lock-free
+> The previous design had every worker take `HASHJOIN_SHARED_SPLIT_INFO::scan_mutex` and walk a shared `(scan_position, next_vpid)` cursor one page at a time. PR #6981 replaced the mutex + cursor with sector pre-split via `qfile_collect_list_sector_info` (see [[components/list-file]]) and two atomics (`membuf_claimed`, `next_sector_index`). The five new per-thread `m_*` fields and the `QMGR_TEMP_FILE *` forward-declaration in the hpp header are the visible surface of that change.
 
 ### `join_task` Methods
 
