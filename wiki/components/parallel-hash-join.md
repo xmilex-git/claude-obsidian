@@ -33,6 +33,9 @@ updated: 2026-04-23
 
 Parallelises the build and probe phases of `HASHJOIN_MANAGER` using worker threads. Three files form a strict pipeline: `px_hash_join` (entry/dispatch) → `px_hash_join_task_manager` (per-task execution and coordination) → `px_hash_join_spawn_manager` (per-worker TLS XASL spawning for join phase).
 
+> [!update] PR #6981 (merge `0be6cdf6`) — split-phase distribution moved to sector-based, lock-free
+> Page distribution in the *split* phase no longer takes a mutex. `build_partitions` calls `qfile_collect_list_sector_info` (see [[components/list-file]]) once per round (outer, then inner) on the main thread, then workers consume disk pages via `next_sector_index.fetch_add(1)` + per-thread `__builtin_ctzll` bitmap walk, and membuf pages via a single CAS-claim. See [[components/parallel-hash-join-task-manager#Page Cursor — Lock-free sector bitmap walk (`get_next_page`)]] for the worker-side state machine.
+
 ## Sub-pages
 
 | Page | Content |
