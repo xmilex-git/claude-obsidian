@@ -146,6 +146,27 @@ QMGR_TEMP_FILE
 
 `qmgr_get_page_type()` discriminates membuf vs disk page by pointer arithmetic on the membuf array bounds. Free list of pre-allocated `QMGR_TEMP_FILE` structs is maintained per type (`qmgr_Query_table.temp_file_list[type]`).
 
+### Page operations: `tfile` role and minimum context
+
+> [!key-insight] `tfile` is needed only for membuf lookup and free-time page-type discrimination
+> The temp-file pointer threaded through `qmgr_get_old_page` / `qmgr_free_old_page` looks essential, but for **disk pages alone** a `vpid` is sufficient on both paths. `tfile` is required only in two situations:
+> 1. **Membuf read.** When `vpid->volid == NULL_VOLID`, the encoding makes `vpid->pageid` a membuf array index — the page must be returned via `tfile->membuf[pageid]`. Without `tfile`, the membuf array isn't reachable.
+> 2. **Free-time discrimination.** `qmgr_free_old_page` calls `qmgr_get_page_type(page, tfile)` (`query_manager.c:201`) which decides via pointer-range check whether `page` lies in `tfile->membuf[0..membuf_last]`. Buffer-pool pages get `pgbuf_unfix`; membuf pages are no-ops.
+>
+> When `tfile == NULL`, `qmgr_free_old_page` skips the type check and unconditionally `pgbuf_unfix`'s — fine for disk pages, **wrong** for any membuf page. Likewise, `qmgr_get_old_page` with `tfile == NULL` cannot serve a membuf-encoded VPID.
+
+| Path | `tfile` required? | Why |
+|------|-------------------|-----|
+| `qmgr_get_old_page` (disk page) | No (could pass NULL) | `pgbuf_fix(vpid)` doesn't read `tfile` |
+| `qmgr_get_old_page` (membuf page, `volid == NULL_VOLID`) | **Yes** | `tfile->membuf[pageid]` lookup |
+| `qmgr_free_old_page` (disk page) | No-but-conventional | Always `pgbuf_unfix`; `qmgr_get_page_type` returns `TEMP_FILE_PAGE` regardless of which `tfile` |
+| `qmgr_free_old_page` (membuf page) | **Yes** | Need to detect "do nothing" via membuf pointer range |
+| `qmgr_set_dirty_page` / `qmgr_get_new_page` | (write path; not on read-only scans) | — |
+
+This is why parallel scanners that distribute disk pages across workers (parallel hash join split phase, parallel heap scan, parallel index build) **only need to track the owning tfile per sector** — not for the disk-page read/free itself, but for two reasons: handling membuf pages (single-owner CAS-claim) and for API contract when calling `qfile_*` helpers that internally consult `tfile_vfid` (e.g. overflow-chain traversal). See [[sources/2026-04-28-tfile-role-analysis]] for the full analysis.
+
+A dependent list's `tfile_vfid` always has `membuf == NULL` (asserted by `qfile_connect_list` — see [[components/list-file]]), so the membuf branch never fires for non-base pages.
+
 ---
 
 ## Cancellation / Interrupt Hook
