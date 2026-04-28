@@ -92,7 +92,8 @@ caller
 
 - **Build mode**: active in `SERVER_MODE` and `SA_MODE` only (worker pool exists in both).
 - **Memory**: `split_task` and `join_task` are heap-allocated with `new`; they self-delete in `base_task::retire()`.
-- **Threading**: `HASHJOIN_SHARED_SPLIT_INFO::scan_mutex` and `part_mutexes[]` protect shared page cursor and per-partition list files. `HASHJOIN_SHARED_JOIN_INFO::scan_mutex` protects the context index.
+- **Threading (split phase)**: lock-free page distribution. `HASHJOIN_SHARED_SPLIT_INFO::sector_info` (filled by `qfile_collect_list_sector_info` before fan-out), `membuf_claimed` (atomic CAS — single membuf owner), and `next_sector_index` (atomic counter) replace the prior `scan_mutex` + `(scan_position, next_vpid)` cursor. `part_mutexes[]` still protects per-partition list-file flushes.
+- **Threading (join phase)**: `HASHJOIN_SHARED_JOIN_INFO::scan_mutex` protects the context index (unchanged).
 - **Interrupt**: `task_manager::check_interrupt` polls `logtb_is_interrupted_tran` per page/context iteration. On interrupt, all workers signal via `m_has_error` + `notify_stop()`.
 - **XASL spawning**: `spawn_manager` instances are TLS singletons; each worker calls `destroy_instance()` at the end of `join_task::execute()`.
 
