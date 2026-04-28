@@ -481,6 +481,13 @@ The design-convergence highlights worth calling out (from review doc §7): `comp
 
 These are left for future ingests to pick up.
 
+## Pre-merge integration analysis
+
+> [!note] 2026-04-28 — `qfile_collect_list_sector_info` integration decision-prep
+> External session note ingested as [[sources/2026-04-28-tfile-role-analysis|tfile role analysis]] explores whether `px_scan_input_handler_list` (PR #7062 branch) should adopt the `qfile_collect_list_sector_info` + `tfiles[]` parallel-array pattern that landed in the now-merged [[prs/PR-6981-parallel-hash-join-sector-split|PR #6981]] (baseline `0be6cdf6`).
+>
+> The analysis isolates `tfile`'s actual role on the read/free path (membuf lookup + free-time page-type discrimination only) and concludes that **disk-page-only** scans can technically operate without per-sector `tfile` tracking — but recommends adopting PR #6981's full pattern (Option B) for code-deduplication and uniform ownership, with a possible reduction to Option B' (no per-sector tfile, only per-sector `list_id`) if the overflow-chain traversal in `qfile_get_tuple` doesn't observably need the dependent's tfile context. No component pages have been edited as a result of this analysis (PR #7062 is still OPEN); baseline-truth claims it surfaced have been applied incidentally to [[components/query-manager]] and [[components/list-file]].
+
 ## Baseline impact
 
 - Before: `175442fc858bd0075165729756745be6f8928036`
