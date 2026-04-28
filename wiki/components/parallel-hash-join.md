@@ -68,11 +68,16 @@ caller
   ├─ build_partitions(thread_ref, manager, split_info)
   │    ├─ hjoin_init_shared_split_info()
   │    ├─ Phase A — outer split:
+  │    │    qfile_collect_list_sector_info(outer->fetch_info->list_id, &shared_info.sector_info)
+  │    │    shared_info.membuf_claimed.store(false); shared_info.next_sector_index.store(0)
   │    │    for i in [0, num_parallel_threads):
   │    │        new split_task(outer, shared_info, i)
   │    │    task_manager.join()          ← CV-wait
   │    ├─ (check error + clear shared_info)
   │    └─ Phase B — inner split:
+  │         qfile_collect_list_sector_info(inner->fetch_info->list_id, &shared_info.sector_info)
+  │            (call frees outer's sector_info internally — outer/inner reuse same struct)
+  │         shared_info.membuf_claimed.store(false); shared_info.next_sector_index.store(0)
   │         for i in [0, num_parallel_threads):
   │             new split_task(inner, shared_info, i)
   │         task_manager.join()
