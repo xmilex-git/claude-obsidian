@@ -29,7 +29,7 @@ Source of truth for CUBRID: `~/dev/cubrid/` — **never write to the source tree
 
 ### CUBRID Baseline Commit
 
-**All wiki content under `wiki/` (outside `_legacy/`) is anchored to CUBRID commit `cc563c7fd90521393781d8440bf5144d2566ff71`.** Every claim, file path, line number, and structural observation reflects the source tree at that commit.
+**All wiki content under `wiki/` (outside `_legacy/`) is anchored to CUBRID commit `0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0`.** Every claim, file path, line number, and structural observation reflects the source tree at that commit.
 
 **Before any new CUBRID ingest, analysis, or wiki update, you MUST:**
 
@@ -37,12 +37,12 @@ Source of truth for CUBRID: `~/dev/cubrid/` — **never write to the source tree
    ```
    git -C ~/dev/cubrid/ rev-parse HEAD
    ```
-2. If HEAD == `cc563c7fd90521393781d8440bf5144d2566ff71`, proceed normally.
-3. If HEAD is **newer** (i.e. `git -C ~/dev/cubrid/ merge-base --is-ancestor cc563c7fd90521393781d8440bf5144d2566ff71 HEAD` exits 0), do this before writing anything:
+2. If HEAD == `0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0`, proceed normally.
+3. If HEAD is **newer** (i.e. `git -C ~/dev/cubrid/ merge-base --is-ancestor 0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0 HEAD` exits 0), do this before writing anything:
    a. Compute the delta for the path you are about to ingest/update:
       ```
-      git -C ~/dev/cubrid/ log --oneline cc563c7fd90521393781d8440bf5144d2566ff71..HEAD -- <path>
-      git -C ~/dev/cubrid/ diff --stat cc563c7fd90521393781d8440bf5144d2566ff71..HEAD -- <path>
+      git -C ~/dev/cubrid/ log --oneline 0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0..HEAD -- <path>
+      git -C ~/dev/cubrid/ diff --stat 0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0..HEAD -- <path>
       ```
    b. For each changed file in that delta, grep existing wiki pages for references to the file path or affected symbols (`grep -rn '<filename>\|<symbol>' wiki/ --include='*.md'`).
    c. Update those wiki pages to reflect the new state. Flag removed/renamed items with `> [!contradiction]` or `> [!gap]` callouts citing both commits.
