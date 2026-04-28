@@ -78,29 +78,68 @@ task_execution_guard(thread_ref, task_manager)   ← borrow main thread identity
   ├─ alloc temp_part_list_id[part_cnt]            ← per-thread local partitions
   ├─ alloc temp_key (HASH_SCAN_KEY)
   │
-  ├─ [outer loop: get_next_page()]                ← lock shared scan_mutex per page
+  ├─ [outer loop: get_next_page()]                ← LOCK-FREE (sector bitmap or membuf CAS)
   │    ├─ check has_error / check_interrupt
-  │    ├─ handle overflow pages (multi-page tuples)
+  │    ├─ skip page if QFILE_GET_TUPLE_COUNT == 0 (empty page)
+  │    ├─ handle overflow start page → walk QFILE_GET_OVERFLOW_VPID chain
+  │    │     fetch/release continuation pages using m_current_tfile
   │    └─ [inner loop: tuples on page]
   │         ├─ hjoin_fetch_key() — extract hash key
   │         ├─ compute part_id = hash_key % part_cnt (or part_cnt-1 for NULL outer join)
   │         └─ append tuple to temp_part_list_id[part_id]
-  │              when temp partition is full → lock part_mutex, merge into shared part_list_id
+  │              when temp partition is full → lock part_mutex,
+  │              qfile_append_list + qfile_truncate_list (or first-fill copy)
   │
+  ├─ qmgr_free_old_page_and_init(page, m_current_tfile)
   └─ flush all temp_part_list_ids to shared partitions (under per-partition mutex)
+       success branch: append + truncate, keep LIST_ID descriptor; cleanup branch is a SEPARATE if (not else)
 ~task_execution_guard                              ← restore thread identity
 ```
 
-### Page Cursor State Machine (`get_next_page`)
+### Page Cursor — Lock-free sector bitmap walk (`get_next_page`)
 
 ```
-S_BEFORE → (first call, VPID null) → fetch list_id->first_vpid → S_ON / S_AFTER
-S_ON     → fetch shared next_vpid → advance → S_AFTER when no more pages
-S_AFTER  → return nullptr (end of scan)
+Phase 1: membuf
+  if m_membuf_index >= 0:                          ← already the membuf owner
+      walk membuf[0..membuf_last] sequentially
+      vpid = {NULL_VOLID, m_membuf_index++}
+      record m_current_tfile = sector_info->membuf_tfile
+      skip pages where TUPLE_COUNT == QFILE_OVERFLOW_TUPLE_COUNT_FLAG
+      return page
+
+  if m_sector_index == -1 and sector_info->membuf_tfile != NULL:
+      try membuf_claimed.compare_exchange_strong(false → true, acq_rel)
+        winner: m_membuf_index = 0 ; re-enter Phase 1
+        loser:  fall to Phase 2
+
+Phase 2: sector
+  while true:
+      while m_current_bitmap != 0:
+          bit = __builtin_ctzll(m_current_bitmap)
+          m_current_bitmap &= m_current_bitmap - 1   ← clear lowest set bit
+          vpid = { m_current_vsid.volid, SECTOR_FIRST_PAGEID(m_current_vsid.sectid) + bit }
+          tfile = (QMGR_TEMP_FILE *) sector_info->tfiles[m_sector_index]
+          page = qmgr_get_old_page(thread, &vpid, tfile)
+          skip overflow continuation pages (TUPLE_COUNT == QFILE_OVERFLOW_TUPLE_COUNT_FLAG)
+          record m_current_tfile = tfile
+          return page
+
+      sector_index = next_sector_index.fetch_add(1, relaxed)
+      if sector_index >= sector_info->sector_cnt:
+          return nullptr                             ← end of scan
+      m_sector_index = sector_index
+      m_current_vsid = sectors[sector_index].vsid
+      m_current_bitmap = sectors[sector_index].page_bitmap
 ```
+
+> [!key-insight] Lock-free split distribution
+> Pre-PR #6981 every `get_next_page` call took `HASHJOIN_SHARED_SPLIT_INFO::scan_mutex` to advance a shared `(scan_position, next_vpid)` cursor — wall-clock split throughput was bounded by mutex hold time. Post-PR, membuf has exactly one owner (single CAS at startup) and disk pages are distributed via `next_sector_index.fetch_add(1, relaxed)`; bitmap iteration inside a sector is purely thread-local. The cost is one upfront `qfile_collect_list_sector_info` call on the main thread before the worker fan-out, which itself reuses `file_get_all_data_sectors` already on the data path for parallel heap scan and parallel index build.
+
+> [!key-insight] Per-thread `m_current_tfile` for dependent lists
+> When `QFILE_LIST_ID` has a `dependent_list_id` chain (e.g. inner side of a nested-loop join materialised into a secondary list), each list owns its own `QMGR_TEMP_FILE *tfile_vfid`. A single shared base-list tfile pointer is wrong for pages from dependents — `qmgr_free_old_page_and_init` must be called against the correct tfile. PR #6981 records the owning tfile in `m_current_tfile` whenever `get_next_page` returns a page; `execute()` then uses it for both the page release and the entire `QFILE_GET_OVERFLOW_VPID` continuation-page chain (continuation pages are allocated by `qfile_allocate_new_ovf_page` from the same tfile as the start page).
 
 > [!key-insight] Per-thread temp list files reduce lock contention
-> Each `split_task` builds up to `part_cnt` in-memory temp list files (`temp_part_list_id[]`) locally. Only when a temp partition fills a memory page does it flush under the per-partition mutex. This amortises lock acquisition across many tuples per page.
+> Each `split_task` builds up to `part_cnt` in-memory temp list files (`temp_part_list_id[]`) locally. Only when a temp partition fills a memory page does it flush under the per-partition mutex. This amortises lock acquisition across many tuples per page. PR #6981 additionally swapped the post-flush `qfile_destroy_list + free` for `qfile_truncate_list + retain LIST_ID`: the temp partition descriptor is reused for the next batch, and a mid-flush `qfile_append_list` failure can no longer leave a half-freed `LIST_ID` for the cleanup branch to double-free.
 
 ## Execution Path — `join_task::execute`
 
