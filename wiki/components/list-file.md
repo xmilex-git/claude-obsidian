@@ -68,6 +68,44 @@ A list can be (a) membuf-only, (b) membuf + disk (membuf pages are still consume
 
 Wide tuples that exceed a page's capacity spill to an overflow chain. Overflow pages carry the sentinel tuple-count marker `QFILE_OVERFLOW_TUPLE_COUNT_FLAG = -2` in their page header. Sector-level parallel scans must detect this marker after a speculative page read and skip the page — overflow pages are already consumed by the primary page's `qfile_get_tuple` handler, so processing them again would double-count.
 
+> [!key-insight] Continuation pages share the start page's sector bitmap
+> `qfile_allocate_new_ovf_page` allocates continuation pages from the same temp file as the start page, so they appear in the same `FILE_PARTIAL_SECTOR::page_bitmap` returned by `file_get_all_data_sectors`. A worker walking the bitmap directly will encounter every continuation page in addition to the start page; the `QFILE_GET_TUPLE_COUNT == QFILE_OVERFLOW_TUPLE_COUNT_FLAG` check is the *only* way for a sector-bitmap walker to distinguish them. Without the skip, both the start-page-owning worker (following `QFILE_GET_OVERFLOW_VPID` chain) and a peer worker (encountering the same page via the bitmap) would consume it.
+
+### Sector-based page distribution (`qfile_collect_list_sector_info`)
+
+> [!update] Added by PR #6981 (merge `0be6cdf6`)
+> Generic helpers used by parallel hash join's split phase to distribute pages across workers without a shared mutex. Reusable for any consumer that wants to parallelise iteration over a `QFILE_LIST_ID` plus its `dependent_list_id` chain.
+
+```c
+typedef struct qfile_list_sector_info QFILE_LIST_SECTOR_INFO;
+struct qfile_list_sector_info {
+  struct qmgr_temp_file *membuf_tfile;   /* tfile owning membuf pages (NULL = none) */
+  struct file_partial_sector *sectors;   /* concatenated sector array (FTAB excluded) */
+  void **tfiles;                         /* parallel array: tfile per sector */
+  int sector_cnt;
+};
+#define QFILE_LIST_SECTOR_INFO_INITIALIZER { NULL, NULL, NULL, 0 }
+
+extern int  qfile_collect_list_sector_info (THREAD_ENTRY *, QFILE_LIST_ID *list_id,
+                                            QFILE_LIST_SECTOR_INFO *sector_info);
+extern void qfile_free_list_sector_info     (THREAD_ENTRY *, QFILE_LIST_SECTOR_INFO *sector_info);
+```
+
+`qfile_collect_list_sector_info`:
+1. Free the incoming `sector_info` first (re-entry safe — the caller can reuse the struct across phases without an explicit reset).
+2. Set `membuf_tfile` if and only if the **first** list_id has both `tfile_vfid->membuf != NULL` *and* `tfile_vfid->membuf_last >= 0`. Membuf only exists in the head of a `dependent_list_id` chain, never in dependents.
+3. Walk the chain (`for (current = list_id; current; current = current->dependent_list_id)`); for each non-NULL `temp_vfid`, call `file_get_all_data_sectors` and concatenate the resulting `(vsid, page_bitmap)` array into `sectors`, growing both `sectors[]` and the parallel `tfiles[]` (one tfile pointer per sector) via paired `db_private_realloc`.
+
+`qfile_free_list_sector_info` releases both arrays (`db_private_free_and_init`), NULLs `membuf_tfile`, zeros `sector_cnt`.
+
+> [!warning] Membuf NULL guard required
+> `FILE_QUERY_AREA` result files can have `membuf_last >= 0` but `membuf == NULL`. The `membuf != NULL` check in `qfile_collect_list_sector_info` is mandatory — without it the membuf-owning worker would `qmgr_get_old_page` against a tfile whose `membuf` pointer is NULL and SEGFAULT in Phase 1.
+
+> [!key-insight] `tfiles[]` parallel array prevents wrong-tfile page release
+> Pages from a *dependent* list_id must be released against the dependent's `QMGR_TEMP_FILE *`, not the base list's. Sectors from base + dependents end up concatenated in a single `sectors[]` array, so the `tfiles[]` array (same length, same indexing) carries the owning tfile per sector. The worker copies `tfiles[m_sector_index]` into a per-thread `m_current_tfile` after picking up a sector, and uses that pointer for every subsequent `qmgr_free_old_page_and_init` and overflow-chain `qmgr_get_old_page` call until the next sector switch.
+
+Consumers (currently): [[components/parallel-hash-join-task-manager|`split_task::get_next_page`]] (PR #6981).
+
 ## Page Layout
 
 ```c
