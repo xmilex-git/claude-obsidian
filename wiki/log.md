@@ -26,6 +26,21 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-28] source-ingest | tfile role analysis (decision-prep for PR #7062 ↔ PR #6981 integration)
+
+Ingested external session note `/home/cubrid/dev/cubrid/.claude/sessions/2026-04-28-tfile-role-analysis.md` (captured on branch `parallel_scan_all`, PR #7062 head) as [[sources/2026-04-28-tfile-role-analysis]].
+
+Content: structural analysis of `QMGR_TEMP_FILE *tfile`'s role on `qmgr_get_old_page` / `qmgr_free_old_page` paths, isolating the two essential uses (membuf array lookup + free-time page-type discrimination) and deriving an integration recommendation for `px_scan_input_handler_list` on PR #7062's branch — Option B (full PR #6981 pattern) vs Option B' (no per-sector tfile, only per-sector list_id).
+
+Pages updated:
+- [[sources/2026-04-28-tfile-role-analysis]] — new source page (full digest, baseline-line-number-verified at `0be6cdf6`).
+- [[components/query-manager]] — incidental enhancement: new "Page operations: `tfile` role and minimum context" section under Temporary File Architecture, with the per-path required/not-required table and the no-NULL-tfile-on-membuf rule. Cites the source page.
+- [[components/list-file]] — incidental enhancement: `[!key-insight]` callout under "Dependent-list chain" recording the `qfile_connect_list` `membuf == NULL` invariant on dependents and tying it to sector-distribution membuf-CAS-claim correctness.
+- [[prs/PR-7062-parallel-scan-all-types]] — added a "Pre-merge integration analysis" subsection linking to the source page; **no component pages edited for PR-induced changes** (PR is OPEN — Reconciliation Plan rules apply). Baseline-truth claims surfaced by the analysis applied incidentally.
+- [[sources/_index]] — Transcripts section gains its first entry.
+
+Verified all baseline line numbers cited in the source against `0be6cdf6` (`qmgr_get_page_type:201`, `qmgr_get_old_page:2520`, `qmgr_free_old_page:2582`, `qmgr_get_old_page_read_only:2618`, `qfile_connect_list:3130`, `qfile_collect_list_sector_info:7085`). Off-baseline `px_scan_*` references (PR #7062 branch only) flagged as such.
+
 ## [2026-04-28] baseline-bump | cc563c7f → 0be6cdf6 (PR #6981)
 
 Triggered by [[prs/PR-6981-parallel-hash-join-sector-split|PR #6981]] ingest (case c — merge commit `0be6cdf6` is the direct child of prior baseline `cc563c7f` on `develop`, single squash-merge). Baseline hash updated in `CLAUDE.md` and `wiki/hot.md`.
