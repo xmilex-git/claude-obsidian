@@ -20,6 +20,7 @@ public_api:
   - "qfile_lookup_list_cache_entry / qfile_update_list_cache_entry"
   - "qfile_clear_list_cache / qfile_end_use_of_list_cache_entry"
   - "qfile_fast_intint_tuple_to_list / qfile_fast_intval_tuple_to_list / qfile_fast_val_tuple_to_list"
+  - "qfile_collect_list_sector_info / qfile_free_list_sector_info (sector-based parallel scan helpers; PR #6981)"
 tags:
   - component
   - cubrid
