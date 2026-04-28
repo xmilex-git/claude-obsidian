@@ -207,7 +207,7 @@ main thread (after join()):
 ## Constraints
 
 - **Memory**: tasks are `new`-allocated and self-delete in `retire()`. Per-task temp allocations use `db_private_alloc` on the worker's `thread_ref`.
-- **Threading**: three separate mutexes govern access: `scan_mutex` (page/context cursor), `part_mutexes[i]` (per-partition list), `stats_mutex` (trace time ranges).
+- **Threading**: split phase is **lock-free for page distribution** (membuf CAS + atomic sector counter; see `get_next_page`). `part_mutexes[i]` still protects per-partition list-file flush. `stats_mutex` protects trace time ranges. Join phase still uses `HASHJOIN_SHARED_JOIN_INFO::scan_mutex` for the context-index cursor (unchanged by PR #6981 — only the *split* phase moved to sector-based distribution).
 - **Interrupt**: `check_interrupt` polls once per page (split) or per context (join). Long-running `hjoin_execute` calls are not interrupted mid-execution.
 - **Tracing**: each task sets `thread_ref.m_px_stats` / `m_uses_px_stats` during execution. Join task accumulates `total_build_time` and `total_probe_time` for min/max range stats.
 - **Build mode**: active in `SERVER_MODE` and `SA_MODE`.
