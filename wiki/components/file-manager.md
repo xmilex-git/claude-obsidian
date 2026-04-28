@@ -103,8 +103,11 @@ File descriptors store type-specific metadata alongside the VFID:
 - `FILE_FTAB_COLLECTOR` accumulates `(vsid, bitmap)` entries — one per allocated sector — where the bitmap marks which of the 64 pages inside that sector actually hold data.
 - The walk covers both `PART_FTAB` (partial sectors — sectors with mixed free + allocated pages) and `FULL_FTAB` (full sectors — all 64 pages allocated).
 - The argument type is `VFID *` — the helper is file-type agnostic (callable for heap files, temp/list files, etc.). Earlier draft used `HFID *`; widened during review (`@hornetmj`) so the same collector works for non-heap files like `QMGR_TEMP_FILE`.
-- Used by: parallel heap scan (sector pre-split of a table's heap), parallel list scan (sector pre-split of a temp file plus its dependent chain).
+- Used by: parallel heap scan (sector pre-split of a table's heap), parallel list scan (sector pre-split of a temp file plus its dependent chain), parallel index build (`SORT_INDEX_LEAF`, via PR #7011), and **parallel hash join split phase** (via PR #6981 — wrapped by `qfile_collect_list_sector_info` in [[components/list-file]] which walks the `dependent_list_id` chain and concatenates sectors with a parallel `tfiles[]` array).
 - Thread safety: the collector lives on the caller's frame; `file_get_all_data_sectors` is called single-threaded on the main thread at scan open, before workers start.
+
+> [!update] PR #6981 (merge `0be6cdf6`) — new consumer
+> Parallel hash join's split phase now uses `file_get_all_data_sectors` (indirectly, via `qfile_collect_list_sector_info`) to pre-split input list-file pages across workers, replacing the previous `scan_mutex`-serialised page handoff. Same primitive as parallel heap scan (PR #6911); each worker claims a sector via `next_sector_index.fetch_add(1)` then walks the bitmap with `__builtin_ctzll`.
 
 The `FILE_FULL_PAGE_BITMAP` macros in `file_manager.h` encode the per-sector 64-page presence vector as a `uint64_t`.
 
