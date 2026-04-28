@@ -26,6 +26,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 
 ## Transcripts
 
+- [[sources/2026-04-28-tfile-role-analysis|2026-04-28-tfile-role-analysis]] — session note: role of `QMGR_TEMP_FILE *tfile` on the read/free path; decision-prep for integrating PR #6981's pattern into PR #7062's `px_scan_input_handler_list` (2026-04-28)
 
 ---
 
