@@ -106,6 +106,16 @@ File descriptors store type-specific metadata alongside the VFID:
 - Used by: parallel heap scan (sector pre-split of a table's heap), parallel list scan (sector pre-split of a temp file plus its dependent chain), parallel index build (`SORT_INDEX_LEAF`, via PR #7011), and **parallel hash join split phase** (via PR #6981 — wrapped by `qfile_collect_list_sector_info` in [[components/list-file]] which walks the `dependent_list_id` chain and concatenates sectors with a parallel `tfiles[]` array).
 - Thread safety: the collector lives on the caller's frame; `file_get_all_data_sectors` is called single-threaded on the main thread at scan open, before workers start.
 
+> [!key-insight] Temp files vs permanent files — different sector layout
+> `file_get_all_data_sectors` (`file_manager.c:12608-12622`) gates the FULL-FTAB walk behind `if (!FILE_IS_TEMPORARY (fhead))`. The macro `FILE_HEADER_GET_FULL_FTAB` even asserts `!FILE_IS_TEMPORARY (fh)` (`file_manager.c:204`).
+>
+> Consequences:
+>
+> - **Temp files** (e.g. `QMGR_TEMP_FILE`, `FILE_QUERY_AREA`) — every data sector lives in the partial-FTAB; the partial-FTAB's per-sector bitmap carries the true page-allocation state. The collector's output is the partial-FTAB walk **only**; no full-sector promotion has happened.
+> - **Permanent files** (heap, btree, etc.) — full sectors are converted by `file_extdata_collect_data_sectors_full` (`file_manager.c:12517-12530`), which stamps `FILE_FULL_PAGE_BITMAP` (all 64 bits set) on each. Output mixes partial + full sectors.
+>
+> **Load-bearing assumption** for [[prs/PR-6981-parallel-hash-join-sector-split|PR #6981]]'s hash-join split phase and PR #7062's `px_scan_input_handler_list` (see [[components/parallel-list-scan]]). Both consume temp-file sector output and depend on every page being represented in some sector's bitmap. If anyone later "optimises" temp files to use the full-FTAB list (e.g. to reduce metadata overhead for large temps), both parallel paths will silently drop full sectors → row miss. The temp-file invariant must hold.
+
 > [!update] PR #6981 (merge `0be6cdf6`) — new consumer
 > Parallel hash join's split phase now uses `file_get_all_data_sectors` (indirectly, via `qfile_collect_list_sector_info`) to pre-split input list-file pages across workers, replacing the previous `scan_mutex`-serialised page handoff. Same primitive as parallel heap scan (PR #6911); each worker claims a sector via `next_sector_index.fetch_add(1)` then walks the bitmap with `__builtin_ctzll`.
 

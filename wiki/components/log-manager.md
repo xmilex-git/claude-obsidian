@@ -192,6 +192,10 @@ log_initialize()              ← called by boot_sr.c
 
 ## System Operations (`LOG_SYSOP`)
 
+> [!info] Dedicated component page
+> Full coverage of the `log_sysop_*()` family (18 functions, lifecycle, end-type matrix, postpone interaction, atomic-sysop recovery semantics): [[components/log-sysop]].
+
+
 System operations allow grouping multiple page changes into a logical atomic unit that:
 - Commits independently of the user transaction (`LOG_SYSOP_END_COMMIT`) — used for catalog updates
 - Holds undo data for logical rollback (`LOG_SYSOP_END_LOGICAL_UNDO`)

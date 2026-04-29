@@ -67,6 +67,15 @@ A `QFILE_LIST_ID` may reference another via the `dependent_list_id` field (singl
 
 A list can be (a) membuf-only, (b) membuf + disk (membuf pages are still consumed first), or (c) disk-only after spill. The parallel list scan dedicates worker 0 to any membuf pages present (Phase 1), then all workers iterate disk sectors in parallel (Phase 2).
 
+> [!key-insight] Membuf is base-only — sector collector relies on this
+> `qfile_collect_list_sector_info` (`list_file.c:7099-7104`) reads `membuf_tfile` from the **base** `list_id` only:
+> ```c
+> /* membuf exists only in the first list_id */
+> if (list_id->tfile_vfid->membuf != NULL && list_id->tfile_vfid->membuf_last >= 0)
+>   sector_info->membuf_tfile = list_id->tfile_vfid;
+> ```
+> Then the loop `for (current = list_id; current != NULL; current = current->dependent_list_id)` (`.c:7106`) walks the chain to collect **disk sectors only** — dependent lists never contribute membuf pages. This is the load-bearing invariant for the parallel reader: `m_sector_info.membuf_tfile` is a single pointer the CAS winner uses for every `NULL_VOLID` page read, regardless of how many dependents the chain has.
+
 ### `QFILE_OVERFLOW_TUPLE_COUNT_FLAG`
 
 Wide tuples that exceed a page's capacity spill to an overflow chain. Overflow pages carry the sentinel tuple-count marker `QFILE_OVERFLOW_TUPLE_COUNT_FLAG = -2` in their page header. Sector-level parallel scans must detect this marker after a speculative page read and skip the page — overflow pages are already consumed by the primary page's `qfile_get_tuple` handler, so processing them again would double-count.
@@ -124,7 +133,18 @@ struct qfile_page_header {
 };
 ```
 
+Defined in `query_list.h:50-58` and `list_file.h:65-78`. Total fixed header size: 32 bytes. Bytes 26-31 are `QFILE_RESERVED_OFFSET` and are zeroed only in debug builds for valgrind UMW suppression (`list_file.c:1098`, `query_manager.c:257` — both guarded by `#if !defined(NDEBUG)`).
+
 Pages are chained forward and backward. Wide tuples that exceed a page size spill to an overflow chain.
+
+> [!key-insight] No writer-in-progress / latch-state field
+> The QFILE page header has **no writer marker, no latch-state field, no version counter**. Writer/reader exclusion happens entirely via `pgbuf_fix(PGBUF_LATCH_WRITE/READ)` (`page_buffer.h:194`), which is invisible to a reader that already holds a READ latch on the page. The only sentinels a reader can observe inside the header are:
+>
+> - `tuple_count >= 0` — regular page or overflow start page (data present)
+> - `tuple_count == QFILE_OVERFLOW_TUPLE_COUNT_FLAG (-2)` — overflow continuation page (`query_list.h:275`)
+> - `tuple_count == 0` — either a freshly-allocated page mid-writer-init, or a legitimately empty page
+>
+> The first two are unambiguous; the third is the source of the silent-skip race in [[components/parallel-list-scan|parallel-list-scan]]'s slot iterator. Closing that race relies on join barriers in the executor (see [[flows/parallel-list-scan-open|parallel-list-scan-open]]), not on any header field.
 
 > [!key-insight] List file I/O is the primary bottleneck for large result sets
 > When intermediate list files exceed the temp file memory buffer, they hit disk. Query plans that minimize list-file size (covering indexes, early predicate pushdown, hash aggregate in-memory path) have disproportionate impact on performance.
@@ -139,6 +159,31 @@ qfile_fast_val_tuple_to_list()     ← fast path: single DB_VALUE
 ```
 
 Fast-path functions bypass the full `QFILE_TUPLE_DESCRIPTOR` building for hot aggregation loops.
+
+## `qfile_close_list` — writer-done barrier (terminator + unfix only)
+
+```c
+// list_file.c:1352-1363
+void qfile_close_list (THREAD_ENTRY * thread_p, QFILE_LIST_ID * list_id_p)
+{
+  if (list_id_p && list_id_p->last_pgptr != NULL)
+    {
+      QFILE_PUT_NEXT_VPID_NULL (list_id_p->last_pgptr);
+      qmgr_free_old_page_and_init (thread_p, list_id_p->last_pgptr,
+                                   list_id_p->tfile_vfid);
+    }
+}
+```
+
+Two effects only:
+
+1. **Write `next_vpid = NULL`** on the last page — terminator for chain walks.
+2. **`pgbuf_unfix`** the last page (releases the writer's pin) via `qmgr_free_old_page_and_init`.
+
+> [!key-insight] No flush, no membuf reset, no dirty-mark
+> `qfile_close_list` does **not** call `qfile_set_dirty_page` after the `next_vpid` write — it relies on the page already being dirty from prior tuple appends. It does **not** flush membuf or disk pages explicitly. It does **not** reset `membuf_last` or any in-memory state. **Writers must mark the page dirty themselves before close** (the tuple-append path does this via `qfile_allocate_new_page_if_need`).
+>
+> Important for understanding the [[flows/parallel-list-scan-open|parallel-list-scan-open]] happens-before chain: parallel scans see the closed list as consistent only because of the join in `run_jobs()` (which establishes happens-before from the close-issuing worker to the readers), not because of any flush-or-publish step inside `qfile_close_list`.
 
 ## Sorting
 

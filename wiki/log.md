@@ -2,7 +2,7 @@
 created: 2026-04-23
 type: meta
 title: "Operation Log"
-updated: 2026-04-28
+updated: 2026-04-29
 tags:
   - meta
   - log
@@ -25,6 +25,67 @@ Entry format: `## [YYYY-MM-DD] operation | Title`
 Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
+
+## [2026-04-29] ingest | log_sysop_*() function family — system-operation logging primitive
+
+Direct-source ingest of the `log_sysop_*()` C API in `src/transaction/log_manager.c`. No `.raw/` source file (user requested no symlink — read directly via absolute path per CLAUDE.md). Baseline source unchanged from `0be6cdf6`.
+
+Pages created (1):
+- [[components/log-sysop]] (address `c-000005`) — comprehensive coverage of the system-operation logging family: 18 functions (9 public via `log_manager.h:200-215`, 9 static helpers), conceptual nested-TX-within-TX model, the topops stack on `LOG_TDES`, the six `LOG_SYSOP_END_TYPE` subtypes (COMMIT/ABORT/LOGICAL_UNDO/LOGICAL_MVCC_UNDO/LOGICAL_COMPENSATE/LOGICAL_RUN_POSTPONE), `LOG_REC_SYSOP_END` payload union (`log_record.hpp:304-324`), atomic-sysop recovery semantics (`LOG_SYSOP_ATOMIC_START` rectype 50 → eager rollback before redo phase advances), postpone interaction (`LOG_SYSOP_START_POSTPONE` rectype 18 + cache fast-path), vacuum-tdes redirection rule, `lock_topop` mutex, checkpoint trigger at outermost-end-final, empty-sysop short-circuit (and the asymmetric ban on empty logical-end variants), failure-mode table, perfmon counters, callers across CUBRID. Anchored to HEAD `0be6cdf6` with file:line citations throughout.
+
+Pages updated (3):
+- [[components/log-manager]] — added `> [!info] Dedicated component page` cross-link to `[[components/log-sysop]]` at the head of the existing "System Operations (`LOG_SYSOP`)" subsection.
+- [[components/recovery]] — appended a sentence to the "Atomic System Operations" paragraph cross-linking to `[[components/log-sysop|log_sysop_start_atomic]]` for the marker emission point and the full sysop family.
+- [[components/_index]] — registered the new page in the recovery/log cluster, between log-manager and recovery.
+
+Hook change: added a new `PreToolUse:Edit` hook to `hooks/hooks.json` that auto-reads the target file (first 400 lines) before any Edit invocation, surfacing it as additional context. Reduces the failure mode where Edit is invoked without prior Read on the project's vault files.
+
+Address allocation: `c-000005` (log-sysop). Recorded in `.raw/.manifest.json::address_map`.
+
+Symlink note: user initially asked to create `.raw/cubrid → ~/dev/cubrid` symlink and then cancelled. Final state: no symlink. CLAUDE.md's "do not create `.raw/cubrid/` symlink" guidance held. Source-tree access uses absolute paths.
+
+No baseline bump (read-only ingest, baseline source unchanged).
+
+## [2026-04-29] pr-reingest | PR #7062 (parallel scan all types) — re-anchor to HEAD `0f8a107bb`
+
+Re-ingest of [[prs/PR-7062-parallel-scan-all-types]] driven by an updated external review doc at `/home/cubrid/dev/cubrid/.claude/knowledge/pr_7062_code_review.md` (rewritten to reflect 22 commits beyond the original `c28c5945a` snapshot). PR remains OPEN — **no PR-reconciliation applied**, no baseline bump.
+
+Source hash: `b40004aa289c3773a5de964aacf30e61` (md5).
+
+Wiki PR page updates:
+- Frontmatter — `head_sha` `e66051b9e…` → `0f8a107bb…`; `base_sha` corrected from `1da6caa7d…` (stale, pre-`develop`-merge) → `0be6cdf6e…` (matches current vault baseline); `updated` 2026-04-24 → 2026-04-29; new fields `last_reingested` / `last_reingested_head`.
+- Stats line — 77 commits → **87 commits**; `+6,190 / −1,893` → `+6,061 / −1,753`.
+- Re-ingest banner callout added at top of body.
+- Aggregate-count fix — "11 aggregate functions" → **13** (the listed names already enumerated 13; count was off-by-two).
+- DISTINCT-loop optimisation note (`c047445c8`, greptile feedback) added to the BUILDVALUE_OPT correction bullet.
+- New section **"Commits after `c28c5945a`"** grouping all 22 follow-on commits by theme (greptile fixes / fallback hardening / two-parameter split + cost-gate / BUILDVALUE_OPT merge / bug fixes / page-fix elimination / concurrency hardening via latch-couple + lazy CAS / style+merges).
+
+Reconciliation Plan: shape unchanged (no new component pages required, and the post-`c28c5945a` deltas are already covered by the existing plan items via [[components/parallel-list-scan]] branch-WIP page + the existing system-parameter / cost-gate / latch-couple plan entries). Pending merge.
+
+No component pages edited (PR is OPEN — Reconciliation Plan rules apply). No incidental enhancements newly applied (the previous round on 2026-04-29 already drained the baseline-truth surface area — all 4 incidental targets ([[components/xasl]], [[components/btree]], [[components/list-file]], [[components/file-manager]]) remain current).
+
+Manifest updated with new `external://cubrid/.claude/knowledge/pr_7062_code_review.md@2026-04-29` entry.
+
+## [2026-04-29] wiki-updates-ingest | pending.md from CUBRID workspace (branch parallel_scan_all)
+
+Ingested `/home/cubrid/dev/cubrid/.claude/wiki-updates/pending.md` — 11 divergence entries logged from the CUBRID workspace on branch `parallel_scan_all` (head `0f8a107bb`, [CBRD-26722]) covering the new `src/query/parallel/px_scan/px_scan_input_handler_list*` + `px_scan_slot_iterator_list*` files (which exist on the branch only — not in baseline `0be6cdf6`) plus several baseline-truth observations missing from the wiki.
+
+Pages created (2):
+- [[components/parallel-list-scan]] — branch-WIP component page (`status: branch-wip`, address `c-000003`). Documents `input_handler_list::init_on_main` static slice partitioning (no work-stealing), `initialize()` lazy CAS-claimed membuf ownership (decoupled from idx==0 in commit `0f8a107bb`), two-phase `get_next_page_with_fix` (Phase 1: membuf drain by CAS winner; Phase 2: per-sector 64-page bitmap walk with per-page tfile lookup), `slot_iterator_list::set_page` tuple_count snapshot, `next_qualified_slot_with_peek` overflow-handoff to `qfile_get_tuple`. Captures the **TWO silent-skip sentinels** key insight: `tuple_count == -2` filtered at page-fetch (intended) + `tuple_count == 0` silently returns S_END at slot level (race window between writer's `qfile_allocate_new_page` zero-init and `QFILE_PUT_TUPLE_COUNT` increment at `list_file.c:1581`). Flags the static-partition fault-tolerance gap vs hash-join's dynamic stealing. Stale comment at `px_scan_input_handler_list.cpp:134` flagged as cleanup. Differences-from-heap-handler and differences-from-hash-join-split-task tables.
+- [[flows/parallel-list-scan-open]] — branch-WIP flow page (`status: branch-wip`, address `c-000004`). End-to-end open sequence for parallel list scan against an inner subquery's materialised list: outer `qexec_execute_mainblock_internal` → aptr loop `add_job` (or sync fallback) → inner BUILDLIST_PROC + `qfile_close_list` → list_id save/restore dance in worker → `run_jobs()` **join barrier** (the load-bearing happens-before edge) → outer `qexec_start_mainblock_iterations` → `scan_open_parallel_list_scan` → `manager::open` → `init_on_main` runs `qfile_collect_list_sector_info` on the now-stable list. Mermaid sequence diagram. Failure-mode table.
+
+Pages updated (5):
+- [[components/list-file]] — three new sections: `[!key-insight]` "Membuf is base-only" under "Membuf vs disk backing" citing `list_file.c:7099-7104` (the `current = list_id; current = current->dependent_list_id` chain only contributes disk sectors); new "qfile_close_list — writer-done barrier (terminator + unfix only)" subsection citing `list_file.c:1352-1363` with explicit "no flush, no membuf reset, no dirty-mark" key-insight; expanded "Page Layout" with `query_list.h:50-58` line citation, debug-only valgrind UMW zeroing note, and a `[!key-insight]` "No writer-in-progress / latch-state field" documenting the three observable `tuple_count` sentinels and pointing at `parallel-list-scan` for the silent-skip race.
+- [[components/file-manager]] — `[!key-insight]` "Temp files vs permanent files — different sector layout" callout under "Data-sector harvesting" citing `file_manager.c:12608-12622` (temps gate FULL-FTAB walk) and `file_manager.c:204` (`FILE_HEADER_GET_FULL_FTAB` asserts `!FILE_IS_TEMPORARY`). Marks the load-bearing assumption for [[prs/PR-6981-parallel-hash-join-sector-split|PR #6981]] hash-join split + PR #7062 `px_scan_input_handler_list` — both consume temp-file output and would silently drop full sectors if temps were "optimised" to use FULL-FTAB.
+- [[components/parallel-query-task]] — new "list_id save/restore dance (parallel-aptr only)" section citing `px_query_task.cpp:188-199` with the four-step stack-local hide/clear/teardown/restore pattern. `[!key-insight]` "Teardown discipline is load-bearing" — any future change to `qexec_clear_xasl_for_parallel_aptr` that examines `list_id` instead of going through the cleared husk would re-introduce the destroy-while-needed bug. Notes the dance does NOT run on sync fallback.
+- [[prs/PR-7062-parallel-scan-all-types]] — added "Branch-WIP companion pages" section linking to the two new pages above, plus an `[!update]` "Post-write commits to this PR page (as of branch HEAD `0f8a107bb`)" callout flagging the now-stale "Worker 0 always becomes the membuf-worker" and `m_tl_is_membuf_worker = (idx == 0 && ...)` claims as superseded by commit `0f8a107bb`'s CAS decoupling, with cross-reference to the new component page.
+- [[components/_index]] / [[flows/_index]] — registered the two new pages.
+
+No baseline bump — PR #7062 is OPEN. The branch-WIP pages explicitly mark `status: branch-wip` and reference branch HEAD `0f8a107bb`. They will be folded into the canonical `parallel-scan-input-handler-list` / `parallel-scan-slot-iterator-list` pages when PR #7062 merges (per its Reconciliation Plan).
+
+Address allocations: `c-000003` (parallel-list-scan), `c-000004` (parallel-list-scan-open). Recorded in `.raw/.manifest.json::address_map`.
+
+Source file (cleared after ingest): `/home/cubrid/dev/cubrid/.claude/wiki-updates/pending.md` — entries 1-11 popped; only the header / format-spec / "entries below" anchor retained for future appends.
 
 ## [2026-04-28] source-ingest | tfile role analysis (decision-prep for PR #7062 ↔ PR #6981 integration)
 

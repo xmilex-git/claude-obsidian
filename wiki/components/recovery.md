@@ -93,7 +93,7 @@ log_rv_redo_all_in_log_pages()
 
 ### Atomic System Operations
 
-`LOG_SYSOP_ATOMIC_START` (type 50) marks operations that **must be rolled back immediately** if recovery encounters them incomplete. After the redo phase, before running postpones, recovery scans for incomplete atomic sysops and undoes them. This prevents partially-executed index splits (B-tree page splits spanning multiple log records) from persisting.
+`LOG_SYSOP_ATOMIC_START` (type 50) marks operations that **must be rolled back immediately** if recovery encounters them incomplete. After the redo phase, before running postpones, recovery scans for incomplete atomic sysops and undoes them. This prevents partially-executed index splits (B-tree page splits spanning multiple log records) from persisting. The marker is emitted by [[components/log-sysop|log_sysop_start_atomic]] (`log_manager.c:3665`); see that page for the full sysop family lifecycle and the six `LOG_SYSOP_END_TYPE` end-record variants.
 
 ## Phase 3: Undo
 

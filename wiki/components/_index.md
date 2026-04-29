@@ -25,6 +25,7 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/lock-manager|lock-manager]] — `LK_RES`/`LK_ENTRY`, 8 lock modes, hierarchical acquire/release, escalation
 - [[components/deadlock-detection|deadlock-detection]] — wait-for graph, DFS cycle finder, youngest-victim policy
 - [[components/log-manager|log-manager]] — WAL append path, `LOG_RECORD_HEADER`, 52 record types, checkpoint, commit/abort
+- [[components/log-sysop|log-sysop]] — System-Operation logging family (`log_sysop_*()`): nested-tx primitive, 18 functions, 6 end-record subtypes, atomic-sysop recovery semantics
 - [[components/recovery|recovery]] — ARIES crash recovery: analysis → redo → undo; CLR; 2PC; atomic sysops
 - [[components/vacuum|vacuum]] — MVCC GC daemon (in `src/query/`); master + up-to-50 workers; heap/btree cleanup
 - [[components/server-boot|server-boot]] — subsystem init order, `BOOT_DB_PARM`, crash-recovery entry point
@@ -82,6 +83,7 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/parallel-interrupt|parallel-interrupt]] — `interrupt` atomic enum, `atomic_instnum` ROWNUM early-exit, `err_messages_with_lock` cross-thread errors
 - [[components/parallel-hash-join|parallel-hash-join]] — hash join parallelism
 - [[components/parallel-heap-scan|parallel-heap-scan]] — heap scan parallelism
+- [[components/parallel-list-scan|parallel-list-scan]] — list-scan input handler + slot iterator (branch-WIP, [[prs/PR-7062-parallel-scan-all-types|PR #7062]])
 - [[components/parallel-query-execute|parallel-query-execute]] — subquery parallelism
 - [[components/parallel-sort|parallel-sort]] — external sort: `SORT_EXECUTE_PARALLEL` / `SORT_WAIT_PARALLEL` macros, condvar vs yield-spin
 

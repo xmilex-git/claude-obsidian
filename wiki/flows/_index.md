@@ -26,6 +26,7 @@ Request paths, data flows, auth flows, and lifecycle sequences. Examples:
 |------|-------------|------------|
 | [[flows/dml-execution-path\|dml-execution-path]] | INSERT/UPDATE/DELETE/MERGE SQL | Modified rows + commit ack |
 | [[flows/ddl-execution-path\|ddl-execution-path]] | CREATE/ALTER/DROP/GRANT/REVOKE SQL | Schema commit + catalog updated |
+| [[flows/parallel-list-scan-open\|parallel-list-scan-open]] | Outer XASL with parallel-aptr inner BUILDLIST_PROC | `scan_id` with `pllsid_parallel` ready for `scan_next` (branch-WIP) |
 
 Populated by `ingest`.
 

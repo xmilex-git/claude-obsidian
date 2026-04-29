@@ -26,13 +26,13 @@
         ]
       }
     ],
-    "PostToolUse": [
+    "PreToolUse": [
       {
-        "matcher": "Write|Edit",
+        "matcher": "Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "[ -d .git ] && git add wiki/ .raw/ .vault-meta/ 2>/dev/null && (git diff --cached --quiet || git commit -m \"wiki: auto-commit $(date '+%Y-%m-%d %H:%M')\" 2>/dev/null) || true"
+            "command": "FP=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); if [ -n \"$FP\" ] && [ -f \"$FP\" ]; then echo \"=== Pre-Edit auto-read: $FP (first 400 lines) ===\"; head -n 400 \"$FP\"; echo \"=== end auto-read ===\"; fi"
           }
         ]
       }

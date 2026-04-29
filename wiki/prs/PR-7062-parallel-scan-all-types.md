@@ -12,8 +12,8 @@ closed_at:
 merge_commit:
 base_ref: "develop"
 head_ref: "parallel_scan_all"
-base_sha: "1da6caa7d6221f4543ef69a5deba12e074e4290b"
-head_sha: "e66051b9e97ead89fbc25265f758985c094e48a4"
+base_sha: "0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0"
+head_sha: "0f8a107bb0b630a7b197dd25dd5a32e956d6543b"
 jira: "CBRD-26722"
 files_changed:
   - "CMakeLists.txt"
@@ -97,6 +97,8 @@ baseline_after: "175442fc858bd0075165729756745be6f8928036"
 reconciliation_applied: false
 reconciliation_applied_at:
 incidental_enhancements_count: 4
+last_reingested: 2026-04-29
+last_reingested_head: "0f8a107bb0b630a7b197dd25dd5a32e956d6543b"
 tags:
   - pr
   - cubrid
@@ -108,7 +110,7 @@ tags:
   - refactor
   - performance
 created: 2026-04-24
-updated: 2026-04-24
+updated: 2026-04-29
 status: open
 ---
 
@@ -116,8 +118,11 @@ status: open
 
 > [!info] PR metadata
 > **Repo:** `CUBRID/cubrid` · **State:** `OPEN` (non-draft) · **Author:** `@xmilex-git` · **Jira:** CBRD-26722
-> **Base → Head:** `develop` (`1da6caa7`) → `parallel_scan_all` (`e66051b9`)
-> **Stats:** 52 files changed, 77 commits, 26 reviews, 37 review-thread comments, ≈ +6,190 / −1,893 LOC
+> **Base → Head:** `develop` (`0be6cdf6`) → `parallel_scan_all` (`0f8a107bb`)
+> **Stats:** 52 files changed, **87 commits**, ≈ **+6,061 / −1,753 LOC**
+
+> [!update] Re-ingest 2026-04-29 (HEAD `0f8a107bb`)
+> External code-review document was rewritten to reflect the live branch HEAD `0f8a107bb` (22 commits beyond the original `c28c5945a` snapshot). This page is updated in place to match: stats refreshed, frontmatter `head_sha` / `base_sha` corrected, BUILDVALUE_OPT aggregate count fixed (13, not 11), system-parameter section re-confirmed as TWO-parameter split, post-`c28c5945a` commit summary added (greptile P1 fixes, fallback patterns, latch-couple, double-fix removal, lazy CAS membuf claim, `qfile_collect_list_sector_info` reuse). No baseline bump (PR still OPEN). Reconciliation Plan unchanged in shape — still pending merge.
 
 > [!note] Ingest classification: open
 > PR is open, not merged. **No component-page edits for PR-induced changes.** A full Reconciliation Plan is written below, executable later when the user says "apply reconciliation for PR #7062". Incidental wiki enhancements from baseline analysis WERE applied — see the dedicated section.
@@ -241,7 +246,7 @@ This section captures findings from a full line-by-line read of the 10,396-line 
 
 ### Corrections to the initial write-up
 
-- **BUILDVALUE_OPT scope is far wider than "COUNT DISTINCT"** (the previous claim). The rename from `COUNT_DISTINCT` → `BUILDVALUE_OPT` reflects an actual capability expansion. The new `is_buildvalue_opt_supported_function()` checker whitelists **11 aggregate functions**: `PT_COUNT_STAR`, `PT_COUNT`, `PT_MIN`, `PT_MAX`, `PT_SUM`, `PT_AVG`, `PT_STDDEV`, `PT_STDDEV_POP`, `PT_STDDEV_SAMP`, `PT_VARIANCE`, `PT_VAR_POP`, `PT_VAR_SAMP`, `PT_GROUP_CONCAT`. DISTINCT aggregates (non-MIN/MAX) use per-worker `qfile` sort-distinct lists; MIN/MAX use collation-aware compare + coerce; SUM/AVG/STDDEV/VARIANCE use `qdata_add_dbval` with per-row domain-resolution fallback. The previous one-liner in this page understated the change significantly.
+- **BUILDVALUE_OPT scope is far wider than "COUNT DISTINCT"** (the previous claim). The rename from `COUNT_DISTINCT` → `BUILDVALUE_OPT` reflects an actual capability expansion. The new `is_buildvalue_opt_supported_function()` checker whitelists **13 aggregate functions**: `PT_COUNT_STAR`, `PT_COUNT`, `PT_MIN`, `PT_MAX`, `PT_SUM`, `PT_AVG`, `PT_STDDEV`, `PT_STDDEV_POP`, `PT_STDDEV_SAMP`, `PT_VARIANCE`, `PT_VAR_POP`, `PT_VAR_SAMP`, `PT_GROUP_CONCAT`. DISTINCT aggregates (non-MIN/MAX) use per-worker `qfile` sort-distinct lists; MIN/MAX use collation-aware compare + coerce; SUM/AVG/STDDEV/VARIANCE use `qdata_add_dbval` with per-row domain-resolution fallback. DISTINCT loop optimisation (commit `c047445c8`, greptile review feedback) reuses the first-operand fetch instead of refetching per row. The previous one-liner in this page understated the change significantly.
 - **Two system parameters, not one** — corrected in the Behavioral section above.
 - **`qexec_resolve_domains_for_aggregation_for_parallel_heap_scan_buildvalue_proc` retains the `heap_scan` substring in its name post-merge** — the function is called from the new `BUILDVALUE_OPT` `write()` path (`px_scan_result_handler.cpp:6425`) but its identifier was never renamed. Latent inconsistency; cleanup candidate for a follow-up PR.
 
@@ -480,6 +485,67 @@ The design-convergence highlights worth calling out (from review doc §7): `comp
 - Deferred-promotion pattern (`parallel_pending` struct consumed between `open` and `start`) — specific to parallel index scan; would benefit from a scan-manager section.
 
 These are left for future ingests to pick up.
+
+## Branch-WIP companion pages
+
+Two pages describing PR #7062 branch state were filed on 2026-04-29 ahead of merge to capture knowledge surfaced while debugging the silent-miss in `sql/_19_apricot/_03_index_skip_scan/cases/_03_iss_700000.sql`:
+
+- [[components/parallel-list-scan]] — `input_handler_list` + `slot_iterator_list` design: static slice partitioning, lazy CAS-claimed membuf, per-page tfile tracking, the **TWO** silent-skip sentinels in the slot iterator (`-2` overflow filter + `tuple_count == 0` race window).
+- [[flows/parallel-list-scan-open]] — end-to-end open sequence and the `run_jobs()` join-barrier happens-before that closes the silent-skip race.
+
+Both pages are tagged `status: branch-wip` and will be reconciled into the canonical `parallel-scan-input-handler-list` / `parallel-scan-slot-iterator-list` pages on merge (per the Reconciliation Plan above).
+
+> [!update] Post-write commits to this PR page (as of branch HEAD `0f8a107bb`)
+> The "Deep analysis — supplementary findings" section above contains two claims that have been **superseded** by branch commits landing after this PR page was written (2026-04-24):
+>
+> 1. **"Worker 0 always becomes the membuf-worker"** — superseded by commit `0f8a107bb`. Membuf is now claimed lazily via `m_membuf_claimed.compare_exchange_strong` in `initialize()`; the first **live** worker through wins, regardless of slice index. An idx-0 worker that fails before `loop()` no longer strands the membuf. See [[components/parallel-list-scan]] § "Lazy membuf claim — CAS, not idx-bound".
+> 2. **`m_tl_is_membuf_worker = (idx == 0 && m_has_membuf)` binding** — same supersession; the source no longer has this expression.
+>
+> A stale comment at `px_scan_input_handler_list.cpp:134` (`/* Phase 1: worker 0 drains membuf pages */`) survives in the live source and is a cleanup candidate — flagged in [[components/parallel-list-scan]].
+>
+> The `qfile_collect_list_sector_info` reuse path (commit `e51920146`) and the per-page-tfile pattern (commit `ddf2e3374`) are both reflected in the new branch-WIP pages.
+
+### Commits after `c28c5945a` (snapshot baseline of original review doc)
+
+The external code-review doc was originally written at HEAD `c28c5945a` and re-anchored to `0f8a107bb` on 2026-04-29. The 22 intervening commits group as follows:
+
+**Greptile-review fixes (P1 static-analysis findings):**
+- `243eed446` build error + greptile P1
+- `c2db4b854` greptile P1 second pass
+- `399dba587` greptile review (general)
+
+**Fallback hardening — single-thread regression on missing parallel flag:**
+- `8799d7778` INDEX spec NO_PARALLEL → single-thread fallback
+- `ecfc6a6fe` LIST spec NO_PARALLEL → single-thread fallback (mirrors INDEX)
+- `195155bc5` defer `pllsid_parallel` writes until `manager::open()` succeeds (null-deref window)
+- `a869c28ec` initialize `null_hfid` / `null_oid` fully on parallel-list entry
+
+**Two-parameter split + cost-gate:**
+- `8dc998587` client-side parallel index degree + count-only — splits `parallel_index_scan_page_threshold` (32) from server-side `parallel_scan_page_threshold` (2048); adds 137-line `qo_apply_parallel_index_scan_threshold` in `plan_generation.c`
+- `fe84e61e3` gate parallel index scan on btree file pages
+- `80471464c` revert: drop `estimated_leaf_pages` cost-gate plumbing
+
+**BUILDVALUE_OPT:**
+- `c047445c8` reuse first-operand fetch in DISTINCT loop
+- `e66051b9e` merge `parallel_buildvalue_heap` → 13-aggregate whitelist landed
+
+**Bug fixes:**
+- `80056ecd9` parallel aptr trace deletion (memory leak)
+
+**Performance — eliminate redundant page fixes:**
+- `e51920146` reuse `qfile_collect_list_sector_info` + per-page tfile (PR #6981 pattern integration)
+- `ddf2e3374` eliminate double-fix in list scan
+- `1dd52e1b8` eliminate double-fix in index scan
+
+**Concurrency hardening:**
+- `0f8a107bb` **HEAD** — latch-couple `px_scan` index descent (root→leaf + leaf chain) + harden parallel promotion path; lazy-CAS membuf claim decoupled from idx 0
+
+**Style / merges (no semantic change):**
+- `3c04243bd`, `f497ae291` codestyle
+- `4de6bf219`, `d84b6d0b8` no-op / shell test fixup
+- `fbc05d96e`, `6b1147a88`, `bc2306a9a` merge develop / CUBRID:develop into branch
+
+The Reconciliation Plan above remains valid — none of these post-`c28c5945a` commits introduce surface that the plan misses (the two-parameter split, latch-couple, lazy CAS, and double-fix removal are all already captured in the plan's per-page deltas via the [[components/parallel-list-scan]] branch-WIP page and the existing system-parameter / cost-gate plan items).
 
 ## Pre-merge integration analysis
 

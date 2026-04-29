@@ -67,6 +67,88 @@
       ],
       "key_insight": "Extends parallel heap scan BUILDVALUE_PROC fast path from 2 aggregates (COUNT*/COUNT) to 12 (COUNT*/COUNT/MIN/MAX/SUM/AVG/STDDEV*/VAR*); cosmetic enum rename COUNT_DISTINCT → BUILDVALUE_OPT; key engineering = two-heap dance (workers write in heap 0, main re-clones into private heap before pr_clear_value cleanup) + qdata_aggregate_accumulator_to_accumulator reused for per-worker partial merge."
     },
+    "external://cubrid/src/transaction/log_manager.c#log_sysop_*@2026-04-29": {
+      "hash": "log_sysop_family_at_baseline_0be6cdf6",
+      "hash_method": "function-family-symbol-set anchored to baseline commit (no file hash; multiple files involved)",
+      "ingested_at": "2026-04-29",
+      "ingest_type": "direct-source-symbol-family",
+      "source_paths": [
+        "/home/cubrid/dev/cubrid/src/transaction/log_manager.c (log_sysop_* definitions at lines 3563-4178 and log_sysop_do_postpone at 8189)",
+        "/home/cubrid/dev/cubrid/src/transaction/log_manager.h:200-215 (public extern declarations)",
+        "/home/cubrid/dev/cubrid/src/transaction/log_record.hpp:67,285-301,304-324,327-332 (LOG_SYSOP_END rectype, LOG_SYSOP_END_TYPE enum, LOG_REC_SYSOP_END struct, LOG_REC_SYSOP_START_POSTPONE struct)"
+      ],
+      "baseline_commit": "0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0",
+      "no_baseline_bump": "Read-only ingest of unchanged baseline source",
+      "user_request_history": "User asked for `.raw/cubrid` symlink → ~/dev/cubrid then cancelled (CLAUDE.md prohibits the symlink anyway). Ingest proceeded against absolute paths only.",
+      "pages_created": [
+        "wiki/components/log-sysop.md"
+      ],
+      "pages_updated": [
+        "wiki/components/log-manager.md",
+        "wiki/components/recovery.md",
+        "wiki/components/_index.md",
+        "wiki/log.md",
+        "wiki/hot.md",
+        "hooks/hooks.json"
+      ],
+      "key_insight": "log_sysop_*() is the public C API exposing the sysop primitive — a nested-transaction-within-a-transaction unit that commits/aborts independently of its parent. 18 functions: 9 public (start/start_atomic/commit/abort/attach_to_outer/end_logical_undo/end_logical_compensate/end_logical_run_postpone/end_recovery_postpone) + 9 static helpers (end_type_string/end_random_exit/end_begin/end_unstack/end_final/commit_internal/get_level/get_tran_index_and_tdes/do_postpone). The end record LOG_SYSOP_END (rectype 20) carries one of six LOG_SYSOP_END_TYPE subtypes — COMMIT (default), ABORT, LOGICAL_UNDO, LOGICAL_MVCC_UNDO, LOGICAL_COMPENSATE, LOGICAL_RUN_POSTPONE — switching the union body of LOG_REC_SYSOP_END accordingly. Atomic sysops emit a separate LOG_SYSOP_ATOMIC_START marker (rectype 50) at start so recovery can roll them back eagerly before the redo phase advances. Postpones of a sysop are bracketed by LOG_SYSOP_START_POSTPONE (rectype 18) which carries the eventual end record + first postpone LSA so recovery can resume mid-replay. The `lock_topop` mutex serialises same-tdes sysop lifecycle (relevant only for vacuum workers and other multi-thread-per-tdes contexts). VACUUM integration is centralised: log_sysop_get_tran_index_and_tdes routes vacuum workers to their thread-special TDES via LOG_FIND_THREAD_TRAN_INDEX, so all 18 functions transparently operate on the right tdes without per-callsite branching. Empty-body sysops short-circuit at commit (no LOG_SYSOP_END emitted); the same shortcut is FORBIDDEN for logical end variants — they assert that the body contains at least one log record (workaround: emit a dummy log record). Outermost sysop's end-final is the natural checkpoint trigger point (SERVER_MODE wakes the checkpoint daemon; SA_MODE runs logpb_checkpoint synchronously — but only when not nested, since checkpoint can clear tdes)."
+    },
+    "external://cubrid/.claude/knowledge/pr_7062_code_review.md@2026-04-29-reingest": {
+      "hash": "b40004aa289c3773a5de964aacf30e61",
+      "hash_method": "md5sum of the rewritten external review doc",
+      "ingested_at": "2026-04-29",
+      "ingest_type": "pr-reingest-from-external-doc",
+      "pr_number": 7062,
+      "pr_state": "OPEN",
+      "ingest_case": "open",
+      "title": "[CBRD-26722] Expand parallel heap scan to parallel scan (index, heap, list) — re-anchor to HEAD 0f8a107bb",
+      "branch": "parallel_scan_all",
+      "branch_head_before": "e66051b9e97ead89fbc25265f758985c094e48a4",
+      "branch_head_after": "0f8a107bb0b630a7b197dd25dd5a32e956d6543b",
+      "review_doc_anchor_before": "c28c5945a",
+      "review_doc_anchor_after": "0f8a107bb",
+      "commits_added_since_prior_anchor": 22,
+      "baseline_before": "0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0",
+      "baseline_after": "0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0",
+      "triggered_baseline_bump": false,
+      "no_baseline_bump_reason": "PR #7062 still OPEN; per protocol, no PR-reconciliation and no bump until merge.",
+      "pages_created": [],
+      "pages_updated": [
+        "wiki/prs/PR-7062-parallel-scan-all-types.md",
+        "wiki/log.md",
+        "wiki/hot.md",
+        ".raw/.manifest.json"
+      ],
+      "key_insight": "Re-anchored the PR page from review-doc snapshot c28c5945a to live HEAD 0f8a107bb. Major post-snapshot semantic deltas: (1) system parameter de-unified — `parallel_scan_page_threshold` (server, 2048) and `parallel_index_scan_page_threshold` (client/session, 32) split into two axes (commit 8dc998587), (2) 137-line cost-gate `qo_apply_parallel_index_scan_threshold` in plan_generation.c performs `metric = ceil(sel * leaf_pages)` selectivity-based degree decision (formula `floor(log2(metric/threshold))+2`), (3) latch-couple introduced on both root→leaf descent and leaf-chain advance in commit 0f8a107bb, narrowing the mid-iteration B+tree split race window, (4) double-fix removed in both list-scan (ddf2e3374) and index-scan (1dd52e1b8), halving page-fix counts on the hot loop, (5) lazy CAS membuf claim (m_membuf_claimed.compare_exchange_strong) replaces static idx==0 worker binding, fixing the silent-skip when idx-0 worker fails before loop entry, (6) BUILDVALUE_OPT whitelist confirmed at 13 aggregates (was off-by-two as 11 in prior wiki page), (7) qfile_collect_list_sector_info reused from PR #6981 with per-page tfile tracking. None of these introduce new wiki surface beyond the existing Reconciliation Plan; all are absorbed into existing plan items + the branch-WIP parallel-list-scan companion page."
+    },
+    "external://cubrid/.claude/wiki-updates/pending.md@2026-04-29": {
+      "hash": "wiki-updates-buffer-2026-04-29",
+      "hash_method": "external-buffer-snapshot (file is append-only divergence log; each ingest pops processed entries — no stable content hash)",
+      "ingested_at": "2026-04-29",
+      "ingest_type": "wiki-updates-buffer",
+      "branch": "parallel_scan_all",
+      "branch_head": "0f8a107bb0b630a7b197dd25dd5a32e956d6543b",
+      "baseline_commit": "0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0",
+      "jira": "CBRD-26722",
+      "related_pr": 7062,
+      "entries_processed": 11,
+      "pages_created": [
+        "wiki/components/parallel-list-scan.md",
+        "wiki/flows/parallel-list-scan-open.md"
+      ],
+      "pages_updated": [
+        "wiki/components/list-file.md",
+        "wiki/components/file-manager.md",
+        "wiki/components/parallel-query-task.md",
+        "wiki/prs/PR-7062-parallel-scan-all-types.md",
+        "wiki/components/_index.md",
+        "wiki/flows/_index.md",
+        "wiki/hot.md",
+        "wiki/log.md"
+      ],
+      "key_insight": "Two new branch-WIP pages capture the px_scan list-scan design (static slice partitioning + lazy CAS-claimed membuf + per-page tfile + TWO silent-skip sentinels in slot iterator). Three baseline-truth incidentals: list-file gets membuf-only-on-base + qfile_close_list contract + page-header-has-no-writer-marker; file-manager gets temp-vs-permanent FTAB layout (load-bearing for parallel temp scans); parallel-query-task gets the list_id save/restore stack-local dance. PR-7062 page flagged its own pre-`0f8a107bb` claims as superseded.",
+      "no_baseline_bump": "PR #7062 OPEN; branch-WIP pages tagged status: branch-wip; will be folded on merge per PR-7062 Reconciliation Plan."
+    },
     "/home/cubrid/cubrid-manual/en/": {
       "hash": "85c1ebbc75933acda015a8776506a270",
       "hash_method": "md5sum of concatenated sorted *.rst files (119 files, ~88K lines)",
@@ -115,6 +197,9 @@
     }
   },
   "address_map": {
-    "wiki/_legacy/concepts/DragonScale Memory.md": "c-000001"
+    "wiki/_legacy/concepts/DragonScale Memory.md": "c-000001",
+    "wiki/components/parallel-list-scan.md": "c-000003",
+    "wiki/flows/parallel-list-scan-open.md": "c-000004",
+    "wiki/components/log-sysop.md": "c-000005"
   }
 }

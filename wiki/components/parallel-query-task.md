@@ -110,6 +110,26 @@ Internally holds:
 - `std::condition_variable` for signal (optional — main thread may yield-spin instead)
 - per-worker scoreboard
 
+## list_id save/restore dance (parallel-aptr only)
+
+When the inner xasl is a BUILDLIST_PROC fed via parallel-aptr, the worker must run `qexec_clear_xasl_for_parallel_aptr` (a teardown helper that calls `qfile_close_list + qfile_destroy_list` on `xasl->list_id`) but **must not** destroy the list — the outer scan is about to consume it. The worker hides the materialised list from the teardown via a stack-local:
+
+```cpp
+// px_query_task.cpp:188-199 (post-execute_job_internal of inner xasl)
+QFILE_LIST_ID list_id;                                                     // local on worker stack
+qfile_copy_list_id (&list_id, xasl->list_id, QFILE_MOVE_DEPENDENT);         // hide
+qfile_clear_list_id (xasl->list_id);                                        // empty husk
+qexec_clear_xasl_for_parallel_aptr (...);                                   // teardown sees empty
+qfile_copy_list_id (xasl->list_id, &list_id, QFILE_MOVE_DEPENDENT);         // restore
+```
+
+Result: `qfile_close_list + qfile_destroy_list` runs on a cleared `xasl->list_id` (a no-op since the descriptor was just zeroed); the saved list_id is then copied back into `xasl->list_id` for the outer scan.
+
+> [!key-insight] Teardown discipline is load-bearing
+> The dance is non-obvious. Any future change to `qexec_clear_xasl_for_parallel_aptr` that **examines** `list_id` instead of going through the cleared husk would re-introduce the destroy-while-needed bug this dance avoids. The contract: that helper must operate purely on whatever `xasl->list_id` currently points to and tolerate it being a cleared `QFILE_LIST_ID`.
+
+The dance does **not** run on the sync fallback path (when `add_job` failed and `qexec_execute_mainblock` was called inline on the main thread) — `xasl->list_id` is fully owned by the executing thread and the normal end-block teardown preserves it. See [[flows/parallel-list-scan-open|parallel-list-scan-open]] for the full open sequence.
+
 ## Error propagation (critical detail)
 
 CUBRID stores errors in `thread-local cuberr::context`. Workers CANNOT let that TL state die on retire — the main thread would never see the error. Each worker **must** call:
