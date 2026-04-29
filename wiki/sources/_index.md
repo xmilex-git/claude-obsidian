@@ -27,6 +27,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 ## Transcripts
 
 - [[sources/2026-04-28-tfile-role-analysis|2026-04-28-tfile-role-analysis]] — session note: role of `QMGR_TEMP_FILE *tfile` on the read/free path; decision-prep for integrating PR #6981's pattern into PR #7062's `px_scan_input_handler_list` (2026-04-28)
+- [[sources/2026-04-29-cbrd-26722-parallel-index-on-partitioned-tables|2026-04-29-cbrd-26722-parallel-index-on-partitioned-tables]] — knowledge dump: four-invariant fix for parallel index scan on partitioned tables (CBRD-26722, branch `parallel_scan_all` head `7fdb82099`, [[prs/PR-7062-parallel-scan-all-types|PR #7062]] OPEN) (2026-04-29)
 
 ---
 

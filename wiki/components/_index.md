@@ -84,6 +84,7 @@ Navigation: [[index]] | [[modules/_index|Modules]] | [[Architecture Overview]]
 - [[components/parallel-hash-join|parallel-hash-join]] — hash join parallelism
 - [[components/parallel-heap-scan|parallel-heap-scan]] — heap scan parallelism
 - [[components/parallel-list-scan|parallel-list-scan]] — list-scan input handler + slot iterator (branch-WIP, [[prs/PR-7062-parallel-scan-all-types|PR #7062]])
+- [[components/parallel-index-scan|parallel-index-scan]] — index-scan input handler + slot iterator + the four-invariant CBRD-26722 partitioned-table fix (branch-WIP, [[prs/PR-7062-parallel-scan-all-types|PR #7062]])
 - [[components/parallel-query-execute|parallel-query-execute]] — subquery parallelism
 - [[components/parallel-sort|parallel-sort]] — external sort: `SORT_EXECUTE_PARALLEL` / `SORT_WAIT_PARALLEL` macros, condvar vs yield-spin
 

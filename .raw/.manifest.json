@@ -149,6 +149,41 @@
       "key_insight": "Two new branch-WIP pages capture the px_scan list-scan design (static slice partitioning + lazy CAS-claimed membuf + per-page tfile + TWO silent-skip sentinels in slot iterator). Three baseline-truth incidentals: list-file gets membuf-only-on-base + qfile_close_list contract + page-header-has-no-writer-marker; file-manager gets temp-vs-permanent FTAB layout (load-bearing for parallel temp scans); parallel-query-task gets the list_id save/restore stack-local dance. PR-7062 page flagged its own pre-`0f8a107bb` claims as superseded.",
       "no_baseline_bump": "PR #7062 OPEN; branch-WIP pages tagged status: branch-wip; will be folded on merge per PR-7062 Reconciliation Plan."
     },
+    "external://cubrid/.claude/wiki-updates/CBRD-26722-parallel-index-on-partitioned-tables.md@2026-04-29": {
+      "hash": "4ba3c2bee6350fdcd767657d0b7414a1",
+      "hash_method": "md5sum of the external knowledge-dump file",
+      "ingested_at": "2026-04-29",
+      "ingest_type": "knowledge-dump-branch-wip",
+      "branch": "parallel_scan_all",
+      "branch_head": "7fdb82099ce3e30b47deb9e5036e02fabddc351c",
+      "baseline_commit": "0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0",
+      "jira": "CBRD-26722",
+      "related_pr": 7062,
+      "pr_state": "OPEN",
+      "fix_commits": [
+        "67e0eb852 (C1: PARALLEL_INDEX_SCAN_ID superset of INDX_SCAN_ID + paired offsetof asserts)",
+        "1867903c0 (C2: relax guard at px_scan.cpp:1319 — parent-class only)",
+        "9185c1aae (C3: restore partition BTID in worker initialize via m_input_handler->get_indx_info())",
+        "7fdb82099 (C4: query_dump branches accept S_PARALLEL_INDEX_SCAN || S_INDX_SCAN — HEAD)"
+      ],
+      "pages_created": [
+        "wiki/components/parallel-index-scan.md",
+        "wiki/sources/2026-04-29-cbrd-26722-parallel-index-on-partitioned-tables.md"
+      ],
+      "pages_updated": [
+        "wiki/prs/PR-7062-parallel-scan-all-types.md",
+        "wiki/components/_index.md",
+        "wiki/sources/_index.md",
+        "wiki/log.md",
+        "wiki/hot.md",
+        ".raw/.manifest.json"
+      ],
+      "triggered_baseline_bump": false,
+      "no_baseline_bump_reason": "PR #7062 still OPEN; per protocol, no PR-reconciliation and no bump until merge. Branch-WIP pages tagged status: branch-wip and anchored to branch HEAD 7fdb82099.",
+      "incidental_enhancements_applied": 0,
+      "incidental_enhancements_skipped_reason": "Every fact in the dump is intertwined with branch-only px_scan/ code (PARALLEL_INDEX_SCAN_ID, manager::close(), input_handler_index, slot_iterator_index) or PR #7062's commit 0f8a107bb latch-couple deferred root descent. Baseline-truth surface remains drained from the prior 2026-04-29 round (the 4 incidental targets — wiki/components/xasl.md, wiki/components/btree.md, wiki/components/list-file.md, wiki/components/file-manager.md — remain current).",
+      "key_insight": "Parallel index scan on partitioned tables is a four-invariant feature, not a single guard relax. (1) PARALLEL_INDEX_SCAN_ID must be a layout superset of INDX_SCAN_ID for the union flip on partitioned scans to preserve isid's view through promote ↔ partition-reopen cycles; PARALLEL_HEAP_SCAN_ID already followed this pattern. (2) manager::close() is the canonical destruction site (destructor + free); calling ~manager() after close() is a double-free — the dispatch chain at qexec_init_next_partition:8795 already handles partition-transition destruction. (3) The XASL stream is compile-time-frozen; the live qexec_init_next_partition:9073 BTID update is invisible to clone_xasl'd workers — workers must override via m_input_handler->get_indx_info(). The failure mode is silent: pgbuf_fix(parent_class_root_vpid) returns NULL with no er_set; downstream the only signal is the ER_PT_EXECUTE(-495) wrapper at qexec_execute_mainblock:16581 firing on `stat != NO_ERROR && er_errid() == NO_ERROR`. (4) The final-iteration parent-class re-open at qexec_init_next_partition rolls scan_id->type back to S_INDX_SCAN; pisid trace_storage (preserved by C1's superset layout) still holds populated stats, so query_dump branches needed the same `S_PARALLEL_INDEX_SCAN || S_INDX_SCAN` OR pattern that the HEAP side already had at query_dump.c:3540. Cross-cutting: latch-couple (PR #7062 commit 0f8a107bb) deferred root descent → m_btid_int.sys_btid is NULL until first worker's descend_to_first_leaf; use m_btid / get_indx_info() for safe BTID access at promote time. Per-partition trace_storage orphan at scan_try_promote line 1560 is a known cosmetic limitation."
+    },
     "/home/cubrid/cubrid-manual/en/": {
       "hash": "85c1ebbc75933acda015a8776506a270",
       "hash_method": "md5sum of concatenated sorted *.rst files (119 files, ~88K lines)",
@@ -200,6 +235,8 @@
     "wiki/_legacy/concepts/DragonScale Memory.md": "c-000001",
     "wiki/components/parallel-list-scan.md": "c-000003",
     "wiki/flows/parallel-list-scan-open.md": "c-000004",
-    "wiki/components/log-sysop.md": "c-000005"
+    "wiki/components/log-sysop.md": "c-000005",
+    "wiki/components/parallel-index-scan.md": "c-000006",
+    "wiki/sources/2026-04-29-cbrd-26722-parallel-index-on-partitioned-tables.md": "c-000007"
   }
 }

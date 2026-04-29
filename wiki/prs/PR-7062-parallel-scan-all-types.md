@@ -13,7 +13,7 @@ merge_commit:
 base_ref: "develop"
 head_ref: "parallel_scan_all"
 base_sha: "0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0"
-head_sha: "0f8a107bb0b630a7b197dd25dd5a32e956d6543b"
+head_sha: "7fdb82099ce3e30b47deb9e5036e02fabddc351c"
 jira: "CBRD-26722"
 files_changed:
   - "CMakeLists.txt"
@@ -98,7 +98,7 @@ reconciliation_applied: false
 reconciliation_applied_at:
 incidental_enhancements_count: 4
 last_reingested: 2026-04-29
-last_reingested_head: "0f8a107bb0b630a7b197dd25dd5a32e956d6543b"
+last_reingested_head: "7fdb82099ce3e30b47deb9e5036e02fabddc351c"
 tags:
   - pr
   - cubrid
@@ -118,8 +118,8 @@ status: open
 
 > [!info] PR metadata
 > **Repo:** `CUBRID/cubrid` · **State:** `OPEN` (non-draft) · **Author:** `@xmilex-git` · **Jira:** CBRD-26722
-> **Base → Head:** `develop` (`0be6cdf6`) → `parallel_scan_all` (`0f8a107bb`)
-> **Stats:** 52 files changed, **87 commits**, ≈ **+6,061 / −1,753 LOC**
+> **Base → Head:** `develop` (`0be6cdf6`) → `parallel_scan_all` (`7fdb82099`)
+> **Stats:** 52 files changed, **91 commits**, ≈ **+6,061 / −1,753 LOC** (HEAD `7fdb82099`; 4 commits beyond the `0f8a107bb` review snapshot covering the CBRD-26722 parallel-index-on-partitioned-tables fix)
 
 > [!update] Re-ingest 2026-04-29 (HEAD `0f8a107bb`)
 > External code-review document was rewritten to reflect the live branch HEAD `0f8a107bb` (22 commits beyond the original `c28c5945a` snapshot). This page is updated in place to match: stats refreshed, frontmatter `head_sha` / `base_sha` corrected, BUILDVALUE_OPT aggregate count fixed (13, not 11), system-parameter section re-confirmed as TWO-parameter split, post-`c28c5945a` commit summary added (greptile P1 fixes, fallback patterns, latch-couple, double-fix removal, lazy CAS membuf claim, `qfile_collect_list_sector_info` reuse). No baseline bump (PR still OPEN). Reconciliation Plan unchanged in shape — still pending merge.
@@ -488,12 +488,13 @@ These are left for future ingests to pick up.
 
 ## Branch-WIP companion pages
 
-Two pages describing PR #7062 branch state were filed on 2026-04-29 ahead of merge to capture knowledge surfaced while debugging the silent-miss in `sql/_19_apricot/_03_index_skip_scan/cases/_03_iss_700000.sql`:
+Three pages describing PR #7062 branch state were filed on 2026-04-29 ahead of merge to capture knowledge surfaced while debugging the silent-miss in `sql/_19_apricot/_03_index_skip_scan/cases/_03_iss_700000.sql` and the parallel-index-on-partitioned-tables crash (CBRD-26722):
 
 - [[components/parallel-list-scan]] — `input_handler_list` + `slot_iterator_list` design: static slice partitioning, lazy CAS-claimed membuf, per-page tfile tracking, the **TWO** silent-skip sentinels in the slot iterator (`-2` overflow filter + `tuple_count == 0` race window).
 - [[flows/parallel-list-scan-open]] — end-to-end open sequence and the `run_jobs()` join-barrier happens-before that closes the silent-skip race.
+- [[components/parallel-index-scan]] — `input_handler_index` + `slot_iterator_index` design plus the four-invariant CBRD-26722 fix (struct-layout superset + paired `offsetof` asserts; `manager::close()` canonical destruction; XASL-stream-frozen-at-compile-time + worker BTID restore via `m_input_handler->get_indx_info()`; final-iteration type roll-back to `S_INDX_SCAN` and dump-path OR pattern). Sourced from [[sources/2026-04-29-cbrd-26722-parallel-index-on-partitioned-tables|CBRD-26722 knowledge dump]].
 
-Both pages are tagged `status: branch-wip` and will be reconciled into the canonical `parallel-scan-input-handler-list` / `parallel-scan-slot-iterator-list` pages on merge (per the Reconciliation Plan above).
+All three pages are tagged `status: branch-wip` and will be reconciled into the canonical `parallel-scan-input-handler-{list,index}` / `parallel-scan-slot-iterator-{list,index}` pages on merge (per the Reconciliation Plan above).
 
 > [!update] Post-write commits to this PR page (as of branch HEAD `0f8a107bb`)
 > The "Deep analysis — supplementary findings" section above contains two claims that have been **superseded** by branch commits landing after this PR page was written (2026-04-24):
@@ -545,7 +546,18 @@ The external code-review doc was originally written at HEAD `c28c5945a` and re-a
 - `4de6bf219`, `d84b6d0b8` no-op / shell test fixup
 - `fbc05d96e`, `6b1147a88`, `bc2306a9a` merge develop / CUBRID:develop into branch
 
-The Reconciliation Plan above remains valid — none of these post-`c28c5945a` commits introduce surface that the plan misses (the two-parameter split, latch-couple, lazy CAS, and double-fix removal are all already captured in the plan's per-page deltas via the [[components/parallel-list-scan]] branch-WIP page and the existing system-parameter / cost-gate plan items).
+### Commits after `0f8a107bb` (CBRD-26722 parallel-index-on-partitioned-tables)
+
+Four follow-on commits between the `0f8a107bb` review snapshot and the current branch HEAD `7fdb82099` ship the parallel-index-scan-on-partitioned-tables feature. Each commit fixes a different invariant:
+
+- `67e0eb852` **C1** — `PARALLEL_INDEX_SCAN_ID` reshaped as a layout superset of `INDX_SCAN_ID` (mirrored offsets + appended pisid-only fields), pinned with paired `offsetof` `static_assert`s in `scan_manager.h:170-313`. Fixes the union-flip-corruption hazard during parallel-promote ↔ partition-reopen sequences.
+- `1867903c0` **C2** — guard at `px_scan.cpp:1319` relaxed to allow parallel index scan on partitioned tables; the parent-class first-call path remains short-circuited via the `curent==NULL` branch.
+- `9185c1aae` **C3** — worker `task::initialize` (`px_scan_task.cpp:130-145`) overrides the cloned `spec->indexptr->btid` with the manager's per-partition BTID via `m_input_handler->get_indx_info()`. The XASL stream is compile-time-frozen, so the live in-memory `qexec_init_next_partition` BTID update at `query_executor.c:9073` is invisible to `clone_xasl`'d workers; without C3 the parent class root `pgbuf_fix` returns NULL with no `er_set`, surfacing as the wrapped `ER_PT_EXECUTE(-495)` at `qexec_execute_mainblock:16581`.
+- `7fdb82099` **C4 (HEAD)** — `query_dump.c:3093, 3553` accept either `S_PARALLEL_INDEX_SCAN || S_INDX_SCAN` (mirrors the HEAP-side pattern at `:3540`). The final-iteration parent-class re-open at `qexec_init_next_partition` rolls type back to `S_INDX_SCAN` while pisid `trace_storage` (preserved by C1's superset layout) still holds populated stats; dump branches need the OR to emit the `parallel workers: N` line.
+
+These four commits are the structural distillation captured at [[components/parallel-index-scan]] (branch-WIP) and the source dump at [[sources/2026-04-29-cbrd-26722-parallel-index-on-partitioned-tables]]. They affect only the parallel-index path and the partitioned-table dispatch; they do not change the Reconciliation Plan shape (the planned `parallel-scan-input-handler-index` and `parallel-scan-slot-iterator-index` pages will absorb the C1/C3 invariants on merge; the existing scan-manager and query-dump plan items absorb the C4 dump-branch widening; C2 is a guard relax with no wiki-side surface beyond the existing checker tables).
+
+The Reconciliation Plan above remains valid — none of these post-`c28c5945a` commits introduce surface that the plan misses (the two-parameter split, latch-couple, lazy CAS, double-fix removal, and the four-commit CBRD-26722 fix are all already captured in the plan's per-page deltas via the [[components/parallel-list-scan]] / [[components/parallel-index-scan]] branch-WIP pages and the existing system-parameter / cost-gate / scan-manager / query-dump plan items).
 
 ## Pre-merge integration analysis
 

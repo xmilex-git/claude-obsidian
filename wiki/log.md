@@ -26,6 +26,30 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-04-29] ingest | CBRD-26722 — parallel index scan on partitioned tables (knowledge dump)
+
+Ingested `/home/cubrid/dev/cubrid/.claude/wiki-updates/CBRD-26722-parallel-index-on-partitioned-tables.md` (md5 `4ba3c2bee6350fdcd767657d0b7414a1`) — knowledge-dump file authored on branch `parallel_scan_all` at HEAD `7fdb82099` (4 commits beyond the prior PR #7062 review snapshot `0f8a107bb`). Captures the four-invariant fix for parallel index scan on partitioned tables and the multi-round debugging history that produced it.
+
+Pages created (2):
+- [[components/parallel-index-scan]] (address `c-000006`, `status: branch-wip`) — `input_handler_index` + `slot_iterator_index` design plus the four invariants documented commit-by-commit:
+  - **C1 `67e0eb852`** — `PARALLEL_INDEX_SCAN_ID` reshaped as a layout superset of `INDX_SCAN_ID`, mirrored offsets + paired `offsetof` `static_assert`s pinning the invariant in `scan_manager.h:170-313`. Fixes union-flip-corruption (3-field pisid was overwriting first 24 bytes of isid on every parallel-promote ↔ partition-reopen).
+  - **C2 `1867903c0`** — guard at `px_scan.cpp:1319` relaxed; parent-class first-call still short-circuits via `curent==NULL`.
+  - **C3 `9185c1aae`** — worker `task::initialize` (`px_scan_task.cpp:130-145`) overrides cloned `spec->indexptr->btid` via `m_input_handler->get_indx_info()`. Fixes the silent `pgbuf_fix(Root_vpid)`-returns-NULL on parent class root that surfaced as wrapped `ER_PT_EXECUTE(-495)` at `qexec_execute_mainblock:16581`. **Key insight: XASL stream is compile-time frozen; the live `qexec_init_next_partition:9073` indexptr->btid update is invisible to `clone_xasl`'d workers.**
+  - **C4 `7fdb82099` (HEAD)** — `query_dump.c:3093, 3553` accept either `S_PARALLEL_INDEX_SCAN || S_INDX_SCAN`, mirroring the HEAP-side pattern at `:3540`. The final-iteration parent-class re-open at `qexec_init_next_partition` rolls type back to `S_INDX_SCAN` while pisid `trace_storage` (kept valid by C1's superset layout) still holds populated stats.
+  - Cross-cutting: `manager::close()` is the canonical destruction site (destructor + free in one); calling `~manager()` after `close()` is a double-free. `m_btid_int.sys_btid` is NULL until first worker's `descend_to_first_leaf` (lazy via PR #7062's latch-couple); use `m_indx_info` / `get_indx_info()` for safe BTID access at promote time. Per-partition `trace_storage` orphan at `scan_try_promote` line 1560 — known cosmetic limitation (aggregate counts and PARTITION lines correct; `parallel workers: N` shows MIN..MAX of last partition only).
+  - Diagnosis playbook: `ER_PT_EXECUTE(-495)` wrapper fires when `stat != NO_ERROR && er_errid() == NO_ERROR`; common `er_clear` sites recorded; file-based `fprintf` is the only reliable diagnostic when `er_set` doesn't fire.
+- [[sources/2026-04-29-cbrd-26722-parallel-index-on-partitioned-tables]] (address `c-000007`) — source-trail page recording the dump's provenance, four-commit fingerprint, five-fact summary, file map, and acceptance-criteria evidence. Linked from the distilled component page.
+
+Pages updated (4):
+- [[prs/PR-7062-parallel-scan-all-types]] — `head_sha` `0f8a107bb…` → `7fdb82099…`; `last_reingested_head` updated; stats line "87 commits" → "91 commits" with explanatory note about the 4 follow-on commits; "Branch-WIP companion pages" section extended from 2 entries to 3 (added `parallel-index-scan` cross-link); new "Commits after `0f8a107bb` (CBRD-26722 parallel-index-on-partitioned-tables)" subsection commit-by-commit summarising C1–C4 and noting these do not change the Reconciliation Plan shape.
+- [[components/_index]] — registered `parallel-index-scan` under "Parallel Query" cluster, after `parallel-list-scan`.
+- [[sources/_index]] — registered the new source page under "Transcripts".
+- [[hot]] — Last Updated section rewritten to reflect this ingest.
+
+No baseline bump (PR #7062 is OPEN). No incidental enhancements applied to baseline component pages — every fact in the dump is intertwined with branch-only `px_scan/` code or PR #7062's latch-couple deferred root descent. Baseline-truth surface remains drained from the prior 2026-04-29 round (the 4 incidental targets — [[components/xasl]], [[components/btree]], [[components/list-file]], [[components/file-manager]] — remain current).
+
+Address allocations: `c-000006` (parallel-index-scan), `c-000007` (CBRD-26722 source). Recorded in `.raw/.manifest.json::address_map`.
+
 ## [2026-04-29] ingest | log_sysop_*() function family — system-operation logging primitive
 
 Direct-source ingest of the `log_sysop_*()` C API in `src/transaction/log_manager.c`. No `.raw/` source file (user requested no symlink — read directly via absolute path per CLAUDE.md). Baseline source unchanged from `0be6cdf6`.
