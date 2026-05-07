@@ -115,9 +115,11 @@ export const arrowRegex = new RegExp(/(-{1,2}>|={1,2}>|<-{1,2}|<={1,2})/g)
 // \[\[               -> open brace
 // ([^\[\]\|\#]+)     -> one or more non-special characters ([,],|, or #) (name)
 // (#[^\[\]\|\#]+)?   -> # then one or more non-special characters (heading link)
-// (\\?\|[^\[\]\#]+)? -> optional escape \ then | then zero or more non-special characters (alias)
+// (\\?\|[^\[\]]*)?   -> optional escape \ then | then zero or more non-special characters (alias)
+//                       NOTE: `#` is allowed in the alias because, post-`|`, it has no
+//                       anchor meaning — only display text. Permits e.g. `[[prs/PR-NNNN|PR #NNNN]]`.
 export const wikilinkRegex = new RegExp(
-  /!?\[\[([^\[\]\|\#\\]+)?(#+[^\[\]\|\#\\]+)?(\\?\|[^\[\]\#]*)?\]\]/g,
+  /!?\[\[([^\[\]\|\#\\]+)?(#+[^\[\]\|\#\\]+)?(\\?\|[^\[\]]*)?\]\]/g,
 )
 
 // ^\|([^\n])+\|\n(\|) -> matches the header row
