@@ -34,7 +34,7 @@ related:
   - "[[components/heap-file|heap-file]]"
   - "[[components/transaction|transaction]]"
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-07
 ---
 
 # `btree.c` — B+Tree Index Manager
@@ -262,6 +262,19 @@ Non-leaf records carry `(child_vpid, first_key)` pairs. The first 6 bytes of the
 | `6` | variable | key data | `btree_read_fixed_portion_of_non_leaf_record` |
 
 This byte layout is a **hidden contract** — callers that descend root-to-leaf without going through `btree_find_first()` (such as `parallel_scan::input_handler_index::init_on_main`) parse these offsets directly. Any future change to the non-leaf record format must keep this prefix compatible or update every direct parser in sync.
+
+## Reused by parallel index scan
+
+The branch-WIP parallel index scan path (see [[components/parallel-index-scan]] § "Vertical descent — serial parity") reuses `btree.c` helpers for its per-range root→leaf descent rather than reimplementing them. Two different reuse modes, depending on whether the helper is exported:
+
+- **`btree_search_nonleaf_page`** is **public** (`btree.h:906`, signature `extern int btree_search_nonleaf_page (THREAD_ENTRY *, BTID_INT *, PAGE_PTR, DB_VALUE *, INT16 *slot_id, VPID *child_vpid, ...)`). Promoted from file-static during CBRD-26722 (commit `fc1b51091`) so the parallel input handler can call it directly. It is invoked at `src/query/parallel/px_scan/px_scan_input_handler_index.cpp:326` for closed-bound (`lower_key != NULL`) descent — same call site shape as the serial path's `btree_locate_key` family (e.g. `btree.c:23504, 27839, 31188, 31227`).
+
+- **`btree_find_boundary_leaf`** is **still file-static** (`btree.c:15077`, prototype `static PAGE_PTR btree_find_boundary_leaf (THREAD_ENTRY *, BTID *, VPID *, BTREE_STATS *, BTREE_BOUNDARY)`). Reachable only through the public wrappers `btree_find_AR_sampling_leaf` (`:15046`) and `btree_find_lower_bound_leaf` (`:15064`) which fix the `BTREE_BOUNDARY_FIRST` / `BTREE_BOUNDARY_LAST` argument before calling. The parallel input handler **inlines the leftmost/rightmost slot-walk pattern** at `px_scan_input_handler_index.cpp:340-378` for open-bound (`lower_key == NULL`) descent, with an explicit `Mirrors btree_find_boundary_leaf (btree.c:15077-15168)` comment (`:251-253`). The inline copy includes the manual `OR_GET_INT(rec.data)` / `OR_GET_SHORT(rec.data + OR_INT_SIZE)` VPID unpack — the same hidden contract documented in the previous section.
+
+> [!gap] Asymmetric exposure
+> If a future PR exports `btree_find_boundary_leaf` (with the `BTREE_BOUNDARY` argument visible on a `btree.h` declaration), the inline duplicate in `px_scan_input_handler_index.cpp:340-378` can be deleted in favor of the helper, eliminating the second direct parser of the non-leaf record byte layout. Until then, both files must stay in sync.
+
+`btree_leaf_record_is_fence` and `btree_key_process_objects` (covered above) are the other two `btree.h`-public helpers consumed by the parallel slot iterator. Together with `btree_search_nonleaf_page` they form the parallel-index-scan public surface from this component's side.
 
 ## MVCC visibility filtering during B-tree iteration
 

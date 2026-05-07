@@ -2,7 +2,7 @@
 created: 2026-04-23
 type: meta
 title: "Operation Log"
-updated: 2026-04-29
+updated: 2026-05-07
 tags:
   - meta
   - log
@@ -23,6 +23,30 @@ Append-only. New entries go at the TOP. Never edit past entries.
 Entry format: `## [YYYY-MM-DD] operation | Title`
 
 Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
+
+---
+
+## [2026-05-07] ingest | Pending wiki-updates buffer reconciliation (8 entries) — `parallel_scan_all` HEAD `58fab454f`
+
+Processed 8 divergence entries from `/home/cubrid/dev/cubrid/.claude/wiki-updates/pending.md` against branch `parallel_scan_all` HEAD `58fab454f` (6 commits beyond the prior `7fdb82099` snapshot — `05d091c66`, `f74891494`, `fc1b51091`, `d117dd946`, `58fab454f`, plus the `8d43694`-era PR review fixups). All entries are CBRD-26722 / PR #7062 (still OPEN); no baseline bump.
+
+**[[prs/PR-7062-parallel-scan-all-types]] (3 entries):**
+- Behavioral § "Index scan — mutex-guarded leaf chain" rewritten as "**per-range vertical descent + drain CV**" — `descend_to_first_leaf(thread_p, worker_scan_id, range_idx, out_leaf)` runs a fresh root→leaf descent per `range_idx`; transitions wait on `m_advance_cv` until `m_active_workers==0`. Single-range `R_KEY` / `R_RANGE` still uses `m_leaf_mutex` + `next_vpid` chain; multi-range `R_KEYLIST` / `R_RANGELIST` no longer relies on the chain crossing range boundaries. Four new HPP fields backing the model (`m_active_workers`, `m_pending_advance_idx`, `m_advance_in_progress`, `m_advance_cv`). The previously-rejected key-range-partition alternative was de-facto adopted via per-range descent for KEYLIST/RANGELIST — earlier rejection sentence flagged as superseded.
+- Range-cursor-optimization bullet retitled to `input_handler_index::convert_all_key_ranges` (input_handler-owned, not slot_iterator-owned). Three-step pipeline now documented: prefix-truncation collapse (GT_*→GE_*, LT_*→LE_*, lines 134-153), `part_key_desc` swap (lines 179-192) mirroring `btree_prepare_bts`, B-tree storage-order sort (lines 196-245). slot_iterator now reads via `m_input_handler->get_key_val_ranges()` / `get_num_key_ranges()` / `is_part_key_desc()`.
+- Trace handler "child_stats" bullet got a "Trace counter parity" callout: `key_qualified_rows` and `read_rows` count **visible OIDs**, not slot keys. Pre-fix `px_scan_slot_iterator_index.cpp:691,696` incremented per leaf-key slot, while serial increments per visible OID at `scan_manager.c:6279` — same trace label, different units (KEYLIST/RANGELIST + lookup queries reported `rows: 1..2` per worker vs `rows: 50000` serial). Fix sites: `px_scan_slot_iterator_index.cpp:731-732` (parallel) and `scan_manager.c:6279` (serial). Final result counts were always correct; only the trace counter was wrong.
+- Frontmatter `head_sha` / `last_reingested_head` advanced `7fdb82099` → `58fab454f`; `last_reingested` / `updated` → 2026-05-07. New header callout "Pending-buffer reconciliation 2026-05-07 (HEAD `58fab454f`)" summarises the three entries above.
+
+**[[components/parallel-index-scan]] (4 entries):**
+- `public_api` block rewritten — `descend_to_first_leaf` and `release_leaf_and_maybe_advance` signatures updated (4-arg / 3-arg with worker_scan_id); 5 new accessors registered (`get_key_val_ranges`, `get_num_key_ranges`, `is_part_key_desc`, `get_current_range_idx`, `is_desc_index`). `get_next_leaf_with_fix` renamed to `get_next_page_with_fix`. `convert_all_key_ranges` (private) registered.
+- "Differences from parallel-list-scan" Partition-strategy row split into single-range vs multi-range; Root-descent row updated to "per-range — driven by the worker that wins the advance lock".
+- New section "**Vertical descent — serial parity (post `58fab454f`)**" with: (a) decision table mapping closed vs open-bound to `btree_search_nonleaf_page` vs inlined `btree_find_boundary_leaf` walk, (b) bound-case parity matrix for `INF_LT` / `GT_INF` / `GT_LT` / `GE_LE` / `EQ_*`, (c) `part_key_desc` swap parity (`btree.c:15972-15981` serial / `convert_all_key_ranges:179-192` parallel), (d) divergence table covering cursor retention, strict-greater enforcement site, range pre-sort, range crossing, cross-leaf state. Candidate for promotion to a `flows/parallel-index-vertical-descent.md` flow page later.
+- New section "**Error model — fail-loud, no `er_clear` (post `58fab454f`)**" — every error path in `descend_to_first_leaf` does `pgbuf_unfix` + explicit `er_set` + `return S_ERROR`; no `er_clear` calls remain (verified). Decision-table breakage caught at debug time via `assert (!closed_bound)` in the open-bound branch (lines 343-349). Structural fix for the silent-NULL `pgbuf_fix` class of bug (Invariant 3's `ER_PT_EXECUTE(-495)` failure mode).
+- Branch HEAD references bumped `7fdb82099` → `58fab454f` (header warning callout, file-map heading, acceptance-criteria heading); `updated` frontmatter → 2026-05-07.
+
+**[[components/btree]] (1 entry):**
+- New section "**Reused by parallel index scan**" between "Non-leaf record byte layout" and "MVCC visibility filtering during B-tree iteration". Documents the asymmetric exposure: `btree_search_nonleaf_page` is **public** in `btree.h:906` (promoted from file-static during CBRD-26722 commit `fc1b51091`) — parallel input handler calls it directly at `px_scan_input_handler_index.cpp:326`; `btree_find_boundary_leaf` is **still file-static** (`btree.c:15077`) — parallel input handler inlines the leftmost/rightmost slot-walk + manual `OR_GET_INT` / `OR_GET_SHORT` VPID unpack at `:340-378` with explicit `Mirrors btree_find_boundary_leaf` comment. `[!gap]` callout suggesting future export of `btree_find_boundary_leaf` would let the inline duplicate go away (eliminating the second direct parser of the non-leaf record byte layout). `updated` → 2026-05-07.
+
+**Status:** PR #7062 still OPEN. No PR-reconciliation. No baseline bump. The Reconciliation Plan in `[[prs/PR-7062-parallel-scan-all-types]]` is unchanged in shape — branch-WIP companion pages absorbed the per-range descent + drain CV + trace counter fix. Expected on merge: the canonical `parallel-scan-input-handler-index` and `parallel-scan-slot-iterator-index` pages will inherit these sections from the branch-WIP companions.
 
 ---
 

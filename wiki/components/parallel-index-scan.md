@@ -17,13 +17,20 @@ key_files:
   - "src/query/query_executor.c (qexec_init_next_partition: per-partition live indexptr update + final-iteration parent-class re-open)"
   - "src/query/query_dump.c (dump branches now accept S_PARALLEL_INDEX_SCAN || S_INDX_SCAN)"
 public_api:
-  - "input_handler_index::init_on_main(thread_p, indx_info) — minimal: BTID_COPY + m_indx_info store"
-  - "input_handler_index::initialize(thread_p, ...) — per-worker entry"
-  - "input_handler_index::descend_to_first_leaf(thread_p) — lazy first-worker root→leaf descent, populates m_btid_int via btree_glean_root_header_info"
-  - "input_handler_index::get_next_leaf_with_fix(thread_p, out_page) — m_leaf_mutex-guarded advance"
+  - "input_handler_index::init_on_main(thread_p, indx_info, scan_id, vd, parallelism) — minimal: BTID_COPY + m_indx_info / m_scan_id / m_vd store; resets m_active_workers / m_pending_advance_idx / m_advance_in_progress"
+  - "input_handler_index::initialize(thread_p, hfid, scan_id) — per-worker entry"
+  - "input_handler_index::descend_to_first_leaf(thread_p, worker_scan_id, range_idx, out_leaf) — private; latch-coupled root→leaf descent for the requested range; on S_SUCCESS out_leaf holds READ latch and m_btid_int is populated; closed-bound branch uses btree_search_nonleaf_page, open-bound branch mirrors btree_find_boundary_leaf"
+  - "input_handler_index::get_next_page_with_fix(thread_p, worker_scan_id, page) — leaf-chain advance under m_leaf_mutex (renamed from get_next_leaf_with_fix)"
+  - "input_handler_index::release_leaf_and_maybe_advance(thread_p, worker_scan_id, local_advance_target) — decrements m_active_workers; if any worker requested an advance to a new range_idx, drains m_active_workers==0 on m_advance_cv and drives the next descent"
   - "input_handler_index::get_indx_info() → INDX_INFO * — safe post-init_on_main"
   - "input_handler_index::get_btid_int() → BTID_INT * — UNSAFE before first descend_to_first_leaf"
-  - "slot_iterator_index::set_page / next_qualified_slot / finalize"
+  - "input_handler_index::get_key_val_ranges() → key_val_range * — converted+sorted ranges; valid post-first descend"
+  - "input_handler_index::get_num_key_ranges() → int — count of converted ranges"
+  - "input_handler_index::is_part_key_desc() → bool — last partial-key domain is DESC (drives swap)"
+  - "input_handler_index::is_desc_index() → bool — use_desc_index flag mirror"
+  - "input_handler_index::get_current_range_idx() → int — current range cursor"
+  - "input_handler_index::convert_all_key_ranges(thread_p, worker_scan_id) — private; idempotent: prefix-truncation collapse + part_key_desc swap + storage-order sort"
+  - "slot_iterator_index::set_page / next_qualified_slot / finalize — reads ranges via m_input_handler->get_key_val_ranges()"
   - "scan_open_parallel_index_scan(...) — deferred promotion, stashes parallel_index_scan_pending in isid"
   - "scan_try_promote_parallel_index_scan(...) — main-thread promote attempt, falls back to S_INDX_SCAN cleanly"
   - "scan_close_parallel_index_scan(...) — manager close + trace_storage hand-off"
@@ -49,13 +56,13 @@ related:
   - "[[prs/PR-7062-parallel-scan-all-types|PR #7062]]"
   - "[[sources/2026-04-29-cbrd-26722-parallel-index-on-partitioned-tables|CBRD-26722 knowledge dump]]"
 created: 2026-04-29
-updated: 2026-04-29
+updated: 2026-05-07
 ---
 
 # `parallel_scan::input_handler_index` / `slot_iterator_index` — Parallel Index Scan
 
 > [!warning] Branch-WIP, not in baseline
-> All file paths and line numbers on this page reflect branch `parallel_scan_all` (head `7fdb82099`, [CBRD-26722], [[prs/PR-7062-parallel-scan-all-types|PR #7062]] OPEN). The `src/query/parallel/px_scan/` directory does **not** exist in baseline `0be6cdf6` — the heap-only predecessor `src/query/parallel/px_heap_scan/` (see [[components/parallel-heap-scan-input-handler]]) is what's on disk at baseline. This page captures forward-looking design and the four-invariant fix for parallel index scan on partitioned tables. It will be reconciled into a canonical `parallel-scan-input-handler-index` page when PR #7062 merges.
+> All file paths and line numbers on this page reflect branch `parallel_scan_all` (head `58fab454f`, [CBRD-26722], [[prs/PR-7062-parallel-scan-all-types|PR #7062]] OPEN). The `src/query/parallel/px_scan/` directory does **not** exist in baseline `0be6cdf6` — the heap-only predecessor `src/query/parallel/px_heap_scan/` (see [[components/parallel-heap-scan-input-handler]]) is what's on disk at baseline. This page captures forward-looking design, the four-invariant fix for parallel index scan on partitioned tables, the per-range vertical descent + drain CV model (post `58fab454f`), and serial-parity tables for `descend_to_first_leaf`. It will be reconciled into a canonical `parallel-scan-input-handler-index` page when PR #7062 merges.
 
 The index-scan variant of the generalised `parallel_scan::manager<RESULT_TYPE, SCAN_TYPE>` template (`SCAN_TYPE::INDEX`). Its job: turn one B+tree range scan into N parallel readers that share a leaf cursor under a mutex, descend the root once (deferred), and propagate per-partition BTIDs through the XASL clone boundary.
 
@@ -241,6 +248,68 @@ else if (spec->s_id.type == S_PARALLEL_INDEX_SCAN)
 
 ---
 
+## Vertical descent — serial parity (post `58fab454f`)
+
+`input_handler_index::descend_to_first_leaf` is structurally a 1:1 shadow of the serial path's choice in `btree_prepare_first_search` (`btree.c:24935-24987`). The two paths produce identical leaf entry points across all bound combinations; they diverge only in **cursor retention model** and **strict-greater enforcement site**.
+
+### Decision table — bound shape → mirrored helper
+
+| Range bound shape (`key_val_range::range`) | Descent helper (parallel path) | Serial path mirror |
+|---|---|---|
+| Closed lower bound (`GE_*`, `GT_*`, `EQ_*` — `lower_key != NULL`) | `btree_search_nonleaf_page` (`btree.c:5193`) called directly per non-leaf level (`px_scan_input_handler_index.cpp:326`) | same — invoked by `btree_prepare_bts` → `btree_locate_key` (`btree.c:5187` family) |
+| Open lower bound (`INF_*` — `lower_key == NULL`) | leftmost slot vertical walk inlined (`px_scan_input_handler_index.cpp:340-378`) — explicit comment at `:251-253`: "Mirrors btree_find_boundary_leaf (btree.c:15077-15168)" | `btree_find_boundary_leaf` (static, `btree.c:15077-15168`); reached via `btree_find_lower_bound_leaf` (`:15049`) |
+| Open upper / DESC scan (`*_INF` with `use_desc_index`) | rightmost slot vertical walk (same inlined pattern) | `btree_find_boundary_leaf` with `BTREE_BOUNDARY_LAST` |
+
+`btree_search_nonleaf_page` was promoted from file-static to a header-visible declaration in `btree.h:906` (commit `fc1b51091`) so the parallel path can call it directly. `btree_find_boundary_leaf` remained static; the parallel path therefore inlines the leftmost/rightmost slot-walk + manual `OR_GET_INT(rec.data)` / `OR_GET_SHORT(rec.data + OR_INT_SIZE)` VPID unpack rather than calling the helper.
+
+### Bound-case parity matrix
+
+For every range shape, single-thread and parallel paths produce the **same leaf entry point**:
+
+| Range case | Single-thread leaf entry | Parallel leaf entry |
+|---|---|---|
+| `INF_LT` (open low, exclusive high) | leftmost leaf via `btree_find_boundary_leaf(FIRST)` | leftmost slot inline walk |
+| `GT_INF` (exclusive low, open high) | `btree_locate_key` to first key > lower bound | `btree_search_nonleaf_page` per level |
+| `GT_LT` (both exclusive) | `btree_locate_key` to lower bound | `btree_search_nonleaf_page` per level |
+| `GE_LE` / `GE_LT` (closed low) | `btree_locate_key` to lower bound | same |
+| `EQ_*` (point) | `btree_locate_key` exact | `btree_search_nonleaf_page` then equality match in leaf |
+
+Strict-greater enforcement (`GT_*`) differs only in **where** it fires: the serial path emits `BTS_KEY_IS_CONSUMED` once after descent; the parallel path defers to `slot_iterator::check_key_in_range` per leaf-key (range membership is re-evaluated each slot because workers process slots out of strict cursor order).
+
+### `part_key_desc` swap parity
+
+The descending-domain swap (DESC last partial-key) mirrors `btree_prepare_bts`:
+- Serial: `btree.c:15972-15981` swaps `key1`/`key2` and reverses range op.
+- Parallel: `convert_all_key_ranges` at `px_scan_input_handler_index.cpp:179-192` calls `range_reverse(range)` + `swap(key1, key2)` for every non-`NA_NA`/non-`INF_INF` range when `m_part_key_desc && !m_use_desc_index`.
+
+Detection logic in both paths walks the `setdomain` chain to the `num_index_term`-th attribute and reads `dom->is_desc`. Identical decision; identical effect; only the call site moves (per-scan in serial, per-input-handler init in parallel).
+
+### Where the two paths diverge
+
+| Concern | Serial | Parallel |
+|---|---|---|
+| Cursor retention | `BTREE_SCAN` holds the leaf page across keys until `BTS_KEY_IS_CONSUMED` | leaf page is unfixed at `release_leaf_and_maybe_advance`; next worker re-fixes via VPID |
+| Strict-greater | applied once after descent (`btree_prepare_first_search` returns the consumed flag) | re-applied per slot in `slot_iterator::check_key_in_range` |
+| Range pre-sort | none — serial walks ranges in user order | `convert_all_key_ranges` sorts by `key1` in storage order so leaf-chain forward traversal is monotonic |
+| Range crossing | leaf-chain `next_vpid` continues across ranges | drain barrier (`m_advance_cv`) + fresh descent per range |
+| Cross-leaf state | `BTREE_SCAN` carries `common_prefix_key`, `cur_key`, etc. across leaves | each `set_page` re-reads page state; no implicit cursor carry-over |
+
+> [!key-insight] Vertical-descent helpers are reused, not reinvented
+> The parallel path's design choice is to **call into `btree_search_nonleaf_page` directly** rather than copy its logic. The only inline duplication is the open-bound boundary-leaf walk, forced by `btree_find_boundary_leaf` being static. If a future PR exports `btree_find_boundary_leaf`, the inline walk in `descend_to_first_leaf:340-378` can be deleted in favor of the helper. See [[components/btree]] § "Reused by parallel index scan".
+
+This section is a candidate for promotion to a dedicated flow page `flows/parallel-index-vertical-descent.md` once the PR merges and the page nomenclature stabilises.
+
+## Error model — fail-loud, no `er_clear` (post `58fab454f`)
+
+`descend_to_first_leaf` (`px_scan_input_handler_index.cpp:256-409`) and `try_prepare_descent_key` follow a **strict fail-loud policy**: every error path does `pgbuf_unfix` + (where the underlying call did not set `er_set`) explicit `er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_FAILED, 0)` + `return S_ERROR`. There are no `er_clear` calls in the descent helpers (verified) — a prior `er_clear` + `ER_GENERIC_ERROR` overwrite pattern was removed during CBRD-26722.
+
+Decision-table breakage is caught at debug time: the open-bound branch carries `assert (!closed_bound)` (lines 343-349) so a future bound shape that slips past the dispatch hits a failed assert rather than silently descending the wrong way.
+
+Why it matters — Invariant 3 (worker BTID restore) was originally invisible because `pgbuf_fix(Root_vpid)` returned NULL on the parent class with no `er_set`, downstream `er_clear` swallowed the (empty) error context, and the only signal that survived was the `ER_PT_EXECUTE(-495)` wrapper at `qexec_execute_mainblock:16581`. The fail-loud policy in the descent helpers is the structural fix for that class of silent-NULL bug: every NULL `pgbuf_fix` now produces an explicit `er_set` before the unwind, every error path preserves the set state, and no `er_clear` overwrites it on the way back up.
+
+> [!key-insight] No `er_clear` contract in descent
+> When extending `descend_to_first_leaf` or adding a new helper that fixes pages, **do not** call `er_clear` to "reset" between cases. The contract is that any error reaching the caller carries an actionable `er_set` payload. If a transient retry pattern is genuinely needed (e.g. a `pgbuf_fix` that is expected to fail under contention), retry inside the helper without exposing the transient state to callers.
+
 ## Cross-cutting: `trace_storage` life-cycle for parallel-index × partition
 
 For HEAP and LIST, `trace_storage` is straightforward. For parallel-index × partition, the storage actually leaks per partition (small):
@@ -290,7 +359,7 @@ For dual-mode (parallel/serial) functions, check the sequence:
 
 ---
 
-## File map (verified at branch HEAD `7fdb82099`)
+## File map (verified at branch HEAD `58fab454f`)
 
 | Path | Role |
 |---|---|
@@ -310,7 +379,7 @@ For dual-mode (parallel/serial) functions, check the sequence:
 
 ---
 
-## Acceptance criteria evidence (run on `7fdb82099`)
+## Acceptance criteria evidence (run on `7fdb82099`; re-verified semantics-only on `58fab454f`)
 
 ```
 P region parallel workers: 5    (G1: ≥5)
@@ -330,8 +399,9 @@ ER_PT_EXECUTE(-495):       0
 | Aspect | `input_handler_list` | `input_handler_index` |
 |---|---|---|
 | Distribution unit | sectors of `QFILE_LIST_ID` | leaves of B+tree |
-| Partition strategy | static slice `[start, end)` per worker | shared cursor under `m_leaf_mutex`; one leaf per acquire |
-| Root descent | n/a (no tree) | deferred — first live worker via `descend_to_first_leaf` |
+| Partition strategy (single-range, `R_KEY` / `R_RANGE`) | static slice `[start, end)` per worker | shared leaf cursor under `m_leaf_mutex`; one leaf per acquire; `next_vpid`/`prev_vpid` advance |
+| Partition strategy (multi-range, `R_KEYLIST` / `R_RANGELIST`) | (n/a — single sector partition is range-agnostic) | per-range fresh root→leaf descent + `m_advance_cv` drain barrier across ranges; `m_leaf_mutex` only guards the intra-range cursor |
+| Root descent | n/a (no tree) | per-range — driven by the worker that wins the advance lock; subsequent workers join the in-progress range |
 | Membuf fast path | lazy CAS-claim (first live worker) | n/a |
 | Partitioned-table propagation | n/a (lists don't partition the same way) | `clone_xasl` boundary fix via `m_input_handler->get_indx_info()` |
 | Type-flip hazard | none reported | the four invariants above (C1–C4) |

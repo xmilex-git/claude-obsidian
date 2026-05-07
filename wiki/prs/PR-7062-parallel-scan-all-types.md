@@ -13,7 +13,7 @@ merge_commit:
 base_ref: "develop"
 head_ref: "parallel_scan_all"
 base_sha: "0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0"
-head_sha: "7fdb82099ce3e30b47deb9e5036e02fabddc351c"
+head_sha: "58fab454f9ed8fe14bfe570f44d19be18ee5e036"
 jira: "CBRD-26722"
 files_changed:
   - "CMakeLists.txt"
@@ -97,8 +97,8 @@ baseline_after: "175442fc858bd0075165729756745be6f8928036"
 reconciliation_applied: false
 reconciliation_applied_at:
 incidental_enhancements_count: 4
-last_reingested: 2026-04-29
-last_reingested_head: "7fdb82099ce3e30b47deb9e5036e02fabddc351c"
+last_reingested: 2026-05-07
+last_reingested_head: "58fab454f9ed8fe14bfe570f44d19be18ee5e036"
 tags:
   - pr
   - cubrid
@@ -110,7 +110,7 @@ tags:
   - refactor
   - performance
 created: 2026-04-24
-updated: 2026-04-29
+updated: 2026-05-07
 status: open
 ---
 
@@ -123,6 +123,9 @@ status: open
 
 > [!update] Re-ingest 2026-04-29 (HEAD `0f8a107bb`)
 > External code-review document was rewritten to reflect the live branch HEAD `0f8a107bb` (22 commits beyond the original `c28c5945a` snapshot). This page is updated in place to match: stats refreshed, frontmatter `head_sha` / `base_sha` corrected, BUILDVALUE_OPT aggregate count fixed (13, not 11), system-parameter section re-confirmed as TWO-parameter split, post-`c28c5945a` commit summary added (greptile P1 fixes, fallback patterns, latch-couple, double-fix removal, lazy CAS membuf claim, `qfile_collect_list_sector_info` reuse). No baseline bump (PR still OPEN). Reconciliation Plan unchanged in shape — still pending merge.
+
+> [!update] Pending-buffer reconciliation 2026-05-07 (HEAD `58fab454f`)
+> Three pending divergences from `~/dev/cubrid/.claude/wiki-updates/pending.md` applied to this page: (1) leaf-cursor model rewritten as **per-range vertical descent + drain CV** (the prior shared-cursor description still applies intra-range, the multi-range path no longer relies on `next_vpid` chain — see Behavioral § "Index scan — per-range vertical descent + drain CV"); (2) range conversion retitled to `input_handler_index::convert_all_key_ranges` with three-step pipeline (truncation collapse → DESC swap → storage-order sort) — Deep analysis § "Range cursor optimization"; (3) trace counter parity note added — `key_qualified_rows`/`read_rows` count visible OIDs, not slot keys, with both serial and parallel increment sites cited. New HPP fields backing per-range descent: `m_active_workers`, `m_pending_advance_idx`, `m_advance_in_progress`, `m_advance_cv`. PR still OPEN — no PR-reconciliation, no baseline bump; `head_sha` advanced from `7fdb82099` → `58fab454f` to track 4 follow-on CBRD-26722 commits (`7fdb82099` → `05d091c66` → `f74891494` → `fc1b51091` → `d117dd946` → `58fab454f`).
 
 > [!note] Ingest classification: open
 > PR is open, not merged. **No component-page edits for PR-induced changes.** A full Reconciliation Plan is written below, executable later when the user says "apply reconciliation for PR #7062". Incidental wiki enhancements from baseline analysis WERE applied — see the dedicated section.
@@ -180,7 +183,9 @@ Heap scan was the only parallel-capable scan. Large list-file materialisations (
 
 - **RESULT_TYPE × SCAN_TYPE matrix is 7 of 9 valid.** Workable combinations: `MERGEABLE_LIST × {heap, list, index}`, `BUILDVALUE_OPT × {heap, list, index}`, `XASL_SNAPSHOT × heap`. **Blocked** by the checker: `XASL_SNAPSHOT × list`, `XASL_SNAPSHOT × index`. Reason: `XASL_SNAPSHOT` is the row-by-row mode where main calls `next()` one row at a time and the scan cursor is shared between main and workers. Heap cursors are page-level with disjoint partitions and are safe; list/index parallel state (`llsid` / `isid` union reinterpretations) produces row-miss-or-duplicate hazards when snapshotted mid-iteration. The final cleanup commit `c28c5945a` removed the dead code paths that assumed this combo was reachable.
 
-- **Index scan — mutex-guarded leaf chain.** Workers share a leaf cursor `VPID m_current_leaf_vpid` protected by `std::mutex m_leaf_mutex` (`px_scan_input_handler_index.hpp:71-73`). Each worker acquires the mutex → reads one leaf → advances cursor to `hdr->next_vpid` (or `prev_vpid` under `use_desc_index`) → releases the mutex → processes all keys in that leaf independently. The mutex is contended **once per thousands of key-processing operations**, so amortises to noise on large indexes. Small indexes suffer; hence the `parallel_scan_page_threshold` gate (see next bullet). The key-range-partition alternative was considered and rejected (skew sensitivity + setup cost of bounding-key lookups).
+- **Index scan — per-range vertical descent + drain CV (post `58fab454f`).** The original "shared leaf cursor `VPID m_current_leaf_vpid` protected by `std::mutex m_leaf_mutex`" model still applies *within a single range* (`R_KEY` / single-range `R_RANGE`), but multi-range queries (`R_KEYLIST` / `R_RANGELIST`) now transition between ranges via a **fresh root→leaf descent per `range_idx`**, gated by a drain barrier instead of the leaf chain. `input_handler_index::descend_to_first_leaf(thread_p, worker_scan_id, range_idx, out_leaf)` (`px_scan_input_handler_index.cpp:256-409`) runs root→leaf descent for the requested range; `release_leaf_and_maybe_advance(thread_p, worker_scan_id, local_advance_target)` (`:504-548`) decrements `m_active_workers`, and the next-range driver waits on `m_advance_cv` until `m_active_workers == 0` before issuing the new descent. New HPP fields backing the model (`px_scan_input_handler_index.hpp:127-130`): `int m_active_workers`, `int m_pending_advance_idx`, `bool m_advance_in_progress`, `std::condition_variable m_advance_cv`. `m_leaf_mutex` is retained — it still guards `m_current_leaf_vpid` republish during a single-range walk — but it no longer crosses range boundaries.
+  > [!update] Superseded design note (commit `58fab454f`)
+  > The earlier sentence "the key-range-partition alternative was considered and rejected (skew sensitivity + setup cost of bounding-key lookups)" is **superseded**: per-range descent was de-facto adopted for `R_KEYLIST` / `R_RANGELIST`. The rejection still holds for *intra-range* partitioning by interior key bounds; what changed is that ranges themselves are now boundary-walked individually rather than concatenated through the leaf chain. The mutex still amortises to noise on large indexes; small indexes still hit the `parallel_scan_page_threshold` gate.
 
 - **Index scan — vertical traversal is inlined, not via `btree_find_first()`.** Root-to-start-leaf descent happens on main thread in `init_on_main` (`px_scan_input_handler_index.cpp:51-173`) via `spage_get_record` + `OR_GET_INT` / `OR_GET_SHORT` raw parsing of non-leaf records. B+tree internal record format becomes a **synchronisation-sensitive contract** — any format change in storage will force an edit in the parallel-scan input handler.
 
@@ -264,7 +269,7 @@ This section captures findings from a full line-by-line read of the 10,396-line 
 - **Fence key skip is required for correctness, not just performance.** Every leaf has sentinel fence records at boundaries (detected via `btree_leaf_record_is_fence`). These duplicate edge entries across adjacent leaves; skipping them prevents double-counting in GROUP BY / aggregates under parallel iteration. Fence check happens only **after** `spage_get_record` succeeds (`px_scan_slot_iterator_index.cpp:7969, 7979`).
 - **Multi-OID per key.** Non-unique indexes may store multiple OIDs per leaf key (overflow chain). `btree_key_process_objects()` callback (`collect_oid_callback` at 7757-7776) collects visible OIDs through MVCC snapshot filtering, then each OID is processed by `process_oid()` — heap fetch, predicate eval, val_list fill.
 - **Covering index vs heap-fetch handshake.** Covering-index path reads output directly from the B-tree key via `btree_attrinfo_read_dbvalues` (7811). Non-covering path does `heap_get_visible_version` (7856). Two different filter functions: `eval_key_filter` for covering, `eval_data_filter` for non-covering (7797-7846 vs 8082-8118).
-- **Range cursor optimization.** When multiple ranges are specified, keys arrive in sorted B-tree order, so `m_current_range_idx` advances monotonically — once a range's upper bound is passed it is never revisited. Ranges are pre-sorted by lower bound in `convert_key_range` (7321-7520).
+- **Range cursor optimization.** When multiple ranges are specified, keys arrive in sorted B-tree order, so `m_current_range_idx` advances monotonically — once a range's upper bound is passed it is never revisited. Range conversion + sort is now `input_handler_index::convert_all_key_ranges(thread_p, worker_scan_id)` at `px_scan_input_handler_index.cpp:71-247` (post `58fab454f`) — owned by `input_handler`, no longer by `slot_iterator`. The function is a three-step pipeline: (1) **prefix-truncation collapse** (`GT_*` → `GE_*`, `LT_*` → `LE_*`, lines 134-153) for prefix indexes whose bounds were truncated; (2) **`part_key_desc` swap** (lines 179-192) — `range_reverse(range)` + `swap(key1, key2)` mirroring `btree_prepare_bts`; (3) **storage-order sort** (lines 196-245) — bubble-sort by `key1` under `btree_compare_key` so leaf-chain forward traversal walks ranges in cursor-friendly order. `slot_iterator_index` no longer owns `m_key_val_ranges`; it reads via `m_input_handler->get_key_val_ranges()` / `get_num_key_ranges()` / `is_part_key_desc()`.
 - **`part_key_desc` bound swap.** If the last partial-key domain is DESC, the B-tree physically stores keys in reverse order for that domain. The iterator swaps lower/upper bounds and inverts range operators (GT↔LT) exactly like `btree_prepare_bts` (7449-7462). Correctness critical; not obvious from SQL semantics.
 - **NULL midxkey rejection with Oracle-empty-string exception.** Replicates `btree_apply_key_range_and_filter`: NULL in the `num_index_term`-th composite-key element fails `<, <=, >, >=, BETWEEN`. BUT: if `PRM_ID_ORACLE_STYLE_EMPTY_STRING` is set and the element is an empty-string char/bit, it's treated as non-NULL (8041-8077).
 - **Reversal semantics for `use_desc_index` (checker-blocked, code-ready).** The iterator physically supports descending traversal (slot counts down from `m_num_keys`, leaf chain reads `prev_vpid`). The checker currently blocks `use_desc_index` from parallel outright (precautionary; review-doc §3.1 says "relatively untested path"). Enabling later requires no iterator change.
@@ -298,6 +303,8 @@ This section captures findings from a full line-by-line read of the 10,396-line 
 ### Trace handler — new 434-line file
 
 - Per-worker `child_stats` struct with heap fields (`fetches`, `ioreads`, `fetch_time`, `read_rows`, `qualified_rows`, `elapsed_time`) plus index-specific fields (`read_keys`, `qualified_keys`, `key_qualified_rows`, `data_qualified_rows`, `elapsed_lookup`, `covered_index`, `multi_range_opt`, `index_skip_scan`, `loose_index_scan`, `need_count_only`).
+  > [!update] Trace counter parity — granularity bug fixed (commit `58fab454f`)
+  > **Unit:** `key_qualified_rows` and `read_rows` count **visible OIDs**, not slot keys. The serial path increments per visible OID at `scan_manager.c:6279`; the parallel path was previously incrementing per leaf-key slot at `px_scan_slot_iterator_index.cpp:691,696` — same trace label, different units. KEYLIST/RANGELIST + lookup queries (e.g. dup-key `IN` over 5 keys × ~10 000 OIDs each) reported `rows: 1..2` per worker vs `rows: 50000` serial. Fix: removed slot-level `++`, added `m_scan_id->scan_stats.key_qualified_rows += m_slot_oids.size()` and `m_scan_id->scan_stats.read_rows += m_slot_oids.size()` after the `btree_key_process_objects` collector populates `m_slot_oids` (`px_scan_slot_iterator_index.cpp:731-732`, post-empty-skip). Final result counts were always correct; only the trace counter was wrong. Cite both increment sites — `scan_manager.c:6279` (serial) and `px_scan_slot_iterator_index.cpp:731-732` (parallel) — when reviewing future trace changes so unit drift is caught.
 - `merge_stats` sums into main via `perfmon_add_at_offset_to_local` for perfmon integration. Boolean flags OR'd (covered_index etc. set if ANY worker detected).
 - `accumulative_trace_storage` retains per-worker history across scan iterations.
 - `dump_stats_json` emits 70-line JSON object with `parallel_workers` count, time ranges, key/row ranges, gather mode (`mergeable list` / `row by row` / `buildvalue` / `unknown`), per-index flags — visible in EXPLAIN JSON output.
