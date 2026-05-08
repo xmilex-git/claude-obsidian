@@ -22,7 +22,7 @@ related:
   - "[[components/heap-file|heap-file]]"
   - "[[components/btree|btree]]"
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-08
 ---
 
 # loaddb Executor (server-side loader)
@@ -100,6 +100,9 @@ Representative conversions:
 | — | any | `mismatch` | Called when LDR type / DB type are incompatible |
 
 The conversion functions do **not** go through the SQL type-checking pipeline. Type compatibility is checked purely by LDR token kind vs. column's `DB_TYPE` at load time.
+
+> [!key-insight] Domain precision = schema precision (since PR #7102)
+> `to_db_generic_char` (load_db_value_converter.cpp) and `ldr_str_db_char` / `ldr_str_db_varchar` (load_sa_loader.cpp) initialize the loaded `DB_VALUE`'s domain via `db_value_domain_init(val, type, precision, 0)` and set `val.domain.char_info.length = precision` — using the **column's defined precision**, not the input string's character count. Pre-[[prs/PR-7102-db-get-char-intl-cleanup|PR #7102]] (`05a7befd8`, 2026-05-08) the same fields were populated with `char_count` of the input, which made every loaded row's domain disagree with the schema; consumers that read `domain.char_info.length` would see a value that varied per row instead of the constant column precision. Truncation enforcement still uses precision: byte-size short-circuit first (`byte_count <= precision` ⇒ no scan), then `intl_char_count` only if the byte size already exceeds precision.
 
 > [!note] TODO: CBRD-21654
 > A comment in `load_db_value_converter.cpp` notes that conversion functions should be reused between `load_sa_loader.cpp` and the server loader. Currently there is duplication.

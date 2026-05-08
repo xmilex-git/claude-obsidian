@@ -30,7 +30,7 @@ related:
   - "[[components/btree|btree]]"
   - "[[components/heap-file|heap-file]]"
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-08
 ---
 
 # Lock Manager
@@ -165,6 +165,44 @@ Batch-lock API for bulk DML:
 ## Deadlock Detection
 
 The deadlock detection daemon runs inside `lock_manager.c` (not the legacy `wait_for_graph.c`, which is `#ifdef ENABLE_UNUSED_FUNCTION`). See [[components/deadlock-detection|deadlock-detection]] for details.
+
+## Initialization (since PR #6930)
+
+> [!update] Init refactor — PR #6930 (`5e12a293c`, 2026-05-07)
+> Lock-manager init/finalize was reorganized around two file-local types in `src/transaction/lock_manager.c`:
+>
+> - **`LK_CONFIG`** — 16 fields: `num_trans`, `tran_local_pool_max_size`, `initial_object_locks`, `object_res_block_count` / `object_entry_block_count`, `min_object_locks`, `object_res_ratio` / `object_entry_ratio`, `object_res_block_size` / `object_entry_block_size`, `start_deadlock_detector`, `max_deadlock_victims`, `min/mid/max_twfg_edge_count`, `verbose_mode`, `dump_level`. Replaces the prior soup of `#define`s (`LK_MIN_OBJECT_LOCKS`, `LK_RES_RATIO`, `LK_MAX_VICTIM_COUNT`, `LK_MIN/MID/MAX_TWFG_EDGE_COUNT`, `LOCK_TRAN_LOCAL_POOL_MAX_SIZE`) and direct `lk_Gl` fields (`max_obj_locks`, `num_trans`, `verbose_mode`, `dump_level`).
+> - **`LK_INIT_STATE`** — `tran_lock_table_initialized`, `tran_lock_table_initialized_count`, `object_lock_structures_initialized`, `deadlock_detection_initialized`. Used by the finalize path to clean up exactly what was initialized.
+
+The runtime path is now a 3-step chain:
+
+```c
+lock_initialize ()                                /* public, unchanged */
+   └── lock_make_runtime_config ()                /* pure → LK_CONFIG */
+   └── lock_initialize_with_config (&runtime_config)
+         ├── lock_initialize_tran_lock_table ()
+         ├── lock_initialize_object_lock_structures ()   /* hash + freelist atomically */
+         ├── lock_initialize_deadlock_detection ()       /* allocates TWFG_node, TWFG_edge_storage, victims */
+         └── if (config.start_deadlock_detector)
+                 lock_deadlock_detect_daemon_init ()
+```
+
+`lock_make_default_config()` returns hard-coded defaults; `lock_make_runtime_config()` layers on derived sizing (e.g. `max_twfg_edge_count = num_trans²`, `min_object_locks = num_trans * 300`) and reads `LK_VERBOSE_SUSPENDED` / `LK_DUMP_LEVEL` env vars. It also enforces the `min_twfg_edge_count < mid_twfg_edge_count <= max_twfg_edge_count` invariant required by the 2-stage TWFG buffer expansion in `lock_add_WFG_edge`; without it, custom configs could produce a heap overflow.
+
+`lock_finalize()` runs in reverse-init order and is now idempotent w.r.t. partial init failures:
+
+```c
+lock_finalize ()
+   ├── lock_deadlock_detect_daemon_destroy ()   /* null-checks daemon ptr */
+   ├── lock_finalize_deadlock_detection ()      /* gated by init_state */
+   ├── lock_finalize_object_lock_structures ()  /* gated by init_state */
+   ├── lock_finalize_tran_lock_table ()         /* loops over initialized_count */
+   └── reset lk_Gl.config / lk_Gl.init_state to defaults
+```
+
+`lock_deadlock_detect_daemon_destroy()` now sets `lock_Deadlock_detect_daemon = NULL` after destroy, so a second finalize call (e.g. on the error path) is safe.
+
+The public signature `int lock_initialize(void)` is unchanged. Test/non-server callers that need to suppress the daemon can build a custom `LK_CONFIG` with `start_deadlock_detector = false` and call `lock_initialize_with_config` directly (file-static, but reachable to in-tree callers).
 
 ## Replication / HA Lock Support
 

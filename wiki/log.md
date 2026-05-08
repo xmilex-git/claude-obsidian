@@ -2,7 +2,7 @@
 created: 2026-04-23
 type: meta
 title: "Operation Log"
-updated: 2026-05-07
+updated: 2026-05-08
 tags:
   - meta
   - log
@@ -23,6 +23,31 @@ Append-only. New entries go at the TOP. Never edit past entries.
 Entry format: `## [YYYY-MM-DD] operation | Title`
 
 Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
+
+---
+
+## [2026-05-08] baseline-bump | `5e12a293` → `05a7befd` (PR #7102)
+
+Reconciled pages (PR-reconciliation = none — pre-PR wiki had no signature claims for `db_get_char` or SWAR claims to update). Incidental wiki enhancements (4):
+- [[components/db-value]] — added `db_get_char (const DB_VALUE *)` to accessor table; documented thin-pointer semantics; noted `DB_GET_STRING_PRECISION` macro removal.
+- [[components/base]] — new "UTF-8 counting and validation" subsection describing the SWAR ASCII fast path in `intl_count_utf8_chars` / `intl_count_utf8_bytes` / `intl_check_utf8` and the `intl_Len_utf8_char[256]` lookup table.
+- [[components/cas]] — `[!key-insight]` callout documenting the wire string-payload trailing-NUL invariant (`val_size - 1` data bytes + `'\0'`).
+- [[components/loaddb-executor]] — `[!key-insight]` callout: domain precision now matches schema precision in `to_db_generic_char` / `ldr_str_db_char` / `ldr_str_db_varchar` (was `char_count` of input).
+
+Transitively absorbs `f3d6434d` (PR #7145, `.travis.yml` removal — no wiki coverage). PR page: [[prs/PR-7102-db-get-char-intl-cleanup|PR #7102]].
+
+---
+
+## [2026-05-08] baseline-bump | `0be6cdf6` → `5e12a293` (PR #6930)
+
+Reconciled pages (2):
+- [[components/lock-manager]] — added "Initialization (since PR #6930)" section: `LK_CONFIG` / `LK_INIT_STATE` layering, `lock_make_default_config → lock_make_runtime_config → lock_initialize_with_config` chain, `lock_finalize` reverse-init order with idempotent partial-init handling.
+- [[components/deadlock-detection]] — replaced static `TWFG_edge_block[]` / `victims[]` claims with heap-owned `lk_Gl.TWFG_edge_storage` / `lk_Gl.victims`; documented `min < mid <= max` TWFG-edge invariant.
+
+Incidental wiki enhancements (1):
+- [[components/lock-manager]] — added explicit `lock_finalize` ordering note + the daemon-ptr null-out post-destroy that makes second-finalize safe (`[!gap]` filled).
+
+PR page: [[prs/PR-6930-lock-manager-init-refactor|PR #6930]].
 
 ---
 

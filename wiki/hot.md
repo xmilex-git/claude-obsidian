@@ -2,7 +2,7 @@
 created: 2026-04-23
 type: meta
 title: "Hot Cache"
-updated: 2026-05-07
+updated: 2026-05-08
 tags:
   - meta
   - hot
@@ -12,9 +12,11 @@ status: active
 # Recent Context
 
 ## CUBRID Baseline Commit
-**`0be6cdf6ee66f9fa40a84874004d9b4e3a642ff0`** — all wiki claims, file paths, line numbers reflect this commit of `~/dev/cubrid/`. Before any new ingest, check repo HEAD; if newer, compute `git log <baseline>..HEAD -- <path>` and reconcile affected wiki pages before writing. Protocol: `CLAUDE.md` § "CUBRID Baseline Commit".
+**`05a7befd8b714811632a16a97d3683ab3b397a0f`** — all wiki claims, file paths, line numbers reflect this commit of `~/dev/cubrid/`. Before any new ingest, check repo HEAD; if newer, compute `git log <baseline>..HEAD -- <path>` and reconcile affected wiki pages before writing. Protocol: `CLAUDE.md` § "CUBRID Baseline Commit".
 
-> [!update] Bumped 2026-04-28 from `cc563c7f` → `0be6cdf6` via [[prs/PR-6981-parallel-hash-join-sector-split|PR #6981]] reconciliation. Direct child of prior baseline on `develop` (case c, single squash-merge).
+> [!update] Bumped 2026-05-08 from `5e12a293` → `05a7befd` via [[prs/PR-7102-db-get-char-intl-cleanup|PR #7102]] reconciliation. Direct descendant on `develop` (case c). Transitively absorbs `f3d6434d` (PR #7145, `.travis.yml` removal — no wiki coverage).
+> Earlier 2026-05-08: `0be6cdf6` → `5e12a293` via [[prs/PR-6930-lock-manager-init-refactor|PR #6930]] reconciliation (case c).
+> Earlier 2026-04-28: `cc563c7f` → `0be6cdf6` via [[prs/PR-6981-parallel-hash-join-sector-split|PR #6981]] reconciliation (case c).
 > Earlier 2026-04-27 (later): `65d69154` → `cc563c7f` via [[prs/PR-7011-parallel-index-build|PR #7011]] reconciliation (case c).
 > Earlier 2026-04-27: `175442fc` → `65d69154` via [[prs/PR-7049-parallel-buildvalue-heap|PR #7049]] (case c).
 
@@ -22,7 +24,7 @@ status: active
 **On-demand only, user-specified only.** Do not autonomously scan, poll, or batch. All PR states are ingestable — behavior differs: merged-case-c → reconcile + bump now; merged-case-a/b → retroactive doc only; open/draft → write Reconciliation Plan (do NOT edit component pages for PR-induced changes); closed-unmerged → doc as abandoned. **Deep code analysis required** every time (read baseline source files, not just the diff). **Incidental Knowledge Enhancement expected** every time: facts about baseline code that are missing/wrong/incomplete in the wiki get added to component/source pages immediately, regardless of PR state. Deferred plan execution via "apply reconciliation for PR #NNNN". Template: `_templates/pr.md`; index: [[prs/_index|PRs]]; protocol: `CLAUDE.md` § "PR Ingest (user-specified only, all states accepted, code analysis required)".
 
 ## Last Updated
-2026-05-07 (latest). **Pending wiki-updates buffer reconciliation — 8 entries, branch `parallel_scan_all` HEAD `58fab454f`.** Drained `~/dev/cubrid/.claude/wiki-updates/pending.md` of CBRD-26722 / PR #7062 divergences accumulated since the prior 2026-04-29 ingest. Branch HEAD advanced 6 commits (`7fdb82099` → `58fab454f` via `05d091c66` / `f74891494` / `fc1b51091` / `d117dd946`). PR #7062 remains OPEN — no PR-reconciliation, no baseline bump.
+2026-05-08 (latest). **Two-PR ingest: #6930 + #7102 (both case-c).** PR #6930 — `lock_manager.c` init/finalize refactor: introduces `LK_CONFIG` (16 fields) and `LK_INIT_STATE` (4 flags) on `lk_Gl`; replaces `.bss` `TWFG_edge_block[]` / `victims[]` with heap-owned `lk_Gl.TWFG_edge_storage` / `lk_Gl.victims`; finalize gated by `init_state` flags; daemon ptr null-out on destroy; fixes partial-init mutex-destroy bug. PR #7102 — `db_get_char` 1-arg cleanup + SWAR ASCII fast path in `intl_count_utf8_chars` / `intl_count_utf8_bytes` / `intl_check_utf8`; precision-truncate fast paths in `db_string_truncate` and loaddb converters; loaddb `val.domain.char_info.length = precision` semantic correction (was `char_count`). Reconciled: [[components/lock-manager]], [[components/deadlock-detection]], [[components/db-value]], [[components/base]], [[components/cas]], [[components/loaddb-executor]]. Baseline `0be6cdf6` → `5e12a293` → `05a7befd` (transitively absorbs PR #7145 `.travis.yml` removal).
 
 - [[prs/PR-7062-parallel-scan-all-types]] — three updates: (1) Behavioral § "Index scan — mutex-guarded leaf chain" rewritten as **per-range vertical descent + drain CV** (multi-range queries no longer use the leaf chain across range boundaries; transitions wait on `m_advance_cv` until `m_active_workers==0`; new HPP fields `m_active_workers`, `m_pending_advance_idx`, `m_advance_in_progress`, `m_advance_cv`); (2) range conversion bullet retitled to `input_handler_index::convert_all_key_ranges` — three-step pipeline (truncation collapse → DESC swap → storage-order sort); (3) trace-counter parity callout — `key_qualified_rows` and `read_rows` count visible OIDs per `m_slot_oids.size()` (parallel `:731-732`, serial `scan_manager.c:6279`) — pre-fix per-slot increments produced wildly wrong trace numbers on KEYLIST/RANGELIST + lookup queries while final row counts stayed correct. `head_sha` / `last_reingested_head` advanced to `58fab454f`.
 - [[components/parallel-index-scan]] — four updates: (1) `public_api` block rewritten with new 4-arg / 3-arg signatures (`descend_to_first_leaf(thread_p, worker_scan_id, range_idx, out_leaf)`, `release_leaf_and_maybe_advance(thread_p, worker_scan_id, local_advance_target)`) + 5 new accessors; `get_next_leaf_with_fix` renamed to `get_next_page_with_fix`; (2) "Differences from parallel-list-scan" Partition-strategy row split single-range vs multi-range; (3) **new section "Vertical descent — serial parity (post `58fab454f`)"** — decision table closed-bound (`btree_search_nonleaf_page` direct call) vs open-bound (inlined `btree_find_boundary_leaf` walk); bound-case parity matrix INF_LT/GT_INF/GT_LT; `part_key_desc` swap parity (`btree.c:15972-15981` serial vs `convert_all_key_ranges:179-192` parallel); divergence table for cursor retention, strict-greater enforcement, range pre-sort, range crossing, cross-leaf state; (4) **new section "Error model — fail-loud, no `er_clear` (post `58fab454f`)"** — descent helpers preserve `er_set` payloads end-to-end, structurally fixing the silent-NULL `pgbuf_fix` class of bug from Invariant 3.

@@ -32,7 +32,7 @@ related:
   - "[[Architecture Overview]]"
   - "[[sources/cubrid-src-broker|cubrid-src-broker]]"
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-08
 ---
 
 # CAS — CUBRID Application Server Worker Process
@@ -127,6 +127,9 @@ fn_execute() / fn_prepare()
 ```
 
 `cas_execute.c` also manages `T_SRV_HANDLE` (server-side statement handle) and maps CUBRID result types to driver wire types.
+
+> [!key-insight] CAS string payload trailing-NUL invariant
+> Wire string values delivered by `net_arg_get_str(&val, &val_size, net_value)` arrive with `val_size` bytes total, where the last byte is always `'\0'` and the `val_size - 1` preceding bytes are the actual UTF-8 (or codeset-specific) content. Code paths consistently subtract 1 before calling `intl_check_string` / `intl_char_count` / `db_make_char`. [[prs/PR-7102-db-get-char-intl-cleanup|PR #7102]] (`05a7befd8`, 2026-05-08) added explicit `assert (str_val[val_size - 1] == '\0')` guards in `cas_common_bind_value_print` and `netval_to_dbval` to document this invariant in debug builds.
 
 ## Session and Connection State
 

@@ -21,7 +21,7 @@ related:
   - "[[components/transaction|transaction]]"
   - "[[components/lock-manager|lock-manager]]"
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-08
 ---
 
 # Deadlock Detection
@@ -74,6 +74,21 @@ The algorithm uses `WFG_STACK_STATUS` to track visited state:
 
 > [!key-insight] Cycle pruning
 > `WFG_PRUNE_CYCLES_IN_CYCLE_GROUP = 10` caps cycles reported per group. `WFG_MAX_CYCLES_TO_REPORT = 100` caps total cycles per detection run. This prevents pathological scenarios (star-shaped deadlock with N! cycle enumeration) from consuming unbounded time.
+
+## TWFG and Victim Storage (since PR #6930)
+
+> [!update] Deadlock storage refactor — PR #6930 (`5e12a293c`, 2026-05-07)
+> The static `.bss` arrays `TWFG_edge_block[LK_MID_TWFG_EDGE_COUNT]` and `victims[LK_MAX_VICTIM_COUNT]` are gone. Both are now lock-manager-owned heap allocations on `lk_Gl`:
+>
+> - `lk_Gl.TWFG_edge_storage` — `LK_WFG_EDGE *`, sized `config.mid_twfg_edge_count` entries. Allocated in `lock_initialize_deadlock_detection`. Used as the initial `lk_Gl.TWFG_edge` value at the start of each `lock_detect_local_deadlock` run.
+> - `lk_Gl.victims` — `LK_DEADLOCK_VICTIM *`, sized `config.max_deadlock_victims` entries. Allocated and `memset`-zeroed in `lock_initialize_deadlock_detection`.
+>
+> The 2-stage WFG-edge expansion in `lock_add_WFG_edge` reads its threshold values (`min/mid/max_twfg_edge_count`) from `lk_Gl.config` instead of file-local `#define`s. Defaults: 200 / 1000 / `MAX_NTRANS²`.
+>
+> Cleanup at end of detection now compares pointers — `if (lk_Gl.TWFG_edge != lk_Gl.TWFG_edge_storage) free_and_init (lk_Gl.TWFG_edge);` — replacing the prior counter compare against `LK_MID_TWFG_EDGE_COUNT`.
+
+> [!key-insight] TWFG edge-count invariant
+> `lock_make_runtime_config` enforces `min_twfg_edge_count < mid_twfg_edge_count <= max_twfg_edge_count`. The 2-stage expansion in `lock_add_WFG_edge` walks `min → mid → max` and copies the previous buffer into the next; if `mid <= min` or `max < mid`, the copy or the in-place reindex walks off the end of the destination. This is unreachable under defaults but matters for any custom `LK_CONFIG`.
 
 ## Active Deadlock Daemon (in `lock_manager.c`)
 

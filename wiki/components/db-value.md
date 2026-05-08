@@ -22,7 +22,7 @@ related:
   - "[[components/parser|parser]]"
   - "[[components/xasl-generation|xasl-generation]]"
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-08
 ---
 
 # `DB_VALUE` — Universal Value Container
@@ -212,9 +212,13 @@ DB_MONETARY    *db_get_monetary (const DB_VALUE *value);
 DB_C_NUMERIC    db_get_numeric (const DB_VALUE *value);
 OID            *db_get_oid (const DB_VALUE *value);
 JSON_DOC       *db_get_json_document (const DB_VALUE *value);
+DB_CONST_C_CHAR db_get_char (const DB_VALUE *value);   /* CHAR-typed accessor (since PR #7102, 1-arg) */
 ```
 
 Macro aliases: `DB_GET_INT(v)`, `DB_GET_STRING(v)`, etc. (`dbtype_function.h`).
+
+> [!key-insight] `db_get_char` is a thin pointer accessor
+> `db_get_char` returns the underlying `data.ch.sm.buf` (small) or `data.ch.medium.buf` (medium) directly. It does **not** count characters. Pre-PR-#7102 the function had an `int *length` out-parameter populated by an `intl_char_count` UTF-8 scan; 9 of 11 call sites discarded the value. Post-PR-#7102 (`05a7befd8`, 2026-05-08) the signature is single-arg and the wasted scan is gone — callers that genuinely need a character count must call `intl_char_count` themselves. Byte size remains available via `db_get_string_size`. The `DB_GET_STRING_PRECISION` macro was also removed as dead.
 
 ## Inspection
 

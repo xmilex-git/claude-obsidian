@@ -37,7 +37,7 @@ related:
   - "[[Memory Management Conventions]]"
   - "[[Build Modes (SERVER SA CS)]]"
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-08
 ---
 
 # `src/base/` — Core Utilities & Infrastructure
@@ -113,7 +113,7 @@ Implementation: [[components/system-parameter|system-parameter]]
 
 | Subsystem | Key Files | Notes |
 |-----------|-----------|-------|
-| Internationalization | `intl_support.c`, `language_support.c`, `uca_support.c` | UTF-8/EUC-KR, UCA collation |
+| Internationalization | `intl_support.c`, `language_support.c`, `uca_support.c` | UTF-8/EUC-KR, UCA collation; SWAR ASCII fast path in counters (since PR #7102) |
 | Timezone | `tz_support.c`, `tz_compile.c` | IANA DB compiler + runtime conversion |
 | Performance Monitoring | `perf_monitor.c`, `perf.hpp` (cubperf namespace) | Legacy C + modern C++ |
 | Serialization | `packer.hpp` (cubpacking namespace), `packable_object.hpp` | Client→server XASL transport |
@@ -121,6 +121,18 @@ Implementation: [[components/system-parameter|system-parameter]]
 | Cryptography | `encryption.c`, `sha1.c`, `base64.c`, `CRC.h` | Auth + integrity |
 | Logging/Diagnostics | `ddl_log.c`, `fault_injection.c`, `resource_tracker.hpp` | DDL audit, debug fault injection |
 | Misc Utilities | `scope_exit.hpp`, `base_flag.hpp`, `compressor.hpp` | C++17 RAII + LZ4 |
+
+### UTF-8 counting and validation
+
+`intl_support.c` provides three entry points for UTF-8 scanning, each used heavily on the CAS reply path and inside string-truncation logic:
+
+- `intl_count_utf8_chars (s, length_in_bytes)` — number of UTF-8 codepoints in `length_in_bytes` bytes.
+- `intl_count_utf8_bytes (s, length_in_chars)` — byte size of the first `length_in_chars` codepoints.
+- `intl_check_utf8 (buf, size, &pos)` — validates UTF-8 well-formedness; returns the first invalid byte position via `pos`.
+
+All three contain a **SWAR ASCII fast path** (since [[prs/PR-7102-db-get-char-intl-cleanup|PR #7102]], `05a7befd8`, 2026-05-08): a 64-bit `(word & 0x8080808080808080) == 0` test rejects 8 ASCII bytes per cycle. On a hit (any high-bit byte) execution falls through to the original per-byte path. For pure-ASCII payloads the throughput improvement is ~8×; for mixed payloads the speed-up scales with ASCII-run length between multi-byte clusters.
+
+Multi-byte stepping inside `intl_support.c` uses the `intl_Len_utf8_char[256]` lookup table directly (`intl_Len_utf8_char[*s]` returns the byte count for a leading byte 0x00–0xFF). External callers continue to use `intl_next_char (s, codeset, &n)` which dispatches per codeset.
 
 ## Memory Allocation Hierarchy
 
