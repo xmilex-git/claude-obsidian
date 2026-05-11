@@ -107,6 +107,11 @@ _attachments/*
 # CUBRID source-tree symlink (local-only path)
 .raw/cubrid
 
+# Ingested source documents — already distilled into wiki/sources/qp-analysis-*.md;
+# kept locally for re-reference only.
+.raw/qp-analysis-*.md
+.raw/qp-pdfs/
+
 # Obsidian internal state — churns constantly, noise-only commits
 .obsidian/workspace.json
 .obsidian/graph.json
