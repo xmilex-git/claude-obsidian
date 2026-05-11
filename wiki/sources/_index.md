@@ -2,7 +2,7 @@
 created: 2026-04-23
 type: meta
 title: "Sources Index"
-updated: 2026-04-28
+updated: 2026-05-11
 tags:
   - meta
   - index
@@ -93,6 +93,24 @@ End-user documentation companion to the source-code wiki. **Hub**: [[sources/cub
 - [[sources/cubrid-manual-sql-tuning-parallel|cubrid-manual-sql-tuning-parallel]] — optimizer hints, parallel execution
 - [[sources/cubrid-manual-sql-functions|cubrid-manual-sql-functions]] — operators + function library
 - [[sources/cubrid-manual-release-notes-114|cubrid-manual-release-notes-114]] — CUBRID 11.4 release notes
+
+---
+
+## CUBRID Internal R&D Wiki (JIRA `jira.cubrid.com:8888`)
+
+Internal JIRA wiki clusters — Korean. Requires VPN + CUBRID JIRA credentials. Ingested via MCP playwright form-login.
+
+### Query Processing analysis cluster (2026-05-11)
+
+- [[sources/qp-analysis|qp-analysis]] — **hub** for the 8-page QP analysis cluster (CUBRID R&D wiki). Owner: 박세훈. Includes 20 architecture diagrams + 8 PDFs + 3 PPTX.
+  - [[sources/qp-analysis-overview|qp-analysis-overview]] — full pipeline + pre-fetch 3-tier
+  - [[sources/qp-analysis-parser|qp-analysis-parser]] — PT_NODE + parser_walk_tree + Flex/Bison
+  - [[sources/qp-analysis-semantic-check|qp-analysis-semantic-check]] — pt_compile 4-stage + name resolution + type-check/fold + statement-specific
+  - [[sources/qp-analysis-rewriter|qp-analysis-rewriter]] — mq_translate + qo_optimize_queries rewrite catalogue
+  - [[sources/qp-analysis-optimizer|qp-analysis-optimizer]] — QO_ENV + QO_PLANNER + permutation
+  - [[sources/qp-analysis-xasl-generator|qp-analysis-xasl-generator]] — XASL_NODE + REGU_VARIABLE + ACCESS_SPEC + 3-way predicate split
+  - [[sources/qp-analysis-executor|qp-analysis-executor]] — Volcano model + qexec_execute_mainblock + group-by/order-by post-processing
+  - [[sources/qp-analysis-tempfile|qp-analysis-tempfile]] — life cycle + cache + NUMERABLE + parallel-query affinity
 
 ---
 

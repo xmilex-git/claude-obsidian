@@ -49,7 +49,7 @@ related:
   - "[[components/parser-allocator|parser-allocator]]"
   - "[[components/show-meta|show-meta]]"
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-11
 ---
 
 # `src/parser/` — SQL Parser & Frontend
@@ -185,6 +185,18 @@ See [[Memory Management Conventions]] and [[components/parser-allocator|parser-a
 
 ## Tree traversal
 
+> [!update] 2026-05-11 — Internal R&D analysis (per [[sources/qp-analysis-parser]])
+> - `node_type` 마다 sub-tree 진입 순서는 **`pt_apply_f[]`** 배열의 함수 포인터로 고정. 예: `pt_apply_select()` 는 `info.query.with → info.query.q.select.list → from → where → connect_by → start_with → after_cb_filter → group_by → having → using_index → with_increment → order_by → orderby_for → into_list → qcache_hint → check_where → waitsecs_hint → use_merge → index_ls → index_ss → use_idx → use_nl → ordered → for_update → limit` 순회. `pt_init_apply_f()` 에서 `node_type` → apply 함수 매핑이 초기화됨.
+> - 워커 진입/이탈 시점에 `pre_function` 의 반환값 `*continue_walk` 가 자식 진입을 통제:
+>   - `PT_CONTINUE_WALK` — sub-tree + or_next + next 모두 진입
+>   - `PT_LEAF_WALK` — sub-tree + or_next 만 (next 패스)
+>   - `PT_LIST_WALK` — or_next + next 만 (sub-tree 패스)
+>   - `PT_STOP_WALK` — 모두 중지
+> - **`next` vs `or_next` 의 의미 분기점**: parser 직후에는 AND/OR 가 모두 `PT_AND/PT_OR` 별도 노드로 표현. rewriter 의 `pt_cnf()` 가 변환을 마치면 같은 레벨 `PT_EXPR` 들이 `next` (AND-chain) + `or_next` (OR-chain) 포인터로 평탄화됨. `PT_AND/PT_OR` 가 살아있는 predicate 는 CNF 변환 실패 (= 인덱스 스캔 비후보) 의 신호. 자세한 변환 동작은 [[components/optimizer-rewriter]] 와 [[sources/qp-analysis-rewriter]].
+> - **Lexer `YY_USER_ACTION`** 가 매 토큰 매치마다 `yybuffer_pos` 업데이트 → `csql_yylloc.buffer_pos` 보존 (`first_line/first_column/last_line/last_column/buffer_pos` 5-필드 확장된 `YYLTYPE`). 에러 메시지 location + password offset 추적 (`pt_add_password_offset`) 의 근간.
+> - **PT_NODE 생성 헬퍼** (Bison action 에서 사용): `parser_make_func_with_arg_count()`, `parser_make_expression(parser, OP, arg1, arg2, arg3)`, `parser_make_link()` (= `parser_append_node` wrapper).
+> - **DDD (display data debugger)** 가 PT_NODE 트리 시각화에 gdb 보다 유리하다고 원작 분석서가 권장.
+
 Always use `parser_walk_tree`; never write manual recursion:
 
 ```c
@@ -259,3 +271,4 @@ All identifier matching in this module uses `intl_identifier_casecmp()` — case
 - [[Query Processing Pipeline]]
 - [[Memory Management Conventions]]
 - Source: [[sources/cubrid-src-parser|cubrid-src-parser]]
+- Source (internal R&D wiki): [[sources/qp-analysis-parser]] — Parser PDF cluster (Parse tree, Lex/Parse, Cheat sheet)

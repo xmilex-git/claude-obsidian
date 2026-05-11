@@ -99,8 +99,10 @@ _attachments/images/skool-hub/
 # Archive of old versions (cosmic-brain, GIF assets)
 claude-obsidian-archive/
 
-# User-specific attachments
-_attachments/
+# User-specific attachments  (top-level files; subdirs handled separately)
+_attachments/*
+!_attachments/qp-analysis/
+# qp-analysis subdir is tracked (diagrams referenced by wiki/sources/qp-analysis-*.md)
 
 # CUBRID source-tree symlink (local-only path)
 .raw/cubrid

@@ -29,7 +29,7 @@ related:
   - "[[components/semantic-check|semantic-check]]"
   - "[[Query Processing Pipeline]]"
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-11
 ---
 
 # XASL Generation (`xasl_generation.c`)
@@ -102,6 +102,83 @@ typedef enum { UNBOX_AS_VALUE, UNBOX_AS_TABLE } UNBOX;
 ```
 
 Controls whether a subquery result is treated as a scalar or as a derived table. Passed to `pt_to_regu_variable` when translating subquery nodes.
+
+> [!update] 2026-05-11 — `gen_outer`/`gen_inner` 재귀 알고리즘 + REGU_VARIABLE 카탈로그 (per [[sources/qp-analysis-xasl-generator]])
+>
+> ### 진입 콜체인
+> ```
+> pt_to_buildlist_proc
+>   pt_to_outlist(select.list)               ← outlist 생성
+>   pt_set_aptr(select)                      ← aptr (uncorrelated subquery) 생성
+>   pt_gen_optimized_plan(select, plan)      ← 나머지
+>     qo_to_xasl(plan)
+>       gen_outer(env, plan)                 ← 재귀 (아래)
+>   pt_set_dptr(select.list)                 ← dptr (correlated subquery) 생성
+> ```
+>
+> ### `gen_outer`/`gen_inner` 재귀
+> ```c
+> gen_outer(env, plan):
+>   case QO_PLANTYPE_SCAN:
+>     scan_ptr = inner_scan
+>     add_access_spec(env, plan)        // spec_list 생성
+>     add_scan_proc(inner_scans)        // scan_ptr 생성
+>     add_subqueries                    // aptr/dptr 생성
+>   case QO_PLANTYPE_JOIN:
+>     outer_plan = plan->plan_un.join.outer
+>     inner_plan = plan->plan_un.join.inner
+>     inner_scan = gen_inner(inner_plan)
+>     gen_outer(inner_scan)             // 재귀
+> ```
+>
+> ### REGU_VARIABLE TYPE 카탈로그 (확장)
+> | TYPE | dispatch 시 사용 union 필드 | 의미 |
+> |---|---|---|
+> | `CONSTANT` / `DBVAL` | `dbval` / `dbvalptr` | DB_VALUE 직접 보유 (PT_VALUE 출신) |
+> | `ATTR_ID` | `attr_descr` (id + cache_dbval) | 테이블 컬럼 직접 접근 |
+> | `POS_VALUE` | `val_pos` | positional ref — `KEY_RANGE.key1/key2`, sort spec 등 |
+> | `INARITH` | `arithptr` → `ARITH_NODE(op, leftptr, rightptr, thirdptr)` | 산술/함수 expression (예: `nvl(col1,0)`) |
+> | `FUNC` | `funcp` | 함수 호출 |
+> | `SUBQUERY` | `xasl` | sub-query 결과 (`XASL_LINK_TO_REGU_VARIABLE` flag 시 일반 execute 경로에서 미실행, REGU 평가 시 1회만) |
+>
+> `fetch_peek_dbval()` 가 REGU → DB_VALUE 의 단일 추출 API. EXECUTOR 의 모든 데이터 read/write 단위.
+>
+> ### ACCESS_SPEC 의 WHERE 3-way 분리
+> ```
+> ACCESS_SPEC type=CLASS, access=INDEX
+> ├── indexptr → INDEX_INFO (btree id, RANGE_TYPE, KEY_INFO)
+> ├── where_key   ← INDEX 수평 스캔 가능한 predicate (key filter)
+> ├── where_pred  ← 데이터 영역 평가 predicate (residual)
+> ├── where_range ← INDEX 수직 스캔 가능한 predicate (key range)
+> └── s(scan node) → HYBRID_NODE → CLS_SPEC_NODE
+>                     ├── regu_list_range  ← RANGE 스캔용 컬럼들
+>                     ├── regu_list_key    ← KEY 스캔용
+>                     ├── regu_list_pred   ← PRED 평가용
+>                     ├── regu_list_rest   ← range + key (이미 알아낸 컬럼; data 영역 재읽기 회피)
+>                     ├── output_val_list  ← 해당 spec 의 writer 컬럼 list (OUTPTR_LIST)
+>                     └── val_list         ← rest 대응 reader list
+> ```
+> 같은 컬럼의 REGU_VAR 은 같은 DB_VALUE 를 공유 → 한번의 fetch 로 여러 평가 단계 재사용.
+>
+> ### RANGE_TYPE
+> | 값 | 의미 |
+> |---|---|
+> | `R_KEY` | `=` (point lookup) |
+> | `R_RANGE` | `>`/`<` (single range) |
+> | `R_KEYLIST` | `IN (...)` (disjoint points) |
+> | `R_RANGE_LIST` | `> OR <` (disjoint ranges) |
+>
+> `KEY_INFO` 는 `key_cnt`, `is_constant`, `key_range[]`. 각 `KEY_RANGE` 는 `range` + `key1` (lower) + `key2` (upper). `BETWEEN 1 AND 2` → key1=1, key2=2.
+>
+> ### PRED_EXPR 트리
+> PT_NODE 의 predicate 가 가벼운 `PRED_EXPR` 로 변환:
+> - `type = T_PRED, pe.m_pred (op = B_OR/B_AND, lhs, rhs)`
+> - `type = T_EVAL_TERM, pe.m_eval_term (et_type = COMP, op = R_EQ/R_LT/..., lhs, rhs)`
+>
+> ### XASL Proc Type (BUILDLIST vs BUILDVALUE vs SCAN)
+> - `BUILDLIST_PROC` — ROW 여러 건 가능 (대부분의 SELECT). temp list 사용.
+> - `BUILDVALUE_PROC` — ROW 한 건 (`select sum(col1) from tab`).
+> - `SCAN_PROC` — TEMP 영역 사용 X. join inner 에서 자주 사용.
 
 ## Translation process
 
@@ -183,3 +260,4 @@ The generator detects when multiple analytic functions share a PARTITION BY / OR
 - [[components/parse-tree|parse-tree]] — source PT_NODE tree
 - [[components/semantic-check|semantic-check]] — previous pass; sets type_enum used here
 - [[Query Processing Pipeline]]
+- Source (internal R&D wiki): [[sources/qp-analysis-xasl-generator]] — 23-page PDF

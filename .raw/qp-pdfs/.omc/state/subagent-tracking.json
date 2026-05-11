@@ -1,0 +1,17 @@
+{
+  "agents": [
+    {
+      "agent_id": "aef16a38d13ac50fe",
+      "agent_type": "claude-obsidian:wiki-lint",
+      "started_at": "2026-05-11T07:45:30.090Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-11T07:47:14.195Z",
+      "duration_ms": 104105
+    }
+  ],
+  "total_spawned": 1,
+  "total_completed": 1,
+  "total_failed": 0,
+  "last_updated": "2026-05-11T07:47:14.296Z"
+}

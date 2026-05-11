@@ -1,5 +1,6 @@
 ---
 created: 2026-04-23
+updated: 2026-05-11
 type: component
 title: "query-manager — Query Lifecycle and Per-Query Context"
 parent_module: "[[modules/src|src]]"
@@ -28,12 +29,44 @@ tags:
   - lifecycle
   - server-side
   - temp-file
+related:
+  - "[[components/query-executor]]"
+  - "[[components/query-fetch]]"
+  - "[[components/list-file]]"
+  - "[[sources/qp-analysis-tempfile]]"
 ---
 
 # query-manager — Query Lifecycle and Per-Query Context
 
 > [!key-insight]
 > The query manager is the **server-side registry** for in-flight queries. It owns the per-transaction query entry table (`QMGR_QUERY_TABLE`), the temporary file infrastructure (memory-buffered + disk-backed), and the cancellation/interrupt signal path. The actual query execution (`qexec_execute_query`) is **called from inside** `qmgr_process_query` — query-manager wraps executor, not the other way around.
+
+> [!update] 2026-05-11 — Temp file lazy-creation + memory buffer fallback (per [[sources/qp-analysis-tempfile]])
+> 본 모듈의 temp-file API 의 의도된 사용 패턴 (분석서 직 정리):
+>
+> | 함수 | 동작 |
+> |---|---|
+> | `qmgr_create_new_temp_file` | 실제 임시파일 미생성. **메모리 버퍼 캐시 공간만 할당** (`temp_file_memory_size_in_pages` 만큼). |
+> | `qmgr_get_new_page` | 새 page 필요 시 호출. 메모리 버퍼 다 차면 `file_create_temp` → 실제 임시파일 생성 (lazy promotion). |
+> | `qmgr_free_list_temp_file` | 메모리 버퍼만 쓰인 경우 메모리만 해제. 임시파일 있으면 제거. |
+> | `qmgr_get_old_page` | 기존 file page 읽기. 메모리 버퍼면 메모리 주소, page 면 `pgbuf_fix` 후 page 주소. |
+> | `qmgr_create_result_file` | result cache 의 최종 결과용. 메모리 버퍼 우회하고 바로 임시파일 생성 (임시 메모리버퍼 장기 점유 방지 추정). |
+>
+> ### Tempfile 캐시 (file_tempcache_*)
+> 생성/제거 비용 큰 임시파일을 캐시에 보관 후 재사용. `max_entries_in_temp_file_cache`, `max_pages_in_temp_file_cache`.
+>
+> - `file_tempcache_put` — 캐시로 임시파일 반환
+> - `file_tempcache_get` — 캐시에서 임시파일 획득
+> - `file_tempcache_push_tran_file` — 임시파일 VPID 를 트랜잭션별 정보에 저장 (commit/rollback 시 삭제 위함)
+> - `file_tempcache_pop_tran_file` — 트랜잭션별 정보에서 제거
+>
+> Trade-off: 캐시된 임시파일이 소유한 page 는 공유 불가 → 영구 임시볼륨 단편화 가능. 그러나 자원 독점 방어 효과.
+>
+> ### 트랜잭션-단위 정리 (`file_Tempcache.tran_files`)
+> 질의 최종 결과 (XASL→list_id) 가 아닌 임시파일은 질의 종료시 모두 제거 (`qexec_clear_xasl → qfile_destroy_list`). 최종 결과 임시파일은 트랜잭션 commit/rollback 시 일괄 제거 (`log_commit_local → file_tempcache_drop_tran_temp_files`). HOLDABLE CURSOR / QUERY RESULT CACHE 는 `file_temp_retire_preserved` 로 commit 이후 연장.
+>
+> ### Parallel query 시 thread-affinity 제약
+> `file_Tempcache.tran_files` 가 **thread-local**. parallel query 에서 다른 thread 가 동일 tran_id 를 쓰면 push/pop 에 락 필요. External sort 는 preserve 패턴으로 우회 (트랜잭션별 정보 미입력). Page FIX/UNFIX 는 동일 thread 권장. private_alloc/private_free 는 동일 thread 에서 free 필요 — `db_change_private_heap(thread_p, 0)` 로 일반 malloc/free 폴백.
 
 ## Purpose
 

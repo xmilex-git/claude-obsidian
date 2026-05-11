@@ -1,0 +1,1011 @@
+
+
+===== PAGE 1 =====
+
+XASL generator
+Date: 2019-09-24
+
+===== PAGE 2 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 1 / 22
+Query process
+PARSER
+parser_main()
+QUERY
+optimizer
+SEMENTIC_CHECK
+(resolve name)
+PT_NODE
+rewriter
+mq_translate()
+PT_NODE with info
+Optimized PT_NODE
+XASL generator
+plan,ENV
+executor
+XASL
+RESULT
+Pre_fetch
+(get class info)
+
+===== PAGE 3 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 2 / 22
+XASL 수행 방식
+• parser_walk_tree() 함수의 post 함수로 수행하며 PT_SELECT type일 때 수행된다.
+• Sub query의 경우 먼저 optimization 및 XASL generation 된다.
+PT_SELECT
+info.query.xasl
+Info.query.q.select
+list
+From
+Where
+Query with subquery parser_walk_tree()
+PT_SPEC
+Info.spec
+next
+PT_SPEC
+Info.spec
+drivied_table
+SELECT 1
+FROM table a,
+(select 1 from tbl2 …) b
+WHERE ...
+PT_SELECT
+info.query.xasl
+Info.query.q.select
+list
+From
+Where
+1
+2
+3 4 XASL 생성5
+6
+7 XASL 생성 XASL
+spec_list
+…..
+XASL
+spec_list
+…..
+
+===== PAGE 4 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 3 / 22
+XASL
+• eXtensional Access Specification Language
+• SQL : 데이터 가져오는 순서가 없음
+• XASL : plan 정보를 사용하여 순서가 있는 절차적 프로시져
+PROC TYPE
+UNION_PROC
+DIFFERENCE_PROC
+INTERSECTION_PROC
+OBJFETCH_PROC
+BUILDLIST_PROC
+BUILDVALUE_PROC
+SCAN_PROC
+MERGELIST_PROC
+UPDATE_PROC
+DELETE_PROC
+INSERT_PROC
+CONNECTBY_PROC
+DO_PROC
+MERGE_PROC
+BUILD_SCHEMA_PROC
+CTE_PROC
+• BUILDLIST_PROC        :  ROW가 여러건이 될 수 있는 SQL 
+• BUILDVALUE_PROC   :  ROW가 한 건 조회되는 SQL  
+ex) select sum(col1) from tab
+• SCAN_PROC              : TEMP 영역을 사용하지 않음. JOIN에 사용됨.
+
+===== PAGE 5 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 4 / 22
+XASL(aptr, dptr, scan_ptr)
+SELECT 
+(select col1 from tab c 
+where col1 = b.col1)
+FROM tab a, tab b
+WHERE a.col2 = b.col2
+AND a.col1 =
+(select col1 from tab d) 
+join 순서 : a → b
+• aptr : uncorrelated subquery
+• dptr : correlated subquery
+• scan_ptr : join (outer scan_ptr → inner)
+XASL_NODE
+BUILDLIST      
+tab a       
+aptr
+dptr
+scan_ptr
+QUERY XASL
+XASL_NODE
+SCAN_PROC     
+tab b       
+aptr
+dptr
+scan_ptr
+XASL_NODE
+BUILDLIST      
+tab d       
+aptr
+dptr
+scan_ptr
+XASL_NODE
+BUILDLIST      
+tab c       
+aptr
+dptr
+scan_ptr
+EXECUTE
+SCAN aptr
+SCAN node
+for each row
+SCAN dptr
+SCAN scan_ptr
+
+===== PAGE 6 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 5 / 22
+XASL node
+SELECT col1
+FROM table a
+WHERE col2 in (1,2)
+• outptr_list : select list
+• var_list : table’s columns
+• spec_list : access spec list (class oid, index info, predicate)
+XASL_NODE
+TYPE = BUILDLIST      
+outptr_list
+var_list
+spec_list
+aptr
+dptr
+scan_ptr
+QUERY XASL
+REGU_VALUE
+COL1
+REGU_VALUE
+COL1
+REGU_VALUE
+COL2
+ACCESS_SPEC
+indexptr
+where_key
+where_pred
+where_range
+s(scan node)
+INDEX_INFO
+RANGE_TYPE
+= R_KEYLIST
+KEY_INFO
+PRED_EXPR
+col2 = 1 or col2 = 2 
+HYBIRD_NODE
+TYPE = CLASS
+cls_node
+set_node
+json_table_node
+REGU_VALUE
+1,2
+CLS_SPEC_TYPE
+regu_list_key
+regu_list_pre
+regu_list_range
+…
+
+===== PAGE 7 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 6 / 22
+REGULAR VARIABLE ( pt_to_regu_variable() )
+SELECT col1, col2
+FROM table a
+WHERE col1 in (1,2)
+• expression을 포함하여 모든 데이터 타입을 저장할 수 있는 변수
+• EXECUTE 단계에서 데이터를 저장하거나 조회하는데 사용됨.
+• fetch_peek_dbval() : regu → db_value, regular variable 에서 데이터 가져오는 함수
+QUERY XASL
+REGU_VARIABLE
+TYPE = CONSTANT
+domain
+UNION 
+dbval
+dbvalptr
+arithptr
+funcp
+DB_VALUE
+domain.type = 1
+DB_DATA 
+i (int)
+d (double)
+char
+…..
+REGU_VARIABLE
+TYPE = ATTR_ID
+domain
+UNION 
+attr_descr
+id = 0
+type = INT
+cache_dbval
+REGU_VARIABLE
+TYPE = POS_VALUE
+domain
+UNION 
+val_pos = 0
+REGU_VARIABLE
+TYPE = POS_VALUE
+domain
+UNION 
+val_pos = 1
+2: 
+COL1
+PT_NAME
+COL1
+PT_NAME
+(1,2)  1: 
+PT_POS_VAL
+VAL_DESCR
+DB_VALUE
+1
+DB_VALUE
+2
+
+===== PAGE 8 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 7 / 22
+REGULAR VARIABLE ( pt_to_regu_variable() )
+SELECT ‘park’
+FROM tab a
+WHERE col1 = 
+nvl(col1,0)
+• PT_EXPR은 OPERATION에 따라 다양하게 변경됨.
+QUERY XASL
+REGU_VARIABLE
+TYPE = DBVAL
+domain
+UNION 
+dbval
+DB_VALUE
+domain.type = 25
+DB_DATA 
+char = ‘park’
+‘park’
+PT_VALUE
+REGU_VARIABLE
+TYPE = INARITH
+domain
+UNION 
+arithptr
+nvl(col1,0)
+PT_EXPR
+ARITH_NODE
+domain
+op = nvl
+value
+leftptr
+rightptr
+thirdptr
+REGU_VALUE
+COL1
+REGU_VALUE
+0
+
+===== PAGE 9 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 8 / 22
+OUTPTR_LIST ( pt_to_outlist() )
+SELECT col1
+FROM table a
+WHERE col2 in (1,2)
+• select list의 column, 상수
+XASL_NODE
+TYPE = BUILDLIST      
+outptr_list
+var_list
+spec_list
+aptr
+dptr
+scan_ptr
+QUERY XASL
+OUTPTR_LIST
+val_cnt = 1
+valptrp
+REGU_VAR_LIST
+next
+value
+REGU_VARIABLE
+TYPE = CONSTANT
+domain
+UNION 
+dbval
+dbvalptr
+arithptr
+funcp
+DB_VALUE
+domain.type = 1
+DB_DATA 
+i (int)
+d (double)
+char
+…..
+null
+
+===== PAGE 10 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 9 / 22
+VAL_LIST ( pt_to_val_list() )
+SELECT col1
+FROM table a
+WHERE col2 in (1,2)
+• 테이블의 column list 
+• outptr_list와 동일한 column은 DB_VALUE를 공유함.
+XASL_NODE
+TYPE = BUILDLIST      
+outptr_list
+val_list
+spec_list
+aptr
+dptr
+scan_ptr
+QUERY XASL
+VAL_LIST
+val_cnt = 2
+valp
+DB_VALUE_LIST
+next
+value
+domain
+DB_VALUE
+domain.type = 1
+DB_DATA 
+i (int)
+d (double)
+char
+…..
+DB_VALUE_LIST
+next
+value
+domain
+null
+DB_VALUE
+domain.type = 1
+DB_DATA 
+i (int)
+d (double)
+char
+…..
+
+===== PAGE 11 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 10 / 22
+SPEC_LIST (add_access_spec ())
+SELECT col1
+FROM table a
+WHERE col2 in (1,2)
+• indexptr : index scan시 필요한 정보 (btree id, range_type, key_info)
+• where_range, where_key, where_pred : predicate (index key, index filter, heap)
+• s(scan node) : 조회 대상 node 정보
+XASL_NODE
+TYPE = BUILDLIST      
+outptr_list
+val_list
+spec_list
+aptr
+dptr
+scan_ptr
+QUERY XASL
+ACCESS_SPEC
+type = CLASS
+access = INDEX
+indexptr
+where_key
+where_pred
+where_range
+s(scan node)
+INDEX_INFO
+RANGE_TYPE
+= R_KEYLIST
+KEY_INFO
+PRED_EXPR
+col2 = 1 or col2 = 2 
+HYBIRD_NODE
+TYPE = CLASS
+cls_node
+set_node
+json_table_node
+REGU_VAR
+1,2
+CLS_SPEC_TYPE
+regu_list_key
+regu_list_pred
+regu_list_range
+…
+
+===== PAGE 12 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 11 / 22
+INDEXPTR (pt_to_index_info() )
+SELECT col1
+FROM table a
+WHERE col2 in (1,2)
+• RANGE_TYPE : R_KEY( = ), R_RANGE( > ), R_KEYLIST( IN ), R_RANGE_LIST( > OR < )
+• KEY1 : lower limit 
+• KEY2 : upper limit   ex) BETWEEN 1 and 2 ➔ key1 = 1, key2 = 2 
+QUERY XASL
+ACCESS_SPEC
+indexptr
+where_key
+where_pred
+where_range
+s(scan node)
+INDEX_INFO
+type = R_KEYLIST
+btid(btree id)
+KEY_INFO
+key_cnt = 2
+is_constant = true
+key_range
+KEY_RANGE[0]
+range = EQ_NA
+key1
+key2
+REGU_VAR
+TYPE = 
+POS_VALUE
+domain
+UNION 
+val_pos = 0
+KEY_RANGE[1]
+range = EQ_NA
+key1
+key2
+REGU_VAR
+TYPE = 
+POS_VALUE
+domain
+UNION 
+val_pos = 0
+REGU_VAR
+TYPE = 
+POS_VALUE
+domain
+UNION 
+val_pos = 1
+REGU_VAR
+TYPE = 
+POS_VALUE
+domain
+UNION 
+val_pos = 1
+
+===== PAGE 13 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 12 / 22
+WHERE_RANGE, WHERE_KEY, WHERE_PRED
+• WHERE_RANGE : INDEX 수직 스캔가능한 PREDCATE
+1,1,1
+INDEX(col1,col2,col3)
+Oid:1
+SELECT * FROM tbl
+WHERE col1 = 1 
+AND col3 = 2
+AND col4 = 2
+… 1,1,2 1,1,3 2,1,1 …
+Oid Col1 Col2 Col3 Col4
+1 1 1 2 5
+2 1 1 2 2
+DATA
+Oid:2
+• WHERE_KEY : INDEX 수평 스캔 가능한 PREDCATE
+• WHERE_PRED : 데이터 영역에서 비교가 필요한 PREDCATE
+➔RANGE
+➔KEY
+➔PRED
+
+===== PAGE 14 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 13 / 22
+PRED_EXPR
+type = T_PRED
+pe.m_pred
+op = B_OR      
+lhs
+rhs
+WHERE_RANGE, WHERE_KEY, WHERE_PRED
+SELECT 1
+FROM table a
+WHERE col1 in (1,2)   ➔RANGE
+AND col3 = 2         ➔KEY
+AND col4 = 2         ➔PRED
+index(col1,col2,col3)
+• PARSER에서 생성된 PREDICATE PT_NODE를 PRED_EXPR 구조체로 변경한다.
+• PT_NODE보다 PRED_EXPR이 가벼운 구조체
+QUERY XASL
+ACCESS_SPEC
+indexptr
+where_range
+where_key
+where_pred
+s(scan node)
+PRED_EXPR
+type =T_EVAL_TERM
+pe.m_eval_term
+et_type = COMP      
+op = R_EQ
+lhs
+rhs
+REGU_VAR
+TYPE = ATTR_ID
+col1
+REGU_VAR
+TYPE = POS_VAL
+1
+PRED_EXPR
+type =T_EVAL_TERM
+pe.m_eval_term
+et_type = COMP      
+op = R_EQ
+lhs
+rhs
+REGU_VAR
+TYPE = ATTR_ID
+col1
+REGU_VAR
+TYPE = POS_VAL
+2
+PRED_EXPR
+type =T_EVAL_TERM
+REGU_VAR
+col3
+REGU_VAR
+2
+PRED_EXPR
+type =T_EVAL_TERM
+REGU_VAR
+col3
+REGU_VAR
+2
+
+===== PAGE 15 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 14 / 22
+S(SPEC NODE) 
+SELECT 1
+FROM table a
+WHERE col1 in (1,2)   ➔RANGE
+AND col3 = 2         ➔KEY
+AND col4 = 2         ➔PRED
+• TYPE에 따라 CLASS(table) node, SET node, JSON node등으로 구분됨.
+• 동일 컬럼의 regu_var일 경우 db_value의 값을 공유함.
+QUERY XASL
+ACCESS_SPEC
+s(scan node)
+HYBIRD_NODE
+TYPE = CLASS
+cls_node
+CLS_SPEC_NODE
+class_oid
+regu_list_key
+regu_list_pred
+regu_list_rest
+regu_list_range
+output_val_list
+val_list
+REGU_VAR
+col3
+REGU_VAR
+col4
+REGU_VAR
+col1
+REGU_VAR
+col3
+REGU_VAR
+col1
+REGU_VAR
+col1
+REGU_VAR
+col3
+REGU_VAR
+col4
+DB_VALUE_LIST
+col1
+DB_VALUE_LIST
+col3
+
+===== PAGE 16 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 15 / 22
+S(SPEC NODE) regu_list
+SELECT 1
+FROM table a
+WHERE col1 in (1,2)   ➔RANGE
+AND col3 = 2         ➔KEY
+AND col4 = 2         ➔PRED
+• range,key,pred : 인덱스 수직,수평,데이터 영역 스캔관련 컬럼
+• rest : range + key
+QUERY XASL
+ACCESS_SPEC
+s(scan node)
+HYBIRD_NODE
+TYPE = CLASS
+cls_node
+CLS_SPEC_NODE
+class_oid
+regu_list_key
+regu_list_pred
+regu_list_rest
+regu_list_range
+output_val_list
+val_list REGU_VAR
+col4
+REGU_VAR
+col1
+REGU_VAR
+col3
+REGU_VAR
+col1
+REGU_VAR_LIST
+next
+value
+REGU_VARIABLE
+TYPE = ATTR_ID
+domain
+vfetch_to
+UNION 
+attr_descry
+id = 1
+type = int  
+DB_VALUE
+domain.type = 1
+DB_DATA 
+i (int)
+d (double)
+char
+…..
+null
+
+===== PAGE 17 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 16 / 22
+S(SPEC NODE) output_val_list, val_list
+SELECT 1
+FROM table a
+WHERE col1 in (1,2)
+AND col3 = 2
+AND col4 = 2
+• output_val_list : 해당 spec의 컬럼 list, writer
+• val_list : rest에 해당하는 컬럼 list, reader
+QUERY XASL
+ACCESS_SPEC
+s(scan node)
+HYBIRD_NODE
+TYPE = CLASS
+cls_node
+CLS_SPEC_NODE
+output_val_list
+val_list
+OUTPTR_LIST
+val_cnt = 1
+valptrp
+REGU_VAR_LIST
+next
+REGU_VAR
+TYPE CONSTANT
+dbvalptr
+DB_VALUE
+domain.type = 1
+DB_DATA 
+i (int)
+REGU_VAR_LIST
+next
+REGU_VAR
+TYPE CONSTANT
+dbvalptr
+DB_VALUE
+domain.type = 1
+DB_DATA 
+i (int)
+REGU_VAR_LIST
+next
+REGU_VAR
+TYPE CONSTANT
+dbvalptr
+DB_VALUE
+domain.type = 1
+DB_DATA 
+i (int)
+REGU_VAR_LIST
+next
+REGU_VAR
+TYPE POSITION
+vfetch_to
+REGU_VAR_LIST
+next
+REGU_VAR
+TYPE POSITION
+vfetch_to
+
+===== PAGE 18 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 17 / 22
+SINGLE TABLE EXECUTE
+• SINGLE TABLE에서 INDEX SCAN 예시.
+• EXECUTOR에 대한 분석 필요.
+XASL EXECUTOR
+ACCESS_SPEC
+indexptr
+where_key
+where_pred
+where_range
+s(scan node)
+INDEX_INFO
+RANGE_TYPE
+= R_KEYLIST
+KEY_INFO
+PRED_EXPR
+col2 = 1 or col2 = 2 
+REGU_VAL
+1,2
+CLS_SPEC
+regu_list_key
+regu_list_pred
+regu_list_rest
+regu_list_range
+output_val_list
+val_list
+PRED_EXPR
+col3=3 
+REGU_VAR
+col3
+REGU_VAR
+col2
+REGU_VAR
+col2
+REGU_VAR
+col3
+for index scan using KEY_INFO(1,2)
+fetch row from OID
+for each row
+evaluation(PRED_EXPR(COL3=3))
+
+===== PAGE 19 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 18 / 22
+JOIN
+SELECT col1
+FROM tab a, tab b
+WHERE a.col1 = b.col1
+plan
+outer: sscan
+node a
+inner : iscan
+node b
+• join 순서에 따라 scan_ptr에 XASL 정보 저장됨
+• BUILDLIST_PROC : temp 저장공간에 결과값 저장
+• SCAN_PROC : temp 저장 공간 사용하지 않음
+XASL_NODE
+TYPE = BUILDLIST      
+(tab a)       
+outptr_list
+var_list
+spec_list
+aptr
+dptr
+scan_ptr
+QUERY XASL
+XASL_NODE
+TYPE = SCAN      
+(tab b)       
+outptr_list
+var_list
+spec_list
+aptr
+dptr
+scan_ptr
+ACCESS_SPEC
+indexptr
+where_key
+where_pred
+where_range
+s(scan node)
+INDEX_INFO
+RANGE_TYPE
+= R_KEYLIST
+KEY_INFO
+REGU_VAL
+a.col1
+REGU_VAL
+a.col1
+DB_VALUE
+domain.type = 1
+DB_DATA 
+i (int)
+…..
+
+===== PAGE 20 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 19 / 22
+UNCORRELATED SUBQUERY
+SELECT a.col1
+FROM
+(select col1 from tab a
+where col2 =3) a
+,tab b
+WHERE a.col1 = b.col1
+plan
+sscan tab a
+plan
+outer: sscan
+node a
+inner : iscan
+node b
+• aptr 포인터에 uncorrelated subquery xasl 저장됨.
+• subquery는 BUILDLIST_PROC으로 생성됨.
+XASL_NODE
+TYPE = BUILDLIST      
+(node a)       
+outptr_list
+var_list
+spec_list
+aptr
+dptr
+scan_ptr
+QUERY XASL
+XASL_NODE
+TYPE = SCAN      
+(node b)
+XASL_NODE
+TYPE = BUILDLIST      
+(tab a)       
+ACCESS_SPEC
+indexptr
+where_key
+where_pred
+where_range
+s(scan node)
+ACCESS_SPEC
+indexptr
+INDEX_INFO
+RANGE_TYPE
+= R_KEYLIST
+KEY_INFO
+REGU_VAL
+a.col1
+HYBIRD_NODE
+TYPE = LIST
+list_node
+LIST_SPEC_NODE
+regu_list_pred
+regu_list_rest
+xasl_node
+REGU_VAL
+a.col1
+DB_VALUE
+DB_DATA
+
+===== PAGE 21 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 20 / 22
+CORRELATED SUBQUERY
+SELECT 
+(select col1 from tab a
+where col1 = b.col1)  
+FROM tab b
+plan
+iscan tab a
+plan
+sscan node b
+• dptr 포인터에 correlated subquery xasl 저장됨.
+• MAIN proc 진행후 dptr proc 진행함
+QUERY
+XASL_NODE
+TYPE = BUILDLIST      
+(node b)       
+outptr_list
+var_list
+spec_list
+aptr
+dptr
+scan_ptr
+XASL_NODE
+TYPE = BUILDLIST      
+(tab b)
+outptr_list
+ACCESS_SPEC
+indexptr
+where_key
+where_pred
+where_range
+s(scan node)
+ACCESS_SPEC
+indexptr
+INDEX_INFO
+RANGE_TYPE
+= R_KEYLIST
+KEY_INFO
+REGU_VAL
+b.col1
+HYBIRD_NODE
+TYPE = class
+cls_node
+cls_SPEC_NODE
+regu_list_pred
+output_var_list
+val_list
+REGU_VAL
+b.col1
+DB_VALUE
+DB_DATA
+DB_VALUE
+DB_DATA
+
+===== PAGE 22 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 21 / 22
+XASL generator 진행 절차
+pt_to_buildlist_proc
+pt_to_outlist(select.list)                      <-- outlist 생성
+pt_set_aptr(select)                              <-- aptr 생성
+pt_gen_optimized_plan(select,plan)  <-- 나머지 생성
+qo_to_xasl(plan)
+gen_outer(env,plan)
+pt_set_dptr(select.list)
+gen_outer(inner_scans)
+case QO_PLANTYPE_SCAN
+add_access_spec(env,plan)   <-- spec list 생성
+add_scan_proc(inner_scans) <-- scan_ptr 생성
+add_subqueries <-- aptr, dptr 생성
+case QO_PLANTYPE_JOIN:
+outer_plan = plan->plan_un.join.outer;
+inner_plan = plan->plan_un.join.inner;
+inner_scan = gen_inner(inner_plan)
+gen_outer(inner_scan) 
+
+===== PAGE 23 =====
+
+© 2019 CUBRID Co., Ltd. All rights reserved. 22 / 22
+PLAN to XASL
+• get_outer 함수가 재귀 호출하며 XASL 생성함.
+PLAN XASL
+PLAN_JOIN
+plan_un.join
+outer
+inner
+PLAN_SCAN
+TAB C
+PLAN_JOIN
+plan_un.join
+outer
+inner
+PLAN_SCAN
+TAB A
+PLAN_SCAN
+TAB B
+select 1 from A,B,C where …
+join order : A->B->C
+gen_outer(inner_scan)
+case PLAN_SCAN
+scan_ptr = inner_scan
+spec 생성
+case PLAN_JOIN:
+inner = gen_inner(inner_scan)
+gen_outer(inner) 
+XASL_NODE
+BUILDLIST      
+tab a       
+aptr
+dptr
+scan_ptr
+XASL_NODE
+SCAN_PROC     
+tab b       
+aptr
+dptr
+scan_ptr
+XASL_NODE
+SCAN_PROC     
+tab c       
+aptr
+dptr
+scan_ptr

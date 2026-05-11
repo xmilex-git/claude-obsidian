@@ -1,0 +1,7 @@
+{
+  "tool_name": "Read",
+  "tool_input_preview": "{\"file_path\":\"/home/cubrid/claude-obsidian/.raw/qp-pdfs/semantic_check_name_resolution_v0_9.pdf\",\"pages\":\"1-20\"}",
+  "error": "pdftoppm is not installed. Install poppler-utils (e.g. `brew install poppler` or `apt-get install poppler-utils`) to enable PDF page rendering.",
+  "timestamp": "2026-05-11T07:24:50.620Z",
+  "retry_count": 1
+}

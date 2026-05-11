@@ -42,7 +42,7 @@ related:
   - "[[Query Processing Pipeline]]"
   - "[[Build Modes (SERVER SA CS)]]"
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-11
 ---
 
 # `src/xasl/` — XASL: eXecutable Algebraic Statement Language
@@ -79,6 +79,26 @@ See [[Query Processing Pipeline]] for the full path.
 ---
 
 ## Core structures
+
+> [!update] 2026-05-11 — `aptr_list` / `dptr_list` / `scan_ptr` semantic 정리 (per [[sources/qp-analysis-xasl-generator]] + [[sources/qp-analysis-executor]])
+> XASL_NODE 의 3가지 연결 포인터의 실행-시간 의미:
+>
+> | 포인터 | sub-query 종류 | EXECUTE 빈도 | 결과 처리 |
+> |---|---|---|---|
+> | `aptr_list` | **uncorrelated** subquery / CTE | 1회 (pre-processing 에서) | temp list 에 저장 후 main 이 read |
+> | `dptr_list` | **correlated** subquery | outer row 마다 재실행 (processing 중) | 매 평가 결과 즉시 소비 |
+> | `scan_ptr` (proc 내부) | join inner | mainblock 과 함께 (`scan_next_scan` 반복 동안) | 1-row 단위 |
+>
+> EXECUTE 순서 (Volcano):
+> ```
+> SCAN aptr            (한번만, qexec_execute_mainblock 호출)
+> SCAN node            (outer)
+> for each row of node:
+>   SCAN dptr          (correlated; row 마다)
+>   SCAN scan_ptr      (join inner; mainblock 동행)
+> ```
+>
+> `XASL_LINK_TO_REGU_VARIABLE` flag 의 효과: aptr 의 일반 execute 경로 우회 → REGU_VAR 가 fetch 될 때 1회만 실행 + 결과 재사용. Select/Where 의 sub-query 가 이 flag 로 처리됨 ([[sources/qp-analysis-executor#Sub-query 실행 메커니즘]]).
 
 ### `XASL_NODE` (`src/query/xasl.h`)
 
@@ -356,3 +376,4 @@ The `MERGEABLE_LIST` / `COUNT_DISTINCT` flags are also set **internally by the o
 - [[Query Processing Pipeline]]
 - [[Build Modes (SERVER SA CS)]]
 - Source: [[sources/cubrid-src-xasl|cubrid-src-xasl]]
+- Source (internal R&D wiki): [[sources/qp-analysis-xasl-generator]], [[sources/qp-analysis-executor]]

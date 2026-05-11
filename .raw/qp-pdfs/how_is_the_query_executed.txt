@@ -1,0 +1,295 @@
+
+
+===== SLIDE 1 =====
+How is the query executed? 
+Date : 2023-03-13 
+
+
+===== SLIDE 2 =====
+Query in optimizer 
+Select a.col, b.col 
+  from tbl1 a, tbl2 b 
+where  a.col1 = b.col1 (join term) 
+   and  a.col2 = 1 (sargs term) 
+   and  b.col2 = 1 (sargs term) 
+
+
+Select b.col 
+  from tbl2 b 
+where  a.col1 = b.col1  
+and  b.col2 = 1 
+Execution plan 
+
+
+
+
+Query 
+
+
+
+
+
+
+===== SLIDE 3 =====
+Plan in XASL generator 
+Select b.col 
+  from tbl2 b 
+where  a.col1 = b.col1  
+and  b.col2 = 1 
+Execution plan 
+
+
+
+
+XASL 
+
+
+
+
+Scan ptr 
+
+
+
+
+
+
+===== SLIDE 4 =====
+Column in XASL 
+SELECT b.col1 
+  FROM  table b 
+WHERE  a.col1 = b.col1 
+and  b.col2 = 1 
+
+
+QUERY 
+XASL 
+
+
+
+
+b.col1 
+(select list) 
+
+
+a.col1 
+(predicate) 
+
+
+
+b.col1, b.col2 
+(predicate) 
+
+
+
+
+
+===== SLIDE 5 =====
+Column in XASL 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+===== SLIDE 6 =====
+Heap scan in Executor 
+record 
+page 
+record 
+
+Heap_next() 
+record 
+
+
+===== SLIDE 7 =====
+Heap scan in Executor 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+record 
+heap_attrinfo_read_dbvalues() 
+
+
+===== SLIDE 8 =====
+Heap scan in Executor 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+fetch_val_list() 
+
+
+===== SLIDE 9 =====
+Heap scan in Executor 
+
+
+
+
+
+
+
+
+
+temp file 
+data 
+
+
+
+
+
+
+
+
+end_one_iteration() 
+
+
+===== SLIDE 10 =====
+Heap scan in Executor 
+EXECUTE 
+
+
+
+
+Scan_next_scan () 
+scan_next_heap_scan () 
+heap_next () 
+eval_data_filter () 
+heap_attrinfo_read_dbvalues () 
+fetch_val_list () 
+eval_fnc () 
+heap_attrinfo_read_dbvalues () 
+fetch_val_list () 
+
+end_one_iteration () 
+qexec_generate_tuple_descriptor ()   
+1 
+2 
+3 
+header 
+1 
+data 
+2 
+
+
+
+
+
+
+
+
+
+
+
+
+3 
+temp file 
+data 
+4 
+4 
+
+
+
+
+Read data 
+Read attribute from record 
+Fetch  regu_var  from  attr_info 
+Copy  dbvalue  to  vfetch_to 
+Write 1row to temp file 
+
+
+===== SLIDE 11 =====
+How to get NDV from Heap 
+
+While (page) 
+    fix(page) 
+    while (page_slot) 
+spage_get_record_data ()   get record 
+          attrinfo_read_dbvalues ()   get db_value 
+          qfile_add_item_to_list()    save db_value to temp file 
+          next(page) 
+    unfix(page) 
+
+qfile_sort_list()    get distinct tuple count by sort 
+
+
+
+===== SLIDE 12 =====
+Problem with gathering NDV by sort 
+Temp file is only available for query execution 
+EXECUTE 
+
+
+
+
+qexec_execute_mainblock () 
+Pre-processing 
+qexec_open_scan ()  
+qfile_open_list()    need to query_id 
+Processing 
+qexec_intprt_fnc ()   
+qexec_next_scan_block_iterations () 
+	while  scan_next_scan () 
+    qexec _execute _ scan() 
+qexec_end_one_ iteration () 
+                         qdata_evaluate_aggregate_list() 
+qfile_add_item_to_list()    save db_value to temp file 
+qexec_end_mainblock_ iterations () 
+                       qdata_finalize_aggregate_list() 
+qfile_sort_list()    get distinct tuple count by sort 
+Post-processing 
+qexec_ groupby () 
+
+
+
+===== SLIDE 13 =====
+Problem with gathering NDV by sort -cont 
+Temp file is only available for query execution 
+Solution : gater NDV by executing query 
+  - select count(distinct col1) … from tbl 
+  - select /*+ sampling */ count(distinct col1) … from tbl 

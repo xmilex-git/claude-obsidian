@@ -27,7 +27,7 @@ related:
   - "[[components/parse-tree]]"
   - "[[Query Processing Pipeline]]"
 created: 2026-04-25
-updated: 2026-04-25
+updated: 2026-05-11
 ---
 
 # `src/optimizer/rewriter/` — Query-rewrite Subsystem
@@ -46,6 +46,59 @@ The rewriter rewrites the parse-tree **before** the cost-based planner sees it. 
 | `query_rewrite_auto_parameterize.c` | 361 | [[components/optimizer-rewriter-auto-parameterize]] |
 | `query_rewrite_set.c` | 153 | [[components/optimizer-rewriter-set]] |
 | `query_rewrite_unused_function.c` | 201 | [[components/optimizer-rewriter-unused-function]] |
+
+> [!update] 2026-05-11 — `mq_translate` / `qo_optimize_queries` 호출 트리 (per [[sources/qp-analysis-rewriter]])
+> 분석서는 `mq_rewrite` 가 호출되는 더 큰 컨텍스트인 view_transform 의 `mq_translate()` 전체 호출 트리를 정리:
+>
+> ```
+> mq_translate
+> └── mq_translate_helper
+>     └── mq_push_paths
+>         └── mq_check_rewrite_select
+>             (where) pt_cnf → pt_transform_cnf_pre / pt_transform_cnf_post
+>             (from)  mq_is_union_translation
+>                     mq_rewrite_vclass_spec_as_derived
+>                     mq_copypush_sargable_terms
+>             mq_push_paths_select
+> └── mq_translate_local
+> └── mq_bump_order_dep_corr_lvl
+> └── parser_walk_tree(... mq_mark_location, ... mq_check_non_updatable_vclass_oid ...)
+> └── mq_optimize
+>     └── qo_optimize_queries          ← 본 모듈의 mq_rewrite 가 호출
+> ```
+>
+> 그리고 `qo_optimize_queries` 내부 호출 순서 (분석서 직 인용):
+> ```
+> pt_split_join_preds
+> qo_can_generate_single_table_connect_by
+> qo_move_on_clause_of_explicit_join_to_where_clause
+> qo_rewrite_index_hints
+> qo_analyze_path_join_pre / qo_analyze_path_join
+> qo_rewrite_subqueries
+> pt_cnf
+> qo_reduce_equality_terms        // = LHS-상수 propagate
+> qo_converse_sarg_terms
+> qo_reduce_comp_pair_terms
+> qo_rewrite_like_terms
+> qo_convert_to_range             // IN → range
+> qo_apply_range_intersection
+> qo_fold_is_and_not_null
+> qo_rewrite_outerjoin            // null 비허용 outer → inner
+> qo_rewrite_innerjoin            // explicit → implicit
+> qo_rewrite_oid_equality
+> qo_reduce_order_by
+> qo_do_auto_parameterize
+> pt_rewrite_to_auto_param        // 상수 → host var (plan cache hit)
+> qo_do_auto_parameterize_limit_clause
+> qo_do_auto_parameterize_keylimit_clause
+> qo_rewrite_hidden_col_as_derived
+> ```
+>
+> ### CNF 변환의 인덱스-스캔 함의
+> rewriter 의 `pt_cnf()` 가 predicate 를 `next` (AND-chain) + `or_next` (OR-chain) 평탄화 구조로 변환. 변환 결과 항 수가 **100 초과** 시 변환 포기 → `PT_AND/PT_OR` 가 살아남음 → 해당 predicate 는 **인덱스 스캔 후보가 되지 않음**. 자세한 시각화는 [[sources/qp-analysis-rewriter#CNF 변환의 시각화]].
+>
+> ### 분석서 TO_DO
+> 원작자가 "VIEW / PREDICATE / JOIN 등 성질별 재작성 카탈로그 미완성" + "`qo_apply_range_intersection`, `qo_fold_is_and_not_null`, `qo_reduce_order_by`, `qo_rewrite_oid_equality`, `qo_rewrite_subqueries`, view/CTE rewrite path 등 로직 요약 미작성" 으로 표기.
 
 ## Public entry point
 
