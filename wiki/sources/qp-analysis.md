@@ -97,11 +97,9 @@ sub_pages:
 - `qp-optimizer`: "to_do : join method, cost 산정, plan compare, plan 객체".
 - `qp-resolve-names` (= semantic-check) wiki page 자체는 4개 PDF 첨부만; 실제 분석은 PDF (특히 Name Resolution v0.9 22p) 에 있음. 일부 섹션은 "TBU" 표기.
 
-## 베이스라인 / 드리프트 메모
+## 베이스라인 메모
 
-- CUBRID baseline: `05a7befd` (recorded in [[hot|hot cache]]).
-- 현재 source HEAD: `bac5eb1615b83d1c55c1078f8d9430c5fe71275c` — baseline 의 직계 후손 아닌 divergent branch (`git merge-base --is-ancestor` 실패).
-- 본 cluster ingest 는 개념-중심 (line 번호 미인용) 이라 drift 영향 최소. 함수 이름/구조체 이름은 모두 CUBRID 마스터 develop 기준이며, drift 시 함수 이름이 그대로면 호환. divergent branch 가 일반 develop 가 아닐 가능성도 있어 사용자 확인 후 baseline 갱신 미수행.
+본 cluster 는 사내 R&D wiki 의 **타 작성자 분석서** 를 가져온 것으로 `~/dev/cubrid/` 의 특정 baseline 과 1:1 결속되지 않는다. 모든 내용은 개념-중심 (함수 이름/구조체 이름/단계 흐름 위주, line 번호 미인용) 이므로 baseline drift 와 무관. 현 wiki baseline (`05a7befd`) 와 별도 trace 로 보면 된다.
 
 ## Sub-pages
 

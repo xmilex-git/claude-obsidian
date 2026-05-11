@@ -59,7 +59,7 @@ Ingested CUBRID R&D internal JIRA wiki cluster at `jira.cubrid.com:8888/wiki/p/R
 
 **Author flags (TO_DO carried forward)**: `qp-analysis-rewriter` and `qp-analysis-optimizer` original authors explicitly marked sections as incomplete (rewriter VIEW/PREDICATE/JOIN sub-categorization; optimizer join-method/cost/plan-compare details).
 
-**Baseline drift note**: Source HEAD `bac5eb16` is on a divergent branch from baseline `05a7befd` (not a direct descendant). Ingest is concept-centric (no line numbers cited), so drift impact is minimal. **Baseline not bumped** (would require user confirmation on which branch this represents).
+**Baseline note**: cluster is a 3rd-party R&D analysis doc, not bound to a specific `~/dev/cubrid/` baseline. All content is concept-centric (function/struct names, stage flow; no line numbers cited). Baseline intentionally **not bumped**.
 
 Hub page: [[sources/qp-analysis]]. Source files preserved at `.raw/qp-analysis-*.md` + `.raw/qp-pdfs/`. Image attachments at `_attachments/qp-analysis/`.
 
